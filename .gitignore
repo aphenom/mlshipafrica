@@ -1,0 +1,7 @@
+env/
+.env
+*/__pycache__/
+*.cpython*
+*.pyc
+mlshipafrica/mlshipafrica/__pycache__/settings.cpython-313.pyc
+mlshipafrica/mlshipafrica/__pycache__/__init__.cpython-313.pyc
