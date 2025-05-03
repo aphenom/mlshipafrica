@@ -14,14 +14,14 @@ class MyModelAbstract(models.Model):
         abstract = True
 
     code = models.CharField(max_length=25, unique=True, editable=False)
-    etat_validation = models.BooleanField('état validation', default=True)
-    etat_suppression = models.BooleanField('état suppression', default=False)
-    date_creation = models.DateTimeField('date création', auto_now_add=True)
-    date_modification = models.DateTimeField('date modification', auto_now=True)
-    date_validation = models.DateTimeField('date validation', null=True, blank=True)
-    date_suppression = models.DateTimeField('date suppression', null=True, blank=True)
-    creation_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, verbose_name = "créé par")
-    modification_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, verbose_name = "modifié par")
+    etat_validation = models.BooleanField('Etat validation', default=True)
+    etat_suppression = models.BooleanField('Etat suppression', default=False)
+    date_creation = models.DateTimeField('Date création', auto_now_add=True)
+    date_modification = models.DateTimeField('Date modification', auto_now=True)
+    date_validation = models.DateTimeField('Date validation', null=True, blank=True)
+    date_suppression = models.DateTimeField('Date suppression', null=True, blank=True)
+    creation_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name="creation_%(class)ss", related_query_name="creation_%(class)s", verbose_name = "Créé par")
+    modification_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name="modification_%(class)ss", related_query_name="modification_%(class)s", verbose_name = "Modifié par")
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -32,9 +32,9 @@ class MyModelAbstract(models.Model):
         ''' On save, update timestamps '''
         if not self.id:
             self.code = CodeGenerator(self, None, None)
-            self.creation_par = get_current_user
+            self.creation_par = get_current_user()
         else:
-            self.modification_par = get_current_user
+            self.modification_par = get_current_user()
         if self.date_validation != self._init_date_validation:
             if self.etat_validation == True:
                 self.date_validation = timezone.now()
@@ -137,7 +137,7 @@ class PartenaireLogistique(MyModelAbstract):
     email = models.EmailField("email", max_length=100, null=True, blank=True)
     contact = models.CharField("contact", max_length=100, null=True, blank=True)
     adresse = models.CharField("adresse", max_length=100, null=True, blank=True)
-    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_partenaire_logistique', related_query_name="license_partenaires_logistiques", verbose_name = "license")
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_partenairelogistiques', related_query_name="license_partenairelogistique", verbose_name = "license")
 
     def __str__(self):
         return '{} - {}'.format(self.code, self.nom)
@@ -154,7 +154,7 @@ class Zone(MyModelAbstract):
     is_depart = models.BooleanField('est depart', default=True, db_comment="Possibilité ou non de faire partir un colis de cette zone")
     is_arrivee = models.BooleanField('est arrivee', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette zone")
     nom = models.CharField('nom', max_length=100)
-    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zone', related_query_name="license_zones", verbose_name = "license")
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zones', related_query_name="license_zone", verbose_name = "license")
     
     def __str__(self):
         return '{} - {}'.format(self.code, self.nom)
@@ -171,8 +171,8 @@ class Localite(MyModelAbstract):
     is_depart = models.BooleanField('est depart', default=True, db_comment="Possibilité ou non de faire partir un colis de cette localité")
     is_arrivee = models.BooleanField('est arrivee', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette localité")
     nom = models.CharField('nom', max_length=100)
-    zone = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_localite', related_query_name="zone_localites", verbose_name = "zone")
-    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zone', related_query_name="license_zones", verbose_name = "license")
+    zone = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_localites', related_query_name="zone_localite", verbose_name = "zone")
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zones', related_query_name="license_zone", verbose_name = "license")
     
     def __str__(self):
         return '{} - {}'.format(self.code, self.nom)
@@ -188,7 +188,7 @@ class FormatArticle(MyModelAbstract):
 
     nom = models.CharField('nom', max_length=100)
     caracteristique = models.CharField('caracteristique', max_length=255)
-    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_format_article', related_query_name="license_formats_articles", verbose_name = "license")
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_formatarticles', related_query_name="license_formatarticle", verbose_name = "license")
     
     def __str__(self):
         return '{} - {}'.format(self.code, self.nom)

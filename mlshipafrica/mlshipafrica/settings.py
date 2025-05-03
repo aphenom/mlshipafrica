@@ -10,7 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+
 from pathlib import Path
+
+from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +25,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!gcszywkh0s--fobc53@5*&k@m5pp910x2xwc9m%=+7#+057gw'
+SECRET_KEY = config('SECRET_KEY')
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = [
+    'ludo-round.com',  # Domaine principal
+    'www.ludo-round.com',  # Optionnel pour www
+    'gameplay.ludo-round.com',  # Sous-domaine pour le jeu
+    'localhost',  # Pour les tests locaux
+    '127.0.0.1',  # Pour les tests locaux
+]
 
 
 # Application definition
@@ -37,7 +50,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tinymce',
+    'allauth',
+    'allauth.account',
+    'django_dump_die',
+    'django_crontab',
+    'tinymce', 
+    "phonenumber_field",
+    'django.contrib.humanize',
     'core',
     'management',
 ]
@@ -51,6 +70,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
+    'allauth.account.middleware.AccountMiddleware', # remove this, which only used in v0.56+
+    'django_dump_die.middleware.DumpAndDieMiddleware',
 ]
 
 ROOT_URLCONF = 'mlshipafrica.urls'
@@ -76,12 +97,30 @@ WSGI_APPLICATION = 'mlshipafrica.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+DATABASES = {  
+        'default': {  
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+        'OPTIONS': {  
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8',  
+        } 
+    }  
+} 
+
+
+if DEBUG == False:
+    SECURE_HSTS_SECONDS = 31536000 # One year in seconds
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 
 # Password validation
@@ -106,21 +145,80 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr-FR'
 
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
+USE_L10N = True
+
 USE_TZ = True
+
+USE_THOUSAND_SEPARATOR = True
+THOUSAND_SEPARATOR = ' '
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+# STATIC_URL = 'static/'
+# STATIC_ROOT = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
+# Add these new lines
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'static'),
+)
+if config('ENVIRONMENT', 'DEV') == 'PROD':
+    STATIC_ROOT = config('STATIC_ROOT', '/var/www/clients/client0/xxx/web/static/')
+    MEDIA_ROOT = config('MEDIA_ROOT', '/var/www/clients/client0/xxx/web/media/')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',  # Pour la connexion admin
+    'allauth.account.auth_backends.AuthenticationBackend',  # Pour Facebook
+)
+
+
+# Désactiver l'inscription par e-mail et forcer l'authentification via Facebook uniquement
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+AACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+ACCOUNT_UNIQUE_EMAIL = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_LOGOUT_ON_GET = False  # Ne pas déconnecter l'utilisateur sur GET request
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+
+# Redirections après connexion
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+
+# Durée de la session (7 jours par exemple)
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 semaine en secondes
+
+# Si True, la session se termine lorsque l'utilisateur ferme le navigateur
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+PHONENUMBER_DEFAULT_REGION = 'CI'
+
+X_FRAME_OPTIONS = 'ALLOWALL'
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "mail.ludo-round.com"
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "contact@ludo-round.com"
+EMAIL_HOST_PASSWORD = "contactLR123*"
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_USE_TLS = True
+EMAIL_HOST_NAME = "Noreply Ludo Round"

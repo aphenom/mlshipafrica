@@ -10,6 +10,8 @@ from django.apps import apps
 '''generateur code de reference'''
 def CodeGenerator(model, start_by_text=None, end_by_text=None):
 
+    start_by_text = "{:%y}".format(timezone.now())
+
     if model == apps.get_model(app_label='core', model_name='License'): 
         start_by_text = "L{:%y}".format(timezone.now())
 
