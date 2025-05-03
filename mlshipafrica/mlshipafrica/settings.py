@@ -189,15 +189,29 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-# Désactiver l'inscription par e-mail et forcer l'authentification via Facebook uniquement
-ACCOUNT_EMAIL_VERIFICATION = 'none'
-AACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_UNIQUE_EMAIL = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+# Authentification uniquement par email
+ACCOUNT_LOGIN_METHODS = {"email"}
+
+# Définition des champs requis pour l'inscription
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+
+# Vérification obligatoire de l'email
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+
+# Champ d'identifiant pour l'utilisateur (si tu n'as pas de `username`)
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_LOGOUT_ON_GET = False  # Ne pas déconnecter l'utilisateur sur GET request
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+
+# Supprimer les anciens paramètres dépréciés
+# Ne PAS inclure les lignes suivantes :
+# - ACCOUNT_AUTHENTICATION_METHOD
+# - ACCOUNT_USERNAME_REQUIRED
+# - ACCOUNT_EMAIL_REQUIRED
+
+# Déconnexion manuelle uniquement
+ACCOUNT_LOGOUT_ON_GET = False
+
+# Social account
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"  # ou "optional" selon ton cas
 
 # Redirections après connexion
 LOGIN_REDIRECT_URL = '/'

@@ -172,7 +172,7 @@ class Localite(MyModelAbstract):
     is_arrivee = models.BooleanField('est arrivee', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette localité")
     nom = models.CharField('nom', max_length=100)
     zone = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_localites', related_query_name="zone_localite", verbose_name = "zone")
-    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zones', related_query_name="license_zone", verbose_name = "license")
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_localites', related_query_name="license_localite", verbose_name = "license")
     
     def __str__(self):
         return '{} - {}'.format(self.code, self.nom)
