@@ -13,7 +13,58 @@ def CodeGenerator(model, start_by_text=None, end_by_text=None):
     start_by_text = "{:%y}".format(timezone.now())
 
     if model == apps.get_model(app_label='core', model_name='License'): 
-        start_by_text = "L{:%y}".format(timezone.now())
+        start_by_text = "LIC{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())       
+
+    if model == apps.get_model(app_label='core', model_name='AchatLicense'): 
+        start_by_text = "AL{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='core', model_name='Configuration'): 
+        start_by_text = "CONF{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='core', model_name='PartenaireLogistique'): 
+        start_by_text = "PL{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='core', model_name='Zone'): 
+        start_by_text = "ZO{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='core', model_name='Localite'): 
+        start_by_text = "LOC{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='core', model_name='FormatArticle'): 
+        start_by_text = "FA{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='Vendeur'): 
+        start_by_text = "V{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='Tarification'): 
+        start_by_text = "TAR{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='Article'): 
+        start_by_text = "A{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='HistoriqueArticle'): 
+        start_by_text = "HA{:%y}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='ReglementArticle'): 
+        start_by_text = "RA{:%y}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='Encaissement'): 
+        start_by_text = "ENC{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
+    if model == apps.get_model(app_label='management', model_name='Reversement'): 
+        start_by_text = "REV{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
 
     if end_by_text is None:
         end_by_text = "{:%m%d}".format(timezone.now())       

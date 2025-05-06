@@ -107,6 +107,7 @@ class Tarification(MyModelAbstract):
 """ Les articles répresentant les colis à livrer """
 class Article(MyModelAbstract):
 
+    code_tracking = models.CharField('Code tracking', max_length=25, null=True, blank=True, db_comment="Code unique auprès du prestatire du colis permettant de le suivre")
     valeur = models.DecimalField('Valeur', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     montant_frais = models.DecimalField('Montant frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     is_option_recuperation = models.BooleanField('état option recuperation du colis', default=False, db_comment="Possibilité ou non de récuperer le colis directement chez le vendeur")
