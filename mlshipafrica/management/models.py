@@ -5,7 +5,7 @@ from django_currentuser.middleware import (
     get_current_user, get_current_authenticated_user)
 from tinymce.models import HTMLField
 
-from core.models import License, PartenaireLogistique, Zone
+from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
 from mlshipafrica.enums import StatutTraitement, STATUT_TRAITEMENT_COULEURS
@@ -38,7 +38,7 @@ class MyModelAbstract(models.Model):
     def save(self, *args, **kwargs):
         ''' On save, update timestamps '''
         if not self.id:
-            self.code = CodeGenerator(self, None, None)
+            self.code = CodeGenerator(self.__class__, None, None)
             self.creation_par = get_current_user()
         else:
             self.modification_par = get_current_user()
@@ -107,11 +107,11 @@ class Tarification(MyModelAbstract):
     partenaire_logistique = models.ForeignKey(PartenaireLogistique, models.SET_NULL, null=True, blank=True, related_name='partenaire_logistiquetarifications', related_query_name="partenaire_logistiquetarification", verbose_name = "partenaire logistique")
     zone_depart = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_departtarifications', related_query_name="zone_departtarification", verbose_name = "zone départ")
     zone_arrivee = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_arriveetarifications', related_query_name="zone_arriveetarification", verbose_name = "zone arrivée")
-    localite_depart = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='localite_departtarifications', related_query_name="localite_departtarification", verbose_name = "localité départ")
-    localite_arrivee = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='localite_arriveetarifications', related_query_name="localite_arriveetarification", verbose_name = "localité arrivée")
-    format_article = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='format_articletarifications', related_query_name="format_articletarification", verbose_name = "format article")
-    vendeur = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='vendeur_tarifications', related_query_name="vendeur_tarification", verbose_name = "vendeur")
-    config = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='config_tarifications', related_query_name="config_tarification", verbose_name = "Configuration")
+    localite_depart = models.ForeignKey(Localite, models.SET_NULL, null=True, blank=True, related_name='localite_departtarifications', related_query_name="localite_departtarification", verbose_name = "localité départ")
+    localite_arrivee = models.ForeignKey(Localite, models.SET_NULL, null=True, blank=True, related_name='localite_arriveetarifications', related_query_name="localite_arriveetarification", verbose_name = "localité arrivée")
+    format_article = models.ForeignKey(FormatArticle, models.SET_NULL, null=True, blank=True, related_name='format_articletarifications', related_query_name="format_articletarification", verbose_name = "format article")
+    vendeur = models.ForeignKey(Vendeur, models.SET_NULL, null=True, blank=True, related_name='vendeur_tarifications', related_query_name="vendeur_tarification", verbose_name = "vendeur")
+    config = models.ForeignKey(Configuration, models.SET_NULL, null=True, blank=True, related_name='config_tarifications', related_query_name="config_tarification", verbose_name = "Configuration")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_tarifications', related_query_name="license_tarification", verbose_name = "license")
     
 

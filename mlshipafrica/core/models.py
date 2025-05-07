@@ -33,7 +33,7 @@ class MyModelAbstract(models.Model):
     def save(self, *args, **kwargs):
         ''' On save, update timestamps '''
         if not self.id:
-            self.code = CodeGenerator(self, None, None)
+            self.code = CodeGenerator(self.__class__, None, None)
             self.creation_par = get_current_user()
         else:
             self.modification_par = get_current_user()
@@ -68,8 +68,10 @@ class AchatLicense(MyModelAbstract):
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_achats', related_query_name="license_achat", verbose_name = "license")
 
     def __str__(self):
-        return '{} valable de {:%d-%m-%Y} à {:%d-%m-%Y}'.format(self.license.code, self.debut, self.fin)
-
+        license_code = self.license.code if self.license and self.license.code else "???"
+        debut_str = self.debut.strftime("%d-%m-%Y") if self.debut else "???"
+        fin_str = self.fin.strftime("%d-%m-%Y") if self.fin else "???"
+        return f"{license_code} valable de {debut_str} à {fin_str}"
     class Meta:
         verbose_name = 'Achat License'
         verbose_name_plural = 'Achats Licenses'      
