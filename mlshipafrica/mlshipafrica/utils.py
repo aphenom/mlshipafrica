@@ -81,3 +81,60 @@ def CodeGenerator(model, start_by_text=None, end_by_text=None):
             pass
         else:
             return code
+        
+
+"""
+# gestion de [profil]
+def checking_user(request, user):
+    try:
+        # Récupération des données Facebook si présentes
+        email = user.email
+        nom = prenom = id_facebook = None
+
+        # Recherche du profil lié à l'utilisateur
+        profil = Profil.objects.filter(user=user).first()
+
+        if profil:
+            # Mise à jour des informations du profil existant
+            updated = False
+            if email and profil.email != email:
+                profil.email = email
+                updated = True
+            if nom and profil.nom != nom:
+                profil.nom = nom
+                updated = True
+            if prenom and profil.prenom != prenom:
+                profil.prenom = prenom
+                updated = True
+            if id_facebook and profil.id_facebook != id_facebook:
+                profil.id_facebook = id_facebook
+                updated = True
+            if updated:
+                profil.save()
+
+        else:
+            # Création d’un nouveau profil
+            profil = Profil(
+                user=user,
+                email=email or '',
+                nom=nom or '',
+                prenom=prenom or '',
+                id_facebook=id_facebook or '',
+                date_validation=timezone.now()
+            )
+
+            # Traitement du code d’invitation
+            if code_invitation:
+                profil.code_invite_par = code_invitation
+                invite_par = Profil.objects.filter(code=code_invitation, etat_suppression=False).first()
+                if invite_par:
+                    profil.invite_par = invite_par
+                else:
+                    profil.code_invite_par = ""
+
+            profil.save()
+
+    except Exception as e:
+        # Log du message d’erreur
+        messages.error(request, f"Une erreur est survenue lors de la configuration du profil : {str(e)}")
+"""

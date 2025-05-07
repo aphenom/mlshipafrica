@@ -1,4 +1,4 @@
-{% extends "base_front.html" %}
+{% extends "base_main.html" %}
 
 <!-- titre -->
 {% block title %}Ludo-Round{% endblock %}
@@ -9,335 +9,682 @@
 {% load humanize %}
 <!-- MainContent -->
 
+	{% block breadcrumb-li %}
+	<li class="breadcrumb-item active" aria-current="page">Tableau de bord</li>
+	{% endblock %}
+
     {% block content %}
+
+				<!--row-->
+				<div class="row">
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Total Purchase</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$77,483</h2>
+										<div class=" tx-12">
+											<span class="tx-muted me-1">since last month</span>
+											<span class="numberfont tx-success min-w-fit-content"><i
+													class="fe fe-arrow-up-right me-1 tx-14"></i>+1.25%</span>
+										</div>
+									</div>
+									<div class="float-end text-end mt-2">
+										<span class="pie" data-peity='{ "fill": ["#1753fc", "#f0f3f7"]}'>220/360</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Total Profit</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$21,909</h2>
+										<div class="tx-12">
+											<span class="tx-muted me-1">since last month</span>
+											<span class="tx-danger min-w-fit-content"><i
+													class="fe fe-arrow-down-right me-1 tx-14"></i>-5.86%</span>
+										</div>
+									</div>
+									<div class="float-end text-end mt-2">
+										<span class="pie" data-peity='{ "fill": ["#9258f1", "#f0f3f7"]}'>306/360</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Total Sales</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$12,129</h2>
+										<div class=" tx-12">
+											<span class="tx-muted me-1">since last month</span>
+											<span class="numberfont tx-success min-w-fit-content"><i
+													class="fe fe-arrow-up-right me-1 tx-14"></i>+3.37%</span>
+										</div>
+									</div>
+									<div class="float-end text-end mt-2">
+										<span class="pie" data-peity='{ "fill": ["#22c03c", "#f0f3f7"]}'>206/360</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Total Returns</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$43,129</h2>
+										<div class="tx-12">
+											<span class="tx-muted me-1">since last month</span>
+											<span class="tx-danger min-w-fit-content"><i
+													class="fe fe-arrow-down-right me-1 tx-14"></i>-4.56%</span>
+										</div>
+									</div>
+									<div class="float-end text-end mt-2">
+										<span class="pie" data-peity='{ "fill": ["#ffc107", "#f0f3f7"]}'>276/360</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!--row-->
+
+				<!--row-->
+				<div class="row">
+					<div class="col-xl-8 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-header">
+								<h3 class="card-title">Revenue Statistics</h3>
+								<!--
+								<div class="dropdown ms-auto dropdown-menu-end">
+									<button aria-expanded="false" aria-haspopup="true"
+										class="btn ripple btn-sm btn-outline-light" data-bs-toggle="dropdown"
+										id="dropdownMenuButton1" type="button">All Analytics<i
+											class="fa fa-caret-down ms-1"></i></button>
+									<div class="dropdown-menu tx-12">
+										<a class="dropdown-item" href="javascript:void(0);">Weekly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Monthly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Annually</a>
+									</div>
+								</div>
+								-->
+							</div>
+							<div class="card-body py-1">
+								<div id="revenueStatistics"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-4 col-md-12">
+						<div class="row">
+							<div class="col-xl-12">
+								<div class="card">
+									<div class="card-header">
+										<h3 class="card-title">Historics</h3>
+										<!--
+										<div class="dropdown ms-auto dropdown-menu-end">
+											<button aria-expanded="false" aria-haspopup="true"
+												class="btn ripple btn-sm btn-outline-light" data-bs-toggle="dropdown"
+												id="dropdownMenuButton2" type="button">All Analytics<i
+													class="fa fa-caret-down ms-1"></i></button>
+											<div class="dropdown-menu tx-12">
+												<a class="dropdown-item" href="javascript:void(0);">Weekly</a>
+												<a class="dropdown-item" href="javascript:void(0);">Monthly</a>
+												<a class="dropdown-item" href="javascript:void(0);">Annually</a>
+											</div>
+										</div>
+										-->
+									</div>
+									<div class="card-body p-0">
+										<div class="list-group list-lg-group list-group-flush">
+											<a class="list-group-item list-group-item-action" href="#">
+												<div class="media align-items-center">
+													<img class="avatar-md rounded-circle me-3"
+														src="{% static 'assets/img/faces/9.jpg' %}" alt="Image description">
+													<div class="media-body">
+														<div
+															class="d-md-flex align-items-center justify-content-between mb-1">
+															<h5 class="mb-0 tx-14">
+																Samantha Wilson
+															</h5>
+															<span class="text-primary tx-12"><i
+																	class="fe fe-calendar me-1"></i> 28 Feb 2019</span>
+														</div>
+														<p class="mb-0 text-muted tx-12">Itaque earum rerum hic tenetur
+															a sapiente reiciendis voluptatibus.</p>
+													</div>
+												</div>
+											</a>
+											<a class="list-group-item list-group-item-action" href="#">
+												<div class="media align-items-center">
+													<img class="avatar-md rounded-circle me-3"
+														src="{% static 'assets/img/faces/2.jpg' %}" alt="Image description">
+													<div class="media-body">
+														<div
+															class="d-md-flex align-items-center justify-content-between">
+															<h5 class="mb-0 tx-14">
+																Kevin North
+															</h5>
+															<span class="text-primary tx-12"><i
+																	class="fe fe-calendar me-1"></i> 26 Feb 2019</span>
+														</div>
+														<p class="mb-0 text-muted tx-12">Itaque earum rerum hic tenetur
+															a sapiente reiciendis voluptatibus.</p>
+													</div>
+												</div>
+											</a>
+											<a class="list-group-item list-group-item-action" href="#">
+												<div class="media align-items-center">
+													<img class="avatar-md rounded-circle me-3"
+														src="{% static 'assets/img/faces/28.jpg' %}" alt="Image description">
+													<div class="media-body">
+														<div
+															class="d-md-flex align-items-center justify-content-between mb-1">
+															<h5 class="mb-0 tx-14">
+																Steven Fisher
+															</h5>
+															<span class="text-primary tx-12"><i
+																	class="fe fe-calendar me-1"></i> 26 Feb 2019</span>
+														</div>
+														<p class="mb-0 text-muted tx-12">Itaque earum rerum hic tenetur
+															a sapiente reiciendis voluptatibus.</p>
+													</div>
+												</div>
+											</a>
+											<a class="list-group-item list-group-item-action" href="#">
+												<div class="media align-items-center">
+													<img class="avatar-md rounded-circle me-3"
+														src="{% static 'assets/img/faces/6.jpg' %}" alt="Image description">
+													<div class="media-body">
+														<div
+															class="d-md-flex align-items-center justify-content-between">
+															<h5 class="mb-0 tx-14">
+																Joanne Taylor
+															</h5>
+															<small class="text-primary tx-12"><i
+																	class="fe fe-calendar me-1"></i> 25 Feb 2019</small>
+														</div>
+														<p class="mb-0 text-muted tx-12">Itaque earum rerum hic tenetur
+															a sapiente reiciendis voluptatibus.</p>
+													</div>
+												</div>
+											</a>
+										</div>
+									</div>
+								</div>
+							</div>
+							<!--
+							<div class="col-xl-12">
+								<div class="card">
+									<div class="row">
+										<div class="col-sm-6 border-end">
+											<div class="card-body iconfont text-center">
+												<p class="text-muted fw-semibold mb-2">Total Cost Reduction</p>
+												<div class="d-flex align-items-center justify-content-center mb-3">
+													<h5 class="fw-bold tx-20 mb-0 me-2">$587K</h5>
+													<span class="badge bg-success"><i
+															class="bx bx-trending-up me-1"></i>50%</span>
+												</div>
+												<div class="progress progress-sm">
+													<div
+														class="progress-bar progress-bar-striped progress-bar-animated bg-primary w-30">
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-sm-6">
+											<div class="card-body iconfont text-center">
+												<p class="text-muted fw-semibold mb-2">Total Cost Savings</p>
+												<div class="d-flex align-items-center justify-content-center mb-3">
+													<h5 class="fw-bold tx-20 mb-0 me-2">$474K</h5>
+													<span class="badge bg-danger"><i
+															class="bx bx-trending-down me-1"></i>32%</span>
+												</div>
+												<div class="progress progress-sm">
+													<div
+														class="progress-bar progress-bar-striped progress-bar-animated bg-secondary w-60">
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							-->
+						</div>
+					</div>
+				</div>
+				<!--row-->
+
+				<!--row-->
+				<!--
+				<div class="row">
+					<div class="col-lg-4 col-md-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Customers Location</h3>
+								<div class="dropdown ms-auto dropdown-menu-end">
+									<button aria-expanded="false" aria-haspopup="true"
+										class="btn ripple btn-sm btn-outline-light" data-bs-toggle="dropdown"
+										id="dropdownMenuButton3" type="button">View All<i
+											class="fa fa-caret-down ms-1"></i></button>
+									<div class="dropdown-menu tx-12">
+										<a class="dropdown-item" href="javascript:void(0);">Weekly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Monthly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Annually</a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body">
+								<div id="world-map-markers" class="worldh ht-320"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-4 col-md-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Latest Ratings and Reviews</h3>
+								<div class="dropdown ms-auto dropdown-menu-end">
+									<button aria-expanded="false" aria-haspopup="true"
+										class="btn ripple btn-sm btn-outline-light" data-bs-toggle="dropdown"
+										id="dropdownMenuButton4" type="button">All Analytics<i
+											class="fa fa-caret-down ms-1"></i></button>
+									<div class="dropdown-menu tx-12">
+										<a class="dropdown-item" href="javascript:void(0);">Weekly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Monthly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Annually</a>
+									</div>
+								</div>
+							</div>
+							<div class="rating-scroll ps ps--active-y">
+								<div class="p-3 border-bottom">
+									<div class="media mt-0">
+										<div class="d-flex me-3">
+											<a href="javascript:void(0);">
+												<img class="media-object avatar brround w-7 h-7" alt="64x64"
+													src="{% static 'assets/img/faces/4.jpg' %}">
+											</a>
+										</div>
+										<div class="media-body">
+											<div class="d-flex">
+												<h6 class="mt-0 mb-0 font-weight-semibold ">Velma Wellons </h6>
+												<span class="tx-12 ms-auto">
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star-half text-warning"></i>
+												</span>
+											</div>
+											<div class="d-flex">
+												<p class="tx-12 text-muted mb-0">Various versions have..</p>
+												<small class="ms-auto text-end">5 reviews</small>
+											</div>
+
+										</div>
+									</div>
+								</div>
+								<div class="p-3 border-bottom">
+									<div class="media mt-0">
+										<div class="d-flex me-3">
+											<a href="javascript:void(0);">
+												<img class="media-object avatar brround w-7 h-7" alt="64x64"
+													src="{% static 'assets/img/faces/7.jpg' %}">
+											</a>
+										</div>
+										<div class="media-body">
+											<div class="d-flex">
+												<h6 class="mt-0 mb-0 font-weight-semibold ">Cathie Madonna </h6>
+												<span class="tx-12 ms-auto">
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star-half text-warning"></i>
+													<i class="ion ion-md-star-outline text-warning"></i>
+												</span>
+											</div>
+											<div class="d-flex">
+												<p class="tx-12 text-muted mb-0">long established fact..</p>
+												<small class="ms-auto text-end">5 reviews</small>
+											</div>
+
+										</div>
+									</div>
+								</div>
+								<div class="p-3 border-bottom">
+									<div class="media mt-0">
+										<div class="d-flex me-3">
+											<a href="javascript:void(0);">
+												<img class="media-object avatar brround w-7 h-7" alt="64x64"
+													src="{% static 'assets/img/faces/12.jpg' %}">
+											</a>
+										</div>
+										<div class="media-body">
+											<div class="d-flex">
+												<h6 class="mt-0 mb-0 font-weight-semibold ">Aurelio Dahmer </h6>
+												<span class="tx-12 ms-auto">
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star-half text-warning"></i>
+												</span>
+											</div>
+											<div class="d-flex">
+												<p class="tx-12 text-muted mb-0">Ut enim ad minim veniam..</p>
+												<small class="ms-auto text-end">5 reviews</small>
+											</div>
+
+										</div>
+									</div>
+								</div>
+								<div class="p-3 border-bottom">
+									<div class="media mt-0">
+										<div class="d-flex me-3">
+											<a href="javascript:void(0);">
+												<img class="media-object avatar brround w-7 h-7" alt="64x64"
+													src="{% static 'assets/img/faces/13.jpg' %}">
+											</a>
+										</div>
+										<div class="media-body">
+											<div class="d-flex">
+												<h6 class="mt-0 mb-1 font-weight-semibold ">Cyrus Macarthur </h6>
+												<span class="tx-12 ms-auto">
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star-half text-warning"></i>
+													<i class="ion ion-md-star-outline text-warning"></i>
+												</span>
+											</div>
+											<div class="d-flex">
+												<p class="tx-12 text-muted mb-0">variations of passages..</p>
+												<small class="ms-auto text-end">5 reviews</small>
+											</div>
+
+										</div>
+									</div>
+								</div>
+								<div class="p-3 border-bottom">
+									<div class="media mt-0">
+										<div class="d-flex me-3">
+											<a href="javascript:void(0);">
+												<img class="media-object avatar brround w-7 h-7" alt="64x64"
+													src="{% static 'assets/img/faces/2.jpg' %}">
+											</a>
+										</div>
+										<div class="media-body">
+											<div class="d-flex">
+												<h6 class="mt-0 mb-1 font-weight-semibold ">Bernardo Sykes </h6>
+												<span class="tx-12 ms-auto">
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star text-warning"></i>
+													<i class="ion ion-md-star-half text-warning"></i>
+													<i class="ion ion-md-star-outline text-warning"></i>
+												</span>
+											</div>
+											<div class="d-flex">
+												<p class="tx-12 text-muted mb-0">you are going to use..</p>
+												<small class="ms-auto text-end">5 reviews</small>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-4 col-md-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Customer Retention</h3>
+								<div class="dropdown ms-auto dropdown-menu-end">
+									<button aria-expanded="false" aria-haspopup="true"
+										class="btn ripple btn-sm btn-outline-light" data-bs-toggle="dropdown"
+										id="dropdownMenuButton5" type="button">All Analytics<i
+											class="fa fa-caret-down ms-1"></i></button>
+									<div class="dropdown-menu tx-12">
+										<a class="dropdown-item" href="javascript:void(0);">Weekly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Monthly</a>
+										<a class="dropdown-item" href="javascript:void(0);">Annually</a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body p-4 mx-auto">
+								<div id="customerRetention"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				-->
+				<!--row-->
+
+				<div class="row">
+					<!--row-->
+					<!--
+					<div class="col-xl-12 col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<div class="card-title">Product Summary</div>
+								<button class="btn ripple btn-sm btn-outline-light ms-auto"><i
+										class="fe fe-download me-1"></i>Download Report</button>
+							</div>
+							<div class="card-body mt-2">
+								<div class="table-responsive">
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Date</th>
+												<th class="fw-bold">Product</th>
+												<th class="fw-bold">Price</th>
+												<th class="fw-bold">Payment Method</th>
+												<th class="fw-bold">Transaction ID</th>
+												<th class="fw-bold">Status</th>
+												<th class="fw-bold">Actions</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr>
+												<td>10-11-2021</td>
+												<td>
+													<div class="d-flex align-items-center">
+														<div class="avatar rounded-5 avatar-sm me-2">
+															<img src="{% static 'assets/img/ecommerce/06.jpg' %}" alt="avatar"
+																class="rounded-5">
+														</div>
+														<a href="javascript:void(0)" class="text-dark">Sed vero et ipsum
+															et</a>
+													</div>
+												</td>
+												<td>$18,900</td>
+												<td>Cash On Delivery</td>
+												<td><a href="invoice.html" class="text-dark">#23412858169</a></td>
+												<td><span
+														class="badge badge-pill bg-primary-transparent tx-primary px-3 py-2 tx-11">Shipped</span>
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i
+																class="fe fe-edit"></i></a>
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14"><i
+																class="fe fe-trash"></i></a>
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>26-01-2022</td>
+												<td>
+													<div class="d-flex align-items-center">
+														<div class="avatarrounded-5 avatar-sm me-2">
+															<img src="{% static 'assets/img/ecommerce/04.jpg' %}" alt="avatar"
+																class="rounded-5">
+														</div>
+														<a href="product-details.html" class="text-dark">Rebum dolores
+															at erat ipsum</a>
+													</div>
+												</td>
+												<td>$3,200</td>
+												<td>Online</td>
+												<td><a href="invoice.html" class="text-dark">#51702935164</a></td>
+												<td><span
+														class="badge badge-pill bg-secondary-transparent  tx-secondary px-3 py-2 tx-11">Pending</span>
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i
+																class="fe fe-edit"></i></a>
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14"><i
+																class="fe fe-trash"></i></a>
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>17-09-2021</td>
+												<td>
+													<div class="d-flex align-items-center">
+														<div class="avatarrounded-5 avatar-sm me-2">
+															<img src="{% static 'assets/img/ecommerce/02.jpg' %}" alt="avatar"
+																class="rounded-5">
+														</div>
+														<a href="product-details.html" class="text-dark">Ipsum et sit
+															diam ut</a>
+													</div>
+												</td>
+												<td>$22,600</td>
+												<td>Online</td>
+												<td><a href="invoice.html" class="text-dark">#71802951620</a></td>
+												<td><span
+														class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-11">Delivered</span>
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i
+																class="fe fe-edit"></i></a>
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14"><i
+																class="fe fe-trash"></i></a>
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>06-08-2021</td>
+												<td>
+													<div class="d-flex align-items-center">
+														<div class="avatarrounded-5 avatar-sm me-2">
+															<img src="{% static 'assets/img/ecommerce/01.jpg' %}" alt="avatar"
+																class="rounded-5">
+														</div>
+														<a href="product-details.html" class="text-dark">No stet eos
+															justo voluptua</a>
+													</div>
+												</td>
+												<td>$6,700</td>
+												<td>Cash On Delivery</td>
+												<td><a href="invoice.html" class="text-dark">#91012557664</a></td>
+												<td><span
+														class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-11">Cancelled</span>
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i
+																class="fe fe-edit"></i></a>
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14"><i
+																class="fe fe-trash"></i></a>
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>17-04-2021</td>
+												<td>
+													<div class="d-flex align-items-center">
+														<div class="avatarrounded-5 avatar-sm me-2">
+															<img src="{% static 'assets/img/ecommerce/03.jpg' %}" alt="avatar"
+																class="rounded-5">
+														</div>
+														<a href="product-details.html" class="text-dark">Eos justo
+															nonumy stet sit</a>
+													</div>
+												</td>
+												<td>$49,670</td>
+												<td>Online</td>
+												<td><a href="invoice.html" class="text-dark">#12352990666</a></td>
+												<td><span
+														class="badge badge-pill bg-secondary-transparent  tx-secondary px-3 py-2 tx-11">Pending</span>
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i
+																class="fe fe-edit"></i></a>
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14"><i
+																class="fe fe-trash"></i></a>
+													</div>
+												</td>
+											</tr>
+											<tr>
+												<td>08-02-2021</td>
+												<td>
+													<div class="d-flex align-items-center">
+														<div class="avatarrounded-5 avatar-sm me-2">
+															<img src="{% static 'assets/img/ecommerce/08.jpg' %}" alt="avatar"
+																class="rounded-5">
+														</div>
+														<a href="product-details.html" class="text-dark">Diam voluptua
+															stet invidunt sed</a>
+													</div>
+												</td>
+												<td>$1,000</td>
+												<td>Cash On Delivery</td>
+												<td><a href="invoice.html" class="text-dark">#47652758630</a></td>
+												<td><span
+														class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-11">Delivered</span>
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i
+																class="fe fe-edit"></i></a>
+														<a href="javascript:void(0)"
+															class="btn btn-sm  rounded-5 border text-muted tx-14"><i
+																class="fe fe-trash"></i></a>
+													</div>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					-->
+					<!--row-->
+
+				</div>
 
     {% endblock %}
 
-<!--  -->
+	<!--  -->
+
     <!-- javascript -->
     {% block scripts %}
     <!-- parent -->
         {{ block.super }}
-        <!-- perso lié a l'interaction  -->
-        <script>
-            $(document).ready(function() {
-                const separateur = "";
-
-                // choix de jeu public
-                $(document).on("click", ".jeu-action", function(e) {
-                    // alert("here");
-                    // console.log($(this)); // Utilisation correcte de $(this) pour faire référence à l'élément cliqué
-                    let partie = $(this).data('partie');
-                    let mise = Number(String($(this).data('mise')).replace(/\s/g, ''));
-                    let nombre_participants = $(this).data('nombre_participants');
-                    let gain = Number(String($(this).data('gain')).replace(/\s/g, ''));
-                    let solde = Number(String($(this).data('solde')).replace(/\s/g, ''));
-                    let currency = $(this).data('currency');
-                    let difference_solde_mise = solde - mise;
-                    let minimum_depot = parseInt(String($(this).data('minimum_depot')).replace(/\s/g, ''));
-                    let base_url_participer_partie = $('#participer-partie-input-url').val();
-
-                    // remplissons le modal
-                    $("#mise-input").val(numStr(mise, separateur));    
-                    $("#mise-mise").html(numStr(mise, separateur));    
-                    $("#mise-nombre_participants").html(nombre_participants);    
-                    $("#mise-gain").html(numStr(gain, separateur));    
-                    $("#mise-debit").html(numStr(mise, separateur));    
-                    $("#mise-solde").html(numStr(solde, separateur));  
-
-                    if(difference_solde_mise >= 0){
-                        $(".mise-solde-bon").show();
-                        $(".mise-solde-mauvais").hide();
-                        $("#participer-partie-button").attr("href", base_url_participer_partie.replace("complement_url_leurre", String(Date.now())).replace("complement_url_code", partie).replace(/\s/g, ''));
-                    }  
-                    else{
-                        $(".mise-solde-bon").hide();
-                        $(".mise-solde-mauvais").show();
-                        //$('#recharge-input').attr('data-difference_solde_mise', Math.abs(difference_solde_mise));
-                        //$('#recharge-input').attr('data-minimum_depot', minimum_depot);
-                        //$("#recharge-input").val(multipleSuperieur(Math.abs(difference_solde_mise), minimum_depot));  
-                        $('#recharge-input').remove();
-                        $('#recharge-input-container').append('<input id="recharge-input" type="text" class="money_field" value ="' + Math.abs(difference_solde_mise) + '" data-difference_solde_mise="' + Math.abs(difference_solde_mise) + '" data-minimum_depot="' + minimum_depot + '">');
-                        $("#recharge-button").attr("href", $("#recharge-input-url").val().replace("complement_url_recharge", String(Math.abs(difference_solde_mise)).replace(/\s/g, '')));
-                        //$("#participer-partie-button").attr("href", "javascript:void(0)");
-                        applyMoneyFieldMask();
-                    }
-
-                });
-
-                // selection partie privee
-                $(document).on("change", "#choix_partie_privee", function(e) {
-                    // alert("here");
-                    // console.log($(this)); // Utilisation correcte de $(this) pour faire référence à l'élément cliqué
-                    // let partie = $(this).data('partie');
-                   // console.log($(".nice-select>ul>li.selected").data('value'));
-                    if($(this).find(":selected").val() != ""){
-                        let choix_partie_privee_data = $(".nice-select>ul>li.selected").data('value').split(';');
-                        let mise = Number(String(choix_partie_privee_data[0]).replace(/\s/g, ''));
-                        let nombre_participants = choix_partie_privee_data[1];
-                        let gain = Number(String(choix_partie_privee_data[2]).replace(/\s/g, ''));
-                        let solde = Number(String(choix_partie_privee_data[3]).replace(/\s/g, ''));
-                        // let currency = $(this).data('currency');
-                        let difference_solde_mise = solde - mise;
-                        let minimum_depot = parseInt(String(choix_partie_privee_data[4]).replace(/\s/g, ''));
-                        let base_url_participer_partie = $('#creer-partie_privee-input-url').val();
-                        
-                        // remplissons le modal
-                        $("#choix_partie_privee-input").val(numStr(mise, separateur));    
-                        $("#choix_partie_privee-mise").html(numStr(mise, separateur));    
-                        $("#choix_partie_privee-nombre_participants").html(nombre_participants);    
-                        $("#choix_partie_privee-gain").html(numStr(gain, separateur));    
-                        $("#choix_partie_privee-debit").html(numStr(mise, separateur));    
-                        $("#choix_partie_privee-solde").html(numStr(solde, separateur));  
-                        
-                        // faisons des tours des passe passe cacher / afficher
-                        // partie rejoindre partie privee
-                        $('#code_partie_privee').val("");
-                        $('.rejoindre_partie_privee-solde-bon').removeClass("d-none");
-                        $(".rejoindre_partie_privee-solde-bon").hide();
-                        $('.rejoindre_partie_privee-solde-bon').removeClass("d-none");
-                        $(".rejoindre_partie_privee-solde-bon").hide();
-                        $('.rejoindre_partie_privee-solde-mauvais').removeClass("d-none");
-                        $(".rejoindre_partie_privee-solde-mauvais").hide();
-                        $('.rejoindre_partie_privee-resume').removeClass("d-none");
-                        $(".rejoindre_partie_privee-resume").hide();
-                        // partie creer partie privee
-                        $('.choix_partie_privee-resume').removeClass("d-none");
-                        $(".choix_partie_privee-resume").show();
-                        
-                        if(difference_solde_mise >= 0){
-                            $(".choix_partie_privee-solde-bon").show();
-                            $(".choix_partie_privee-solde-mauvais").hide();
-                            /* a voir */ $("#creer_partie_privee-btn-creer").attr("href", base_url_participer_partie.replace("complement_url_nombre", String(nombre_participants)).replace("complement_url_leurre", String(Date.now())).replace("complement_url_mise", String(mise)).replace(/\s/g, ''));
-                        }  
-                        else{
-                            $(".choix_partie_privee-solde-bon").hide();
-                            $(".choix_partie_privee-solde-mauvais").show();
-                            $("#creer_partie_privee-btn-creer").attr("href", "javascript:void(0)");
-                            //$('#recharge-input').attr('data-difference_solde_mise', Math.abs(difference_solde_mise));
-                            //$('#recharge-input').attr('data-minimum_depot', minimum_depot);
-                            //$("#recharge-input").val(multipleSuperieur(Math.abs(difference_solde_mise), minimum_depot));  
-                            $('#recharge-input').remove();
-                            $('#recharge-input-container').append('<input id="recharge-input" type="text" class="money_field" value ="' + Math.abs(difference_solde_mise) + '" data-difference_solde_mise="' + Math.abs(difference_solde_mise) + '" data-minimum_depot="' + minimum_depot + '">');
-                            $("#recharge-button").attr("href", $("#recharge-input-url").val().replace("complement_url_recharge", String(Math.abs(difference_solde_mise)).replace(/\s/g, '')));
-                            applyMoneyFieldMask();
-                        }
-                    }
-                    else{
-                        $(".choix_partie_privee-resume").hide();
-                        /* a voir */ $("#participer-partie-button").attr("href", "javascript:void(0)");
-                    }
-
-                });
-
-                // selection partie privee
-                $(document).on("keyup", "#code_partie_privee", function(e) {
-                    // alert("here");
-                    // console.log($(this)); // Utilisation correcte de $(this) pour faire référence à l'élément cliqué
-                    // let partie = $(this).data('partie');
-                    // faisons le menage et donnons toute la place au code
-                    //let code_partie_privee_valeur = $('#code_partie_privee').val();
-                    // $("#choix_partie_privee").val('');
-                    $('#choix_partie_privee').prop('selectedIndex',0).trigger( "change" );
-                    $(".nice-select>ul>li").removeClass("selected");
-                    $(".nice-select>ul>li").removeClass("focus");
-                    $(".nice-select>.current").html($('#choix_partie_privee').find("option[value='']").text());
-                    $('.rejoindre_partie_privee-resume').removeClass("d-none");
-                    $(".rejoindre_partie_privee-resume").hide();
-                    $('.choix_partie_privee-resume').removeClass("d-none");
-                    $(".choix_partie_privee-resume").hide();
-                    $('.rejoindre_partie_privee-solde-mauvais').removeClass("d-none");
-                    $(".rejoindre_partie_privee-solde-mauvais").hide();
-                    $('.rejoindre_partie_privee-solde-bon').removeClass("d-none");
-                    $('.rejoindre_partie_privee-code-erreur').removeClass("d-none");
-                    $(".rejoindre_partie_privee-code-erreur").hide();
-                    $("#rejoindre_partie_privee-btn-rejoindre").attr("href", "javascript:void(0)")
-                    if($("#code_partie_privee").val() != ''){
-                        $(".rejoindre_partie_privee-solde-bon").show();
-                    }
-                    else{
-                        $(".rejoindre_partie_privee-solde-bon").hide();
-                    }
-                });
-
-                // valide code partie privee
-                $(document).on("click", "#rejoindre_partie_privee-btn-rejoindre", function(e) {
-                    // alert("here");
-                    // console.log($(this)); // Utilisation correcte de $(this) pour faire référence à l'élément cliqué
-                    // let partie = $(this).data('partie');
-
-                    let code_partie_privee = $("#code_partie_privee").val();
-
-                    $.ajax({
-                        url: '{% url 'api_get_partie_privee_via_by_code' %}',  // URL vers laquelle vous envoyez la requête
-                        type: 'GET',                // Méthode de la requête (POST ici)
-                        data: {                      // Les données envoyées au serveur
-                            code_partie_privee: code_partie_privee
-                        },
-                        dataType: 'json',            // Type de réponse attendue du serveur (JSON)
-                        success: function(response) { // Si la requête réussit
-                            console.log(response);
-                            if (Object.keys(response).length > 0) {  // Vérifier si le serveur a renvoyé un succès
-                                //let partie = response.partie;
-                                let mise = Number(String(response.mise).replace(/\s/g, ''));
-                                let nombre_participants = response.nombre_participants;
-                                let gain = Number(String(response.gain).replace(/\s/g, ''));
-                                let solde = Number(String(response.solde).replace(/\s/g, ''));
-                                // let currency = $(this).data('currency');
-                                let difference_solde_mise = solde - mise;
-                                let minimum_depot = parseInt(String(response.minimum_depot).replace(/\s/g, ''));
-                                let base_url_participer_partie = $('#rejoindre-partie_privee-input-url').val();
-                                
-                                // remplissons le modal
-                                $("#rejoindre_partie_privee-input").val(numStr(mise, separateur));    
-                                $("#rejoindre_partie_privee-mise").html(numStr(mise, separateur));    
-                                $("#rejoindre_partie_privee-nombre_participants").html(nombre_participants);    
-                                $("#rejoindre_partie_privee-gain").html(numStr(gain, separateur));    
-                                $("#rejoindre_partie_privee-debit").html(numStr(mise, separateur));    
-                                $("#rejoindre_partie_privee-solde").html(numStr(solde, separateur));  
-                                
-                                // faisons des tours des passe passe cacher / afficher
-                                $(".rejoindre_partie_privee-code-erreur").hide();
-                                $('.rejoindre_partie_privee-resume').removeClass("d-none");
-                                $(".rejoindre_partie_privee-resume").show();
-
-                                if(difference_solde_mise >= 0){
-                                    $(".rejoindre_partie_privee-solde-bon").show();
-                                    $(".rejoindre_partie_privee-solde-mauvais").hide();
-                                    $("#rejoindre_partie_privee-btn-rejoindre").attr("href", base_url_participer_partie.replace("complement_url_leurre", String(Date.now())).replace("complement_url_code", code_partie_privee).replace(/\s/g, ''));
-                                }  
-                                else{
-                                    $(".rejoindre_partie_privee-solde-bon").hide();
-                                    $(".rejoindre_partie_privee-solde-mauvais").show();
-                                    //$('#recharge-input').attr('data-difference_solde_mise', Math.abs(difference_solde_mise));
-                                    //$('#recharge-input').attr('data-minimum_depot', minimum_depot);
-                                    //$("#recharge-input").val(multipleSuperieur(Math.abs(difference_solde_mise), minimum_depot));  
-                                    $('#recharge-input').remove();
-                                    $('#recharge-input-container').append('<input id="recharge-input" type="text" class="money_field" value ="' + Math.abs(difference_solde_mise) + '" data-difference_solde_mise="' + Math.abs(difference_solde_mise) + '" data-minimum_depot="' + minimum_depot + '">');
-                                    $("#recharge-button").attr("href", $("#recharge-input-url").val().replace("complement_url_recharge", String(Math.abs(difference_solde_mise)).replace(/\s/g, '')));
-                                    applyMoneyFieldMask();
-                                }
-                                
-                            } else {
-                                $(".rejoindre_partie_privee-solde-bon").hide();
-                                $(".rejoindre_partie_privee-solde-mauvais").hide();
-                                $(".rejoindre_partie_privee-resume").hide();
-                                $(".rejoindre_partie_privee-code-erreur").html('Désolé, ce code ne correspond à aucune partie privée active !');
-                                $(".rejoindre_partie_privee-code-erreur").show();
-                            }
-                        },
-                        error: function(xhr, status, error) { // Si la requête échoue
-                            console.error('Erreur lors de la requête:', error);
-                            $(".rejoindre_partie_privee-solde-bon").show();
-                            $(".rejoindre_partie_privee-solde-mauvais").hide();
-                            $(".rejoindre_partie_privee-resume").hide();
-                            $(".rejoindre_partie_privee-code-erreur").html('Une erreur s\'est produite. Veuillez réessayer.');
-                            $(".rejoindre_partie_privee-code-erreur").show();
-                        }
-                    });
-                    /*
-                    console.log($(".nice-select>ul>li.selected").data('value'));
-                    let choix_partie_privee_data = $(".nice-select>ul>li.selected").data('value').split(';');
-                    if($(this).find(":selected").val() != ""){
-                        let mise = Number(String(choix_partie_privee_data[0]).replace(/\s/g, ''));
-                        let nombre_participants = choix_partie_privee_data[1];
-                        let gain = Number(String(choix_partie_privee_data[2]).replace(/\s/g, ''));
-                        let solde = Number(String(choix_partie_privee_data[3]).replace(/\s/g, ''));
-                        // let currency = $(this).data('currency');
-                        let difference_solde_mise = solde - mise;
-                        let minimum_depot = Number(String(choix_partie_privee_data[4]).replace(/\s/g, ''));
-                        
-                        // remplissons le modal
-                        $("#choix_partie_privee-input").val(numStr(mise, separateur));    
-                        $("#choix_partie_privee-mise").html(numStr(mise, separateur));    
-                        $("#choix_partie_privee-nombre_participants").html(nombre_participants);    
-                        $("#choix_partie_privee-gain").html(numStr(gain, separateur));    
-                        $("#choix_partie_privee-solde").html(numStr(solde, separateur));  
-                        
-                        // faisons des tours des passe passe cacher / afficher
-                        $('#code_partie_privee').val("");
-                        $('.rejoindre_partie_privee-resume').removeClass("d-none");
-                        $(".rejoindre_partie_privee-resume").hide();
-                        $('.choix_partie_privee-resume').removeClass("d-none");
-                        $(".choix_partie_privee-resume").show();
-
-                        if(difference_solde_mise >= 0){
-                            $(".choix_partie_privee-solde-bon").show();
-                            $(".choix_partie_privee-solde-mauvais").hide();
-                        }  
-                        else{
-                            $(".choix_partie_privee-solde-bon").hide();
-                            $(".choix_partie_privee-solde-mauvais").show();
-                            //$('#recharge-input').attr('data-difference_solde_mise', Math.abs(difference_solde_mise));
-                            //$('#recharge-input').attr('data-minimum_depot', minimum_depot);
-                            //$("#recharge-input").val(multipleSuperieur(Math.abs(difference_solde_mise), minimum_depot));  
-                            $('#recharge-input').remove();
-                            $('#recharge-input-container').append('<input id="recharge-input" type="text" class="money_field" value ="' + Math.abs(difference_solde_mise) + '" data-difference_solde_mise="' + Math.abs(difference_solde_mise) + '" data-minimum_depot="' + minimum_depot + '">');
-                            applyMoneyFieldMask();
-                        }
-                    }
-                    else{
-                        $(".choix_partie_privee-resume").hide();
-                    }
-                    */
-
-                });
-
-                // box rechargement 
-                $(document).on("change keyup", "#recharge-input", function(e) {
-                    // alert("here");
-                    // console.log($(this)); // Utilisation correcte de $(this) pour faire référence à l'élément cliqué
-                    valeur_input_recharge = Number(String($("#recharge-input").val()).replace(/\s/g, ''));
-                    let difference_solde_mise = Number(String($("#recharge-input").data('difference_solde_mise')).replace(/\s/g, ''));
-                    let minimum_depot = parseInt(String($("#recharge-input").data('minimum_depot')).replace(/\s/g, ''));
-                    let base_url_recharge = $("#recharge-input-url").val();
-
-                    $("#recharge-button").attr("href", base_url_recharge.replace("complement_url_recharge", String($("#recharge-input").val()).replace(/\s/g, '')));
-                    $("#recharge-button").show();
-
-                    // remplissons le modal
-                    if(valeur_input_recharge >= difference_solde_mise){
-                        let check = multipleSuperieur(valeur_input_recharge, minimum_depot);
-                        if(valeur_input_recharge != check){
-                            if(e.handleObj.type == "change"){
-                                $("#recharge-input").val(check);
-                                $("#recharge-button").attr("href", base_url_recharge.replace("complement_url_recharge", String($("#recharge-input").val()).replace(/\s/g, '')));
-                            }
-                            else{
-                                $("#recharge-button").attr("href", "javascript:void(0)");
-                                $("#recharge-button").hide();
-                            }
-                        }
-                        else{
-                            $("#recharge-button").attr("href", base_url_recharge.replace("complement_url_recharge", String($("#recharge-input").val()).replace(/\s/g, '')));
-                            $("#recharge-button").show();
-                        }
-                    }
-                    else{
-                        if(e.handleObj.type == "change"){
-                            $("#recharge-input").val(multipleSuperieur(difference_solde_mise, minimum_depot));
-                        }
-                        else{
-                            $("#recharge-button").attr("href", "javascript:void(0)");
-                            $("#recharge-button").hide();
-                        }
-                    }
-                });
-
-                // partie privee selectionnee
-                {% if rejoindre_partie_code %}
-                    $("button[class='login privateChoice']").trigger("click");
-                    //$("#code_partie_privee").val({{rejoindre_partie_code}});
-                    $("#code_partie_privee").trigger("keyup");
-                    $("#rejoindre_partie_privee-btn-rejoindre").trigger("click");
-                {% endif %}
-
-                // partie public selectionnee
-                {% if public_partie_code %}
-                    $('a.jeu-action[data-partie="{{public_partie_code}}"]')[0].click();
-                {% endif %}
-
-            });
-
-        </script>
     {% endblock %}

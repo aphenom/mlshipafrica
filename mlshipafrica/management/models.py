@@ -10,6 +10,10 @@ from mlshipafrica.utils import CodeGenerator
 
 from mlshipafrica.enums import StatutTraitement, STATUT_TRAITEMENT_COULEURS
 
+from django.db.models.signals import post_save, m2m_changed
+from django.dispatch import receiver
+from phonenumber_field.modelfields import PhoneNumberField
+
 # Create your models here.
 class MyModelAbstract(models.Model):
     '''Champs communs aux modèles'''
@@ -52,13 +56,13 @@ class Vendeur(MyModelAbstract):
 
     nom = models.CharField("Nom", max_length=100, null=True, blank=True)
     adresse = models.CharField("Adresse", max_length=255, null=True, blank=True)
-    logo = models.ImageField(upload_to='uploaded_media/management/vendeur_logos')
+    logo = models.ImageField(upload_to='uploaded_media/management/vendeur_logos', null=True, blank=True)
     nom_contact = models.CharField("Nom contact", max_length=100, null=True, blank=True)
     prenom_contact = models.CharField("Prénom(s) contact", max_length=255, null=True, blank=True)
     fonction_contact = models.CharField("Fonction contact", max_length=255, null=True, blank=True)
-    numero_contact = models.CharField("Numéro contact", max_length=100, null=True, blank=True)
+    numero_contact = PhoneNumberField("Numéro contact", null=True, blank=True)
     email_contact = models.CharField("Email contact", max_length=100, null=True, blank=True)
-    numero_sms = models.CharField("Numéro notification sms", max_length=100, null=True, blank=True)
+    numero_sms = PhoneNumberField("Numéro notification sms", null=True, blank=True)
     email_notification = models.CharField("Email notification", max_length=100, null=True, blank=True)
     etat_approbation = models.BooleanField('Etat approbation', default=False)
     approbation_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='approbation_vendeurs', related_query_name="approbation_vendeur", verbose_name = "approuvé par")
@@ -73,6 +77,22 @@ class Vendeur(MyModelAbstract):
         verbose_name = 'Vendeur'
         verbose_name_plural = 'Vendeurs'      
         db_table_comment = "Les Vendeurs pour lesquels il faut gérer la livraison"
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''                      
+        if self.code and self.user.username != self.code:
+            self.user.username = self.code
+        if self.nom and self.user.last_name != self.nom:
+            self.user.last_name = self.nom
+        self.user.save()
+        return super(Vendeur, self).save(*args, **kwargs)        
+
+
+@receiver(post_save, sender=User)
+def save_user_username(sender, instance, **kwargs):
+    if not instance.username:
+        instance.username = instance.email
+        instance.save()
 
 
 """ Parametrage des tarifs selon les critères souhaités """
@@ -108,6 +128,7 @@ class Tarification(MyModelAbstract):
 class Article(MyModelAbstract):
 
     code_tracking = models.CharField('Code tracking', max_length=25, null=True, blank=True, db_comment="Code unique auprès du prestatire du colis permettant de le suivre")
+    
     valeur = models.DecimalField('Valeur', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     montant_frais = models.DecimalField('Montant frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     is_option_recuperation = models.BooleanField('état option recuperation du colis', default=False, db_comment="Possibilité ou non de récuperer le colis directement chez le vendeur")
@@ -117,6 +138,11 @@ class Article(MyModelAbstract):
     cout_option_encaissement = models.DecimalField('cout fixe option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis (= self+%valeur)")
     taux_option_encaissement = models.DecimalField('taux option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option d'encaissement (= %valeur)")
     montant_total_frais = models.DecimalField('Montant total frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout total des frais associé au colis (=montant_frais+cout_option_recuperation+cout_option_encaissement)")
+
+    nom_destinataire = models.CharField("Nom destinataire", max_length=100, null=True, blank=True)
+    nom_destinataire = models.CharField("Prénom(s) destinataire", max_length=255, null=True, blank=True)
+    numero_principal_destinataire = PhoneNumberField("Numéro principal destinataire", null=True, blank=True)
+    numero_secondaire_destinataire = PhoneNumberField("Numéro secondaire destinataire", null=True, blank=True)
 
     statut_traitement = models.CharField(max_length=25, choices=StatutTraitement.choices,default=StatutTraitement.BROUILLON, null=True, blank=True)
     etat_encaissement = models.BooleanField('état encaissement client', default=False)

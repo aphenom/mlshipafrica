@@ -18,7 +18,7 @@ class Command(BaseCommand):
         # Ajouter des utilisateurs
         self.stdout.write("Création des données de Core...")
         
-        
+
         """License"""
         license = License()
         license.save()
@@ -49,8 +49,8 @@ class Command(BaseCommand):
 
         """PartenaireLogistique"""
         partenaireLogistiques = [
-            {"nom": "Logistique SA", "email": "contact@logistiquesa.com", "contact":"0101020304", "adresse":"Abidjan Yopougon"},
-            {"nom": "3000 Logistics", "email": "contact@3000logistics.com", "contact":"0101020304", "adresse":"Abidjan Cocody"},
+            {"nom": "Logistique SA", "email": "contact@logistiquesa.com", "contact":"+2250101020304", "adresse":"Abidjan Yopougon"},
+            {"nom": "3000 Logistics", "email": "contact@3000logistics.com", "contact":"+2250101020304", "adresse":"Abidjan Cocody"},
         ]
         for partenaireLogistique in partenaireLogistiques:
             partenaire_logistique = PartenaireLogistique()

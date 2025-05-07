@@ -1,0 +1,181 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}Ludo-Round{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Profil</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Edition</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row row-sm">
+					<!-- Col -->
+					<div class="col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Informations Vendeur</h3>
+							</div>
+							<form class="form-horizontal" method="POST" enctype="multipart/form-data" >
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.nom.label}} <span class="text-danger">*</span></label>
+											</div>
+											<div class="col-md-9">
+												{{ form.nom }}
+                                                <div class="text-danger">
+                                                    {{ form.nom.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.adresse.label}}</label>
+											</div>
+											<div class="col-md-9">
+												{{ form.adresse }}
+                                                <div class="text-danger">
+                                                    {{ form.adresse.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.logo.label}}</label>
+											</div>
+											<div class="col-md-9">
+												{{ form.logo }}
+                                                <div class="text-danger">
+                                                    {{ form.logo.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="mb-4 main-content-label">Personne à contacter</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.nom_contact.label}}</label>
+											</div>
+											<div class="col-md-9">
+												{{ form.nom_contact }}
+                                                <div class="text-danger">
+                                                    {{ form.nom_contact.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.prenom_contact.label}}</label>
+											</div>
+											<div class="col-md-9">
+												{{ form.prenom_contact }}
+                                                <div class="text-danger">
+                                                    {{ form.prenom_contact.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.fonction_contact.label}}</label>
+											</div>
+											<div class="col-md-9">
+												{{ form.fonction_contact }}
+                                                <div class="text-danger">
+                                                    {{ form.fonction_contact.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.numero_contact.label}} <span class="text-danger">*</span></label>
+											</div>
+											<div class="col-md-9">
+												{{ form.numero_contact }}
+                                                <div class="text-danger">
+                                                    {{ form.numero_contact.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="mb-4 main-content-label">Notification</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.numero_sms.label}} <span class="text-danger">*</span></label>
+											</div>
+											<div class="col-md-9">
+												{{ form.numero_sms }}
+                                                <div class="text-danger">
+                                                    {{ form.numero_sms.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
+												<label class="form-label">{{form.email_notification.label}} <span class="text-danger">*</span></label>
+											</div>
+											<div class="col-md-9">
+												{{ form.email_notification }}
+                                                <div class="text-danger">
+                                                    {{ form.email_notification.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="clearfix"></div>
+									<div class="mt-3">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer">
+									<button type="submit" class="btn-lg btn-primary waves-effect waves-light">Mettre à jour
+										Profil</button>
+								</div>
+							</form>
+
+						</div>
+					</div>
+					<!-- /Col -->
+				</div>
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+    {% endblock %}

@@ -6,6 +6,8 @@ from django_currentuser.middleware import (
 from tinymce.models import HTMLField
 
 from mlshipafrica.utils import CodeGenerator
+from phonenumber_field.modelfields import PhoneNumberField
+
 
 # Create your models here.
 class MyModelAbstract(models.Model):
@@ -135,7 +137,7 @@ class PartenaireLogistique(MyModelAbstract):
 
     nom = models.CharField('nom', max_length=100)
     email = models.EmailField("email", max_length=100, null=True, blank=True)
-    contact = models.CharField("contact", max_length=100, null=True, blank=True)
+    contact = PhoneNumberField("contact", max_length=100, null=True, blank=True)
     adresse = models.CharField("adresse", max_length=100, null=True, blank=True)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_partenairelogistiques', related_query_name="license_partenairelogistique", verbose_name = "license")
 
