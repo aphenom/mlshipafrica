@@ -1,0 +1,9 @@
+{% extends "account/email/base_message.txt" %}
+{% load account %}
+{% load i18n %}
+
+{% block content %}{% autoescape off %}{% user_display user as user_display %}{% blocktranslate with site_name=current_site.name site_domain=current_site.domain %}Vous recevez cet e-mail car un utilisateur a fourni votre adresse e-mail pour créer un compte sur {{ site_domain }}.{% endblocktranslate %}
+
+{% if code %}{% blocktranslate %}Votre code de vérification d'adresse e-mail est indiqué ci-dessous. Veuillez le saisir dans la fenêtre de votre navigateur.{% endblocktranslate %}
+
+{{ code }}{% else %}{% blocktranslate %}Pour confirmer que c'est bien vous et que cela est correct, accédez à {{ activate_url }}{% endblocktranslate %}{% endif %}{% endautoescape %}{% endblock content %}

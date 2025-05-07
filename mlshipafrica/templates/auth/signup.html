@@ -1,0 +1,48 @@
+{% extends "base_front.html" %}
+
+<!-- titre -->
+{% block title %}Ludo-Round{% endblock %}
+
+<!-- meta -->
+{% block meta-description %}"Gagnez de l'argent en interagissant efficacement avec du contenu publicitaire de qualité sur Benepub. Inscrivez-vous dès maintenant pour profiter de nos campagnes publicitaires efficaces !"{% endblock %}
+
+{% block meta-og-title %}"Ludo-Round"{% endblock %}
+{% block meta-og-url %}"{{ request.scheme }}://{{ request.META.HTTP_HOST }}"{% endblock %}
+{% block meta-og-image %} "https://www.benepub.com{{ costum_parallax }}" {% endblock %}
+{% block meta-og-description %} "Gagnez de l'argent en interagissant efficacement avec du contenu publicitaire de qualité sur Benepub. Inscrivez-vous dès maintenant pour profiter de nos campagnes publicitaires efficaces !"{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load socialaccount %}
+{% load humanize %}
+<!-- MainContent -->
+
+    {% block tournaments %}
+    <section class="tournaments">
+        <div class="overlay pt-120 pb-120">
+            <div class="container cus-mar">
+                <div class="row justify-content-center">
+                    <div class="col-lg-10">
+                        <div class="lottery-content">
+                            <div class="section-text text-center">
+                                <h5 class="sub-title">Rejoins la communauté Ludo-Round</h5>
+                                <h2 class="title">Inscription</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="single-box">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="cmn-btn">S'inscrire</button>
+                    </form>
+                </div>
+
+
+            </div>
+        </div>
+    </section>
+    {% endblock %}
