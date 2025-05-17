@@ -15,6 +15,10 @@
 
     {% block content %}
 
+		{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
+
+			{% if vendeur.etat_approbation is True %}
+
 				<!--row-->
 				<div class="row">
 					<div class="col-xl-3 col-md-12">
@@ -265,6 +269,29 @@
 					</div>
 				</div>
 				<!--row-->
+			{% else %}
+			huiuuuuuuuuuuuuuu
+				<div class="row">
+					<div class="col-md-3">
+						<label class="form-label">{{form.logo.label}}</label>
+					</div>
+					<div class="col-md-6">
+						<div class="text-wrap">
+							<div class="example">
+								Merci pour votre enregistrement, votre profil est attente d'approbation, vous serez contacté par l'équipe de ML SHIP Africa
+								<div class="spinner-border" role="status">
+									<span class="sr-only">Loading...</span>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<label class="form-label">{{form.logo.label}}</label>
+					</div>
+				</div>
+			{% endif %}
+		
+		{% endif %}
 
 				<!--row-->
 				<!--

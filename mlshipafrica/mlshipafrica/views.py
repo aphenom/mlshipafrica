@@ -41,21 +41,25 @@ from management.models import Vendeur
 # index de la plateforme
 def index(request):
     user = request.user
+    # dd(user)
     if user.is_authenticated:
-        if user.is_staff == True:
+        if user.is_staff is True:
             user_is_staff = True
         else:
             user_is_staff = False
                 
-        if user_is_staff == False:
+        if user_is_staff is False:
             vendeur_pk = None
             try:
                 vendeur = Vendeur.objects.get(user=request.user)
                 vendeur_pk = vendeur.pk
             except Vendeur.DoesNotExist:
                 member_pk = None
+                vendeur = None
+                return redirect(reverse('management:management_vendeur_edit_profil'))
+
     else:
-        redirect(reverse('account_login'))
+        return redirect(reverse('account_login'))
     
     return render(request, 'dashboard.html', locals())
 

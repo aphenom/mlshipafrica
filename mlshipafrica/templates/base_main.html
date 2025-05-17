@@ -584,31 +584,31 @@
 									-->
 									<li class="dropdown main-profile-menu nav nav-item nav-link">
 										<a class="profile-user d-flex" href=""><img alt=""
-												src="{% static 'assets/img/faces/9.jpg' %}"></a>
+												src="{{ vendeur.logo.url }}"></a>
 										<div class="dropdown-menu">
 											<div class="main-header-profile bg-primary border-bottom p-3">
 												<div class="d-flex wd-100p">
 													<div class="main-img-user">
-														<img alt="" src="{% static 'assets/img/faces/9.jpg' %}" class="">
+														<img alt="" src="{{ vendeur.logo.url }}" class="">
 													</div>
 													<div class="ms-3 my-auto text-white">
-														<h6>Petey Cruiser</h6>
-														<span>Premium Member</span>
+														<h6>{{ vendeur.nom_store }}</h6>
+														<span>{{ vendeur.nom_entreprise|default_if_none:"" }}</span>
 													</div>
 												</div>
 											</div>
-											<a class="dropdown-item" href="profile.html"><i
+											<a class="dropdown-item d-none" href="profile.html"><i
 													class="bx bx-user-circle"></i>Profile</a>
-											<a class="dropdown-item" href="editprofile.html"><i class="bx bx-cog"></i>
+											<a class="dropdown-item d-none" href="editprofile.html"><i class="bx bx-cog"></i>
 												Edit Profile</a>
-											<a class="dropdown-item" href="mail.html"><i
+											<a class="dropdown-item d-none" href="mail.html"><i
 													class="bx bxs-inbox"></i>Inbox</a>
-											<a class="dropdown-item" href="chat.html"><i
+											<a class="dropdown-item d-none" href="chat.html"><i
 													class="bx bx-envelope"></i>Messages</a>
-											<a class="dropdown-item" href="settings.html"><i
+											<a class="dropdown-item d-none" href="settings.html"><i
 													class="bx bx-slider-alt"></i> Account Settings</a>
-											<a class="dropdown-item" href="signin.html"><i class="bx bx-log-out"></i>
-												Sign Out</a>
+											<a class="dropdown-item" href="{% url 'account_logout' %}"><i class="bx bx-log-out"></i>
+												Déconnexion</a>
 										</div>
 									</li>
 									<!--
@@ -653,10 +653,11 @@
 						<ul class="side-menu">
 							
 							<li class="slide">
-								<a class="side-menu__item" href="_dashboard.html"><i
+								<a class="side-menu__item" href="{% url 'index' %}"><i
 										class="bx bx-desktop side-menu__icon"></i><span
 										class="side-menu__label">Tableau de bord</span></a>
 							</li>
+							{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
 							<li class="slide">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -696,8 +697,9 @@
 										class="bx bx-headphone side-menu__icon"></i><span
 										class="side-menu__label">Support</span></a>
 							</li>
+							{% endif %}
 							<li class="slide">
-								<a class="side-menu__item" href="#_login.html"><i
+								<a class="side-menu__item" href="{% url 'account_logout' %}"><i
 										class="bx bx-log-out side-menu__icon"></i><span
 										class="side-menu__label">Déconnexion</span></a>
 							</li>

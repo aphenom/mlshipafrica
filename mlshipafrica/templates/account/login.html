@@ -1,4 +1,4 @@
-{% extends "base_log.html" %}
+{% extends "account/base_entrance.html" %}
 {% load i18n %}
 {% load allauth account %}
 {% load static %}
@@ -6,100 +6,69 @@
 {% block head_title %}
     {% trans "Sign In" %}
 {% endblock head_title %}
+
 {% block content %}
-			<div class="row no-gutter">
-				<!-- The image half -->
-				<div class="col-md-6 col-lg-6 col-xl-7 d-none d-md-flex">
-					<div class="row wd-100p mx-auto text-center">
-						<div class="col-md-12 col-lg-12 col-xl-12 my-auto mx-auto wd-100p">
-							<img src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}"
-								class="my-auto ht-xl-80p wd-md-100p wd-xl-80p mx-auto" alt="logo">
-						</div>
-					</div>
-				</div>
-				<!-- The content half -->
-				<div class="col-md-6 col-lg-6 col-xl-5 bg-white">
-					<div class="login d-flex align-items-center py-2">
-						<!-- Demo content-->
-						<div class="container p-0">
-							<div class="row">
-								<div class="col-md-10 col-lg-10 col-xl-9 mx-auto">
-									<div class="card-sigin">
-										<div class="mb-5 d-flex">
-											<a href="{% url 'index' %}"><img src="{% static 'assets/img/brand/favicon.png' %}"
-													class="sign-favicon-a ht-40" alt="logo">
-												<img src="{% static 'assets/img/brand/favicon.png' %}"
-													class="sign-favicon-b ht-40" alt="logo">
-											</a>
-											<h1 class="main-logo1 ms-1 me-0 my-auto tx-28">ML SHIP AFRICA</h1>
-										</div>
-										<div class="card-sigin">
-											<div class="main-signup-header">
-												<h2>Bienvenue !</h2>
-												<h5 class="fw-semibold mb-4">Veuillez vous connecter pour continuer.</h5>
-												
-                                                {% if not SOCIALACCOUNT_ONLY %}
-                                                    {% setvar link %}
-                                                        <a class="text-bold" href="{% url 'account_signup' %}"><strong><u>
-                                                        {% endsetvar %}
-                                                    {% setvar end_link %}
-                                                        </u></strong></a>
-                                                    {% endsetvar %}
-                                                    {% element p %}
-                                                        <span class="text-justify">{% blocktranslate %}If you have not created an account yet, then please {{ link }}sign up{{ end_link }} first.{% endblocktranslate %}</span><hr>
-                                                    {% endelement %}
-                                                    {% url 'account_login' as login_url %}
-                                                {% endif %}
+<div class="card-sigin">
+    <div class="main-signup-header">
+        <h2>Connexion</h2>
+        <h5 class="fw-semibold mb-4">Veuillez vous connecter pour continuer.</h5>
+        
+        {% if not SOCIALACCOUNT_ONLY %}
+            {% setvar link %}
+                <a class="text-bold" href="{% url 'account_signup' %}"><strong><u>
+                {% endsetvar %}
+            {% setvar end_link %}
+                </u></strong></a>
+            {% endsetvar %}
+            {% element p %}
+                <span class="text-justify">{% blocktranslate %}If you have not created an account yet, then please {{ link }}sign up{{ end_link }} first.{% endblocktranslate %}</span><hr>
+            {% endelement %}
+            {% url 'account_login' as login_url %}
+        {% endif %}
 
-                                                {% if form.errors and form.non_field_errors %}
-                                                    <div class="alert alert-danger">
-                                                        {{ form.non_field_errors }}
-                                                    </div>
-                                                {% endif %}
+        {% if form.errors and form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
 
-                                                <form method="post" action="{% url 'account_login' %}" novalidate>
-                                                    {% csrf_token %}
-                                                    {{ redirect_field }}
+        <form method="post" action="{% url 'account_login' %}" novalidate>
+            {% csrf_token %}
+            {{ redirect_field }}
 
-                                                    <div class="form-group">
-                                                        <label for="id_login" class="form-label">Email</label>
-                                                        <input type="email" name="login" class="form-control {% if form.login.errors %}is-invalid{% endif %}" id="id_login" placeholder="{% trans 'Entrez votre email' %}" value="{{ form.login.value|default_if_none:'' }}" required>
-                                                        {% if form.errors and form.login.errors %}
-                                                            <div class="alert alert-danger">
-                                                                {{ form.login.errors }}
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
+            <div class="form-group">
+                <label for="id_login" class="form-label">Email</label>
+                <input type="email" name="login" class="form-control {% if form.login.errors %}is-invalid{% endif %}" id="id_login" placeholder="{% trans 'Entrez votre email' %}" value="{{ form.login.value|default_if_none:'' }}" required>
+                {% if form.errors and form.login.errors %}
+                    <div class="alert alert-danger">
+                        {{ form.login.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-                                                    <div class="form-group">
-                                                        <label for="id_password" class="form-label">{% trans "Password" %}</label>
-                                                        <input type="password" name="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}" id="id_password" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
-                                                        {% if form.errors and form.password.errors %}
-                                                            <div class="alert alert-danger">
-                                                                {{ form.password.errors }}
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
+            <div class="form-group">
+                <label for="id_password" class="form-label">{% trans "Password" %}</label>
+                <input type="password" name="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}" id="id_password" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
+                {% if form.errors and form.password.errors %}
+                    <div class="alert alert-danger">
+                        {{ form.password.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-                                                        <button type="submit" class="btn btn-main-primary btn-block">
-                                                            {% trans "Sign In" %}
-                                                        </button>
-                                                </form>
+                <button type="submit" class="btn btn-main-primary btn-block">
+                    {% trans "Sign In" %}
+                </button>
+        </form>
 
-												<div class="main-signin-footer mt-5">
-													<p><a href="{% url 'account_reset_password' %}">Mot de passe oublié ?</a></p>
-													<p>Vous n'avez pas de compte ? <a href="{% url 'account_signup' %}">Inscrivez-vous ici</a></p>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div><!-- End -->
-					</div>
-				</div><!-- End -->
-			</div>
+        <div class="main-signin-footer mt-5">
+            <p><a href="{% url 'account_reset_password' %}">Mot de passe oublié ?</a></p>
+            <p>Vous n'avez pas de compte ? <a href="{% url 'account_signup' %}">Inscrivez-vous ici</a></p>
+        </div>
+    </div>
+</div>
 {% endblock content %}
+
 {% block extra_body %}
     {{ block.super }}
     {% if PASSKEY_LOGIN_ENABLED %}

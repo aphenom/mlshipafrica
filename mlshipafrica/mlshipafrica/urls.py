@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import index #annuler, annuler_participation, api_get_partie_privee_via_by_code, cgu, check_participation_et_partie, connect_with_state, creer_partie_privee, facebook_login_with_state, faq, index, index_partie, login_demo, mysignup, participer_partie, privacy, register_device, api_update_room_info
 #from .cron import cron_transfert_cinetpay
+from django.conf.urls.static import static
+from django.conf import settings
 
 
 urlpatterns = [
@@ -36,4 +38,4 @@ urlpatterns = [
 
     # path('cron/cron_transfert_cinetpay/', cron_transfert_cinetpay, name='cron_transfert_cinetpay'),
 
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

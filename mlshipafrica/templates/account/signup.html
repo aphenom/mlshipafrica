@@ -1,4 +1,4 @@
-{% extends "base_log.html" %}
+{% extends "account/base_entrance.html" %}
 {% load i18n %}
 {% load allauth account %}
 {% load static %}
@@ -6,106 +6,74 @@
 {% block head_title %}
     {% trans "Sign In" %}
 {% endblock head_title %}
+
 {% block content %}
-			<div class="row no-gutter">
-				<!-- The image half -->
-				<div class="col-md-6 col-lg-6 col-xl-7 d-none d-md-flex">
-					<div class="row wd-100p mx-auto text-center">
-						<div class="col-md-12 col-lg-12 col-xl-12 my-auto mx-auto wd-100p">
-							<img src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}"
-								class="my-auto ht-xl-80p wd-md-100p wd-xl-80p mx-auto" alt="logo">
-						</div>
-					</div>
-				</div>
-				<!-- The content half -->
-				<div class="col-md-6 col-lg-6 col-xl-5 bg-white">
-					<div class="login d-flex align-items-center py-2">
-						<!-- Demo content-->
-						<div class="container p-0">
-							<div class="row">
-								<div class="col-md-10 col-lg-10 col-xl-9 mx-auto">
-									<div class="card-sigin">
-										<div class="mb-5 d-flex">
-											<a href="{% url 'index' %}"><img src="{% static 'assets/img/brand/favicon.png' %}"
-													class="sign-favicon-a ht-40" alt="logo">
-												<img src="{% static 'assets/img/brand/favicon.png' %}"
-													class="sign-favicon-b ht-40" alt="logo">
-											</a>
-											<h1 class="main-logo1 ms-1 me-0 my-auto tx-28">ML SHIP AFRICA</h1>
-										</div>
-										<div class="card-sigin">
-											<div class="main-signup-header">
-												<h2>Bienvenue !</h2>
-												<h5 class="fw-semibold mb-4">Veuillez créer un compte pour continuer.</h5>
-												
-                                                {% if not SOCIALACCOUNT_ONLY %}
-                                                    {% setvar link %}
-                                                        <a class="text-bold" href="{% url 'account_login' %}"><strong><u>
-                                                        {% endsetvar %}
-                                                    {% setvar end_link %}
-                                                        </u></strong></a>
-                                                    {% endsetvar %}
-                                                    {% element p %}
-                                                        <span class="text-justify">{% blocktranslate %}Already have an account? Then please {{ link }}sign in{{ end_link }}.{% endblocktranslate %}</span><hr>
-                                                    {% endelement %}
-                                                    {% url 'account_signup' as signup_url %}
-                                                {% endif %}
+    <div class="card-sigin">
+        <div class="main-signup-header">
+            <h2>Inscription</h2>
+            <h5 class="fw-semibold mb-4">Veuillez créer un compte pour continuer.</h5>
+            
+            {% if not SOCIALACCOUNT_ONLY %}
+                {% setvar link %}
+                    <a class="text-bold" href="{% url 'account_login' %}"><strong><u>
+                    {% endsetvar %}
+                {% setvar end_link %}
+                    </u></strong></a>
+                {% endsetvar %}
+                {% element p %}
+                    <span class="text-justify">{% blocktranslate %}Already have an account? Then please {{ link }}sign in{{ end_link }}.{% endblocktranslate %}</span><hr>
+                {% endelement %}
+                {% url 'account_signup' as signup_url %}
+            {% endif %}
 
-                                                {% if form.errors and form.non_field_errors %}
-                                                    <div class="alert alert-danger">
-                                                        {{ form.non_field_errors }}
-                                                    </div>
-                                                {% endif %}
+            {% if form.errors and form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
 
-                                                <form method="post" action="{% url 'account_signup' %}" novalidate>
-                                                    {% csrf_token %}
-                                                    {{ redirect_field }}
+            <form method="post" action="{% url 'account_signup' %}" novalidate>
+                {% csrf_token %}
+                {{ redirect_field }}
 
-                                                    <div class="form-group">
-                                                        <label for="id_login" class="form-label">Email</label>
-                                                        <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" id="id_email" placeholder="{% trans 'Entrez votre email' %}" value="{{ form.email.value|default_if_none:'' }}" required>
-                                                        {% if form.errors and form.non_field_errors %}
-                                                        <div class="alert alert-danger">
-                                                            {{ form.email.errors }}
-                                                        </div>
-                                                        {% endif %}
-                                                    </div>
+                <div class="form-group">
+                    <label for="id_login" class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" id="id_email" placeholder="{% trans 'Entrez votre email' %}" value="{{ form.email.value|default_if_none:'' }}" required>
+                    {% if form.errors and form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.email.errors }}
+                    </div>
+                    {% endif %}
+                </div>
 
-                                                    <div class="form-group">
-                                                        <label for="id_password" class="form-label">{% trans "Password" %}</label>
-                                                        <input type="password1" name="password1" class="form-control {% if form.password1.errors %}is-invalid{% endif %}" id="id_password1" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
-                                                        {% if form.errors and form.password1.errors %}
-                                                            <div class="alert alert-danger">
-                                                                {{ form.password1.errors }}
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
+                <div class="form-group">
+                    <label for="id_password" class="form-label">{% trans "Password" %}</label>
+                    <input type="password1" name="password1" class="form-control {% if form.password1.errors %}is-invalid{% endif %}" id="id_password1" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
+                    {% if form.errors and form.password1.errors %}
+                        <div class="alert alert-danger">
+                            {{ form.password1.errors }}
+                        </div>
+                    {% endif %}
+                </div>
 
-                                                    <div class="form-group">
-                                                        <label for="id_password" class="form-label">{% trans "Password" %}</label>
-                                                        <input type="password2" name="password2" class="form-control {% if form.password2.errors %}is-invalid{% endif %}" id="id_password2" placeholder="{% trans 'Confirmez votre mot de passe' %}" required>
-                                                        {% if form.errors and form.password2.errors %}
-                                                            <div class="alert alert-danger">
-                                                                {{ form.password2.errors }}
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
+                <div class="form-group">
+                    <label for="id_password" class="form-label">{% trans "Password" %}</label>
+                    <input type="password2" name="password2" class="form-control {% if form.password2.errors %}is-invalid{% endif %}" id="id_password2" placeholder="{% trans 'Confirmez votre mot de passe' %}" required>
+                    {% if form.errors and form.password2.errors %}
+                        <div class="alert alert-danger">
+                            {{ form.password2.errors }}
+                        </div>
+                    {% endif %}
+                </div>
 
-                                                    <button type="submit" class="btn btn-main-primary btn-block">
-                                                        {% trans "Sign Up" %}
-                                                    </button>
-                                                </form>
+                <button type="submit" class="btn btn-main-primary btn-block">
+                    {% trans "Sign Up" %}
+                </button>
+            </form>
 
-												<div class="main-signin-footer mt-5">
-													<p>Vous avez déjà compte ? <a href="{% url 'account_login' %}">Connectez-vous ici</a></p>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div><!-- End -->
-					</div>
-				</div><!-- End -->
-			</div>
+            <div class="main-signin-footer mt-5">
+                <p>Vous avez déjà compte ? <a href="{% url 'account_login' %}">Connectez-vous ici</a></p>
+            </div>
+        </div>
+    </div>
 {% endblock content %}

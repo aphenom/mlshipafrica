@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import StatutTraitement, STATUT_TRAITEMENT_COULEURS
+from mlshipafrica.enums import DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypeVendeurChoice
 
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -54,9 +54,13 @@ class MyModelAbstract(models.Model):
 """ Vendeur pour lequel on gere la livraison """
 class Vendeur(MyModelAbstract):
 
-    nom = models.CharField("Nom", max_length=100, null=True, blank=True)
+    nom_entreprise = models.CharField("Nom entreprise", max_length=100, null=True, blank=True)
+    immatriculation = models.CharField("RCCM / Numéro d'immatriculation", max_length=100, null=True, blank=True)
+    nom_gerant = models.CharField("Nom gerant", max_length=255, null=True, blank=True)
+    nom_store = models.CharField("Nom boutique / store", max_length=100)
+    email = models.CharField("Email", max_length=100, null=True, blank=True)
     adresse = models.CharField("Adresse", max_length=255, null=True, blank=True)
-    logo = models.ImageField(upload_to='uploaded_media/management/vendeur_logos', null=True, blank=True)
+    logo = models.ImageField("Logo", upload_to='uploaded_media/management/logos_vendeur/', null=True, blank=True)
     nom_contact = models.CharField("Nom contact", max_length=100, null=True, blank=True)
     prenom_contact = models.CharField("Prénom(s) contact", max_length=255, null=True, blank=True)
     fonction_contact = models.CharField("Fonction contact", max_length=255, null=True, blank=True)
@@ -68,10 +72,53 @@ class Vendeur(MyModelAbstract):
     approbation_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='approbation_vendeurs', related_query_name="approbation_vendeur", verbose_name = "approuvé par")
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='account_vendeur', verbose_name = "vendeur")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_vendeurs', related_query_name="license_vendeur", verbose_name = "license")
-    
+
+    type_vendeur = models.CharField("Type vendeur", max_length=25, choices=TypeVendeurChoice.choices, null=True, blank=True)
+
+    # Upload documents
+    cni = models.FileField("Carte Nationale d’Identité", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
+    permis = models.FileField("Permis de conduire", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
+    passeport = models.FileField("Passeport", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
+    dfe = models.FileField("Déclaration Fiscale d’Exercice (DFE)", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
+    rccm = models.FileField("RCCM", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
+
+    # Activité commerciale
+    duree_activite = models.CharField("Ancienneté", max_length=20, choices=DureeActiviteChoice, null=True, blank=True)
+
+    plateformes = models.JSONField("Plateformes utilisées", blank=True, null=True)
+    # plateformes_facebook = models.BooleanField("Facebook / Instagram", default=False)
+    # plateformes_whatsapp = models.BooleanField("WhatsApp", default=False)
+    # plateformes_ecommerce = models.BooleanField("Shopify / YouCan / Storeino", default=False)
+    plateformes_autre = models.CharField("Autres plateformes utilisées", max_length=100, null=True, blank=True)
+
+    type_produits_vendus = models.CharField("Type de produits vendus", max_length=255, null=True, blank=True)
+
+    # Produits à expédier
+    produits = models.JSONField("Produits à expédier", blank=True, null=True)
+    # produits_cosmetiques = models.BooleanField("Cosmétiques", default=False)
+    # produits_mode = models.BooleanField("Mode / Accessoires", default=False)
+    # produits_sante = models.BooleanField("Santé / Bien-être", default=False)
+    # produits_high_tech = models.BooleanField("High-tech", default=False)
+    # produits_maison = models.BooleanField("Maison / Cuisine", default=False)
+    produits_autre = models.CharField("Autre type de produit", max_length=100, null=True, blank=True)
+
+    # Nature colis
+    nature_colis = models.JSONField("Nature des colis", blank=True, null=True)
+    # nature_petit = models.BooleanField("Petit (moins de 2kg)", default=False)
+    # nature_moyen = models.BooleanField("Moyen (entre 3 - 5kg)", default=False)
+    # nature_gros = models.BooleanField("Gros (plus de 10kg)", default=False)
+    # nature_large = models.BooleanField("Large (plus de 50kg)", default=False)
+
+    # Fréquence et volume
+    frequence_envoi = models.CharField("Fréquence d’envoi", max_length=20, choices=FrequenceEnvoiChoice, null=True, blank=True)
+    nombre_colis_semaine = models.CharField("Nombre moyen de colis livré par semaine", max_length=20, choices=NombreColisSemaineChoice, null=True, blank=True)
+
+    # Paiement à la livraison (COD)
+    cod_actif = models.BooleanField("Souhaitez-vous activer le paiement à la livraison ?", default=False)
+    collecte_par_mlship = models.BooleanField("ML SHIP collecte et reverse l’argent ?", default=False)
 
     def __str__(self):
-        return '{}'.format(self.nom)
+        return '{}'.format(self.nom_store)
 
     class Meta:
         verbose_name = 'Vendeur'
@@ -82,12 +129,12 @@ class Vendeur(MyModelAbstract):
         ''' On save, update timestamps '''                      
         if self.code and self.user.username != self.code:
             self.user.username = self.code
-        if self.nom and self.user.last_name != self.nom:
-            self.user.last_name = self.nom
+        if self.nom_store and self.user.last_name != self.nom_store:
+            self.user.last_name = self.nom_store
         self.user.save()
         return super(Vendeur, self).save(*args, **kwargs)        
 
-
+    
 @receiver(post_save, sender=User)
 def save_user_username(sender, instance, **kwargs):
     if not instance.username:

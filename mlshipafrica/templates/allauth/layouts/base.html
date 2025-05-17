@@ -1,140 +1,181 @@
-{% load i18n %}
-<!doctype html>
+<!DOCTYPE html>
 {% load static %}
-<html lang="en">
+{% load humanize %}
+<html lang="fr">
 
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <title>{% block title %}Ludo-Round{% endblock %}</title>
+<head>
 
-        <!-- opengraph -->
-        <meta property="og:title" content={% block meta-og-title %} "Titre Benepub" {% endblock %}>
-        <meta property="og:type" content="website">
-        <meta property="og:url" content={% block meta-og-url %} "https://www.benepub.com{{ request.get_full_path }}" {% endblock %}>
-        <meta property="og:image" content={% block meta-og-image %} "https://www.benepub.com{{ costum_parallax }}" {% endblock %}>
-        <meta property="og:description" content={% block meta-og-description %} "Description page Benepub"{% endblock %}>
-        <meta property="og:video" content={% block meta-og-video %} "" {% endblock %}>
-        <meta property="og:locale" content="fr_FR">
-        <meta property="og:site_name" content="Balise META">
-        <!--  -->
+	<meta charset="UTF-8">
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=0'>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="Description" content={% block description %}"Plateforme de Livraison E-Commerce (Cash on Delivery - Paiement à la Livraison)"{% endblock %}>
+	<meta name="Author" content={% block author %}"Benepub"{% endblock %}>
+	<meta name="Keywords"
+		content={% block Keywords %}"admin dashboard, admin dashboard html css, Plateforme de Livraison E-Commerce, Cash on Delivery, Paiement à la Livraison, ML SHIP AFRICA"{% endblock %}>
+
+	<!-- Title -->
+	<title>{% block title %}ML SHIP AFRICA{% endblock %}</title>
+
+	<!-- Favicon -->
+	<link rel="icon" href="{% static 'assets/img/brand/favicon.png' %}" type="image/x-icon">
+
+	<!-- Icons css -->
+	<link href="{% static 'assets/css/icons.css' %}" rel="stylesheet">
+
+	<!-- Bootstrap css -->
+	<link id="style" href="{% static 'assets/plugins/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+
+	<!-- style css -->
+	<link href="{% static 'assets/css/style.css' %}" rel="stylesheet">
+	<link href="{% static 'assets/css/plugins.css' %}" rel="stylesheet">
+
+	<!--- Animations css-->
+	<link href="{% static 'assets/css/animate.css' %}" rel="stylesheet">
+
+</head>
+
+<body class="ltr error-page1 main-body bg-light text-dark error-3 login-img">
 
 
-        <link rel="shortcut icon" href="{% static 'front/images/fav.png' %}" type="image/x-icon">
-        <link rel="stylesheet" href="{% static 'front/css/bootstrap.min.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/fontawesome.min.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/jquery-ui.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/plugin/nice-select.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/plugin/magnific-popup.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/plugin/slick.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/ara-font.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/plugin/animate.css' %}">
-        <link rel="stylesheet" href="{% static 'front/css/style.css' %}">
-    </head>
+	<!-- Loader -->
+	<div id="global-loader">
+		<img src="{% static 'assets/img/loader.svg' %}" class="loader-img" alt="Loader">
+	</div>
+	<!-- /Loader -->
 
-    <body class="error-section">
-        <!-- start preloader -->
-        <div class="preloader" id="preloader"></div>
+	<!-- Page -->
+	<div class="page">
 
-        <section>
-            <div class="overlay pt-120 pb-120">
-                <div class="container">
-                    <div class="row justify-content-center align-items-center">
-                        <div class="col-lg-9">
-                            <div class="section-area pt-120 pb-120 text-center mb-50">
+		<div class="container-fluid">
+			<div class="row no-gutter">
+				<!-- The image half -->
+				<div class="col-md-6 col-lg-6 col-xl-7 d-none d-md-flex">
+					<div class="row wd-100p mx-auto text-center">
+						<div class="col-md-12 col-lg-12 col-xl-12 my-auto mx-auto wd-100p">
+							<img src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}"
+								class="my-auto ht-xl-80p wd-md-100p wd-xl-80p mx-auto" alt="logo">
+						</div>
+					</div>
+				</div>
+				<!-- The content half -->
+				<div class="col-md-6 col-lg-6 col-xl-5 bg-white">
+					<div class="login d-flex align-items-center py-2">
+						<!-- Demo content-->
+						<div class="container p-0">
+							<div class="row">
+								<div class="col-md-10 col-lg-10 col-xl-9 mx-auto">
+									<div class="card-sigin">
+										<div class="mb-5 d-flex">
+											<a href="{% url 'index' %}"><img src="{% static 'assets/img/brand/favicon.png' %}"
+													class="sign-favicon-a ht-40" alt="logo">
+												<img src="{% static 'assets/img/brand/favicon-light.png' %}"
+													class="sign-favicon-b ht-40" alt="logo">
+											</a>
+											<h1 class="main-logo1 ms-1 me-0 my-auto tx-28">ML SHIP AFRICA</h1>
+										</div>
+			                            {% block content %}
+										<div class="card-sigin">
+											<div class="main-signup-header">
+												<h2>Welcome back!</h2>
+												<h5 class="fw-semibold mb-4">Please sign in to continue.</h5>
+												<form>
+													<div class="form-group">
+														<label>Email</label> <input class="form-control"
+															placeholder="Enter your email" type="text">
+													</div>
+													<div class="form-group">
+														<label>Password</label> <input class="form-control"
+															placeholder="Enter your password" type="password">
+													</div>
+													<a href="index.html" class="btn btn-main-primary btn-block">Sign
+														In</a>
+													<div class="row row-xs">
+														<div class="col-sm-6">
+															<button class="btn btn-block"><i
+																	class="fa fa-facebook-f"></i> Signup with
+																Facebook</button>
+														</div>
+														<div class="col-sm-6 mg-t-10 mg-sm-t-0">
+															<button class="btn btn-info btn-block btn-b"><i
+																	class="fa fa-twitter"></i> Signup with
+																Twitter</button>
+														</div>
+													</div>
+												</form>
+												<div class="main-signin-footer mt-5">
+													<p><a href="forgot.html">Forgot password?</a></p>
+													<p>Don't have an account? <a href="signup.html">Create an
+															Account</a></p>
+												</div>
+											</div>
+										</div>
+			                            {% endblock %}
+									</div>
+								</div>
+							</div>
+						</div><!-- End -->
+					</div>
+				</div><!-- End -->
+			</div>
+		</div>
 
-                                {% block body %}
-   
-                                    <a href="{% url 'index' %}">
-                                        <div class="img-box mb-30">
-                                            <img src="{% static 'dashboard/images/logo.png' %}" alt="Image">
-                                        </div>
-                                    </a>
-                                    <h3 class="title"></h3>
-                                    {% if messages %}
-                                        <div class="mb-20">
-                                            <ul>
-                                                {% for message in messages %}<li class="text-h6"><mark><strong>{{ message }}</strong></mark></li>{% endfor %}
-                                            </ul>
-                                        </div>
-                                    {% endif %}
+	</div>
+	<!-- End Page -->
 
-                                    {% block content %}
-                                    {% endblock content %}
-                                {% endblock body %}
-                                {% block extra_body %}
-                                {% endblock extra_body %}
-                                
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+	<!-----------------------------SCRIPTS--------------------------->
+	{% block scripts %}
+	<!-- JQuery min js -->
+	<script src="{% static 'assets/plugins/jquery/jquery.min.js' %}"></script>
 
-    <script>
+	<!-- Bootstrap Bundle js -->
+	<script src="{% static 'assets/plugins/bootstrap/js/popper.min.js' %}"></script>
+	<script src="{% static 'assets/plugins/bootstrap/js/bootstrap.min.js' %}"></script>
+
+	<!-- Moment js -->
+	<script src="{% static 'assets/plugins/moment/moment.js' %}"></script>
+
+	<!-- Daterangepicker js-->
+	<script src="{% static 'assets/plugins/bootstrap-daterangepicker/daterangepicker.js' %}"></script>
+
+	<!-- P-scroll js -->
+	<script src="{% static 'assets/plugins/perfect-scrollbar/perfect-scrollbar.min.js' %}"></script>
+
+	<!-- eva-icons js -->
+	<script src="{% static 'assets/js/eva-icons.min.js' %}"></script>
+
+	<!--themecolor js-->
+	<script src="{% static 'assets/js/themecolor.js' %}"></script>
+
+	<!-- custom js -->
+	<script src="{% static 'assets/js/custom.js' %}"></script>
+
+	<!-- switcher-styles js -->
+	<script src="{% static 'assets/js/swither-styles.js' %}"></script>
+
+        <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Sélectionne tous les boutons de la page
-            var buttons = document.querySelectorAll("button");
-
+            var buttons = document.querySelectorAll('button');
             // Parcourt chaque bouton et ajoute la classe 'xxx'
             buttons.forEach(function(button) {
-                button.classList.add("cmn-btn");
+                console.log(button.getAttribute('type'));
+                button.classList.add("btn");
+                if(button.getAttribute('type')=="submit"){
+                    button.classList.add("btn-main-primary");
+                }
+                button.classList.add("btn-block");
             });
-
-            var h1Elements = document.querySelectorAll("h1");
-
-            // Parcourir chaque <h1> et le transformer en <h3>
-            h1Elements.forEach(function(h1) {
-                // Créer un nouvel élément <h3>
-                var h3 = document.createElement("h3");
-
-                // Copier le contenu de <h1> dans le nouveau <h3>
-                h3.innerHTML = h1.innerHTML;
-
-                // Ajouter la classe "title" à <h3>
-                h3.classList.add("title");
-
-                // Remplacer l'ancien <h1> par le nouveau <h3>
-                h1.parentNode.replaceChild(h3, h1);
+            // Sélectionne tous les input de la page
+            var inputs = document.querySelectorAll("input");
+            // Parcourt chaque input et ajoute la classe 'xxx'
+            inputs.forEach(function(input) {
+                input.classList.add("form-control");
             });
         });
     </script>
-    
+
     <style>
         /* Styles CSS pour personnaliser le bouton */
-        .login-container {
-            text-align: center;
-            margin-top: 50px;
-        }
-        
-        .facebook-login-button {
-            display: inline-block;
-            background-color: #3b5998;
-            color: white;
-            padding: 15px 30px;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: bold;
-            text-decoration: none;
-        }
-        
-        .facebook-login-button:hover {
-            background-color: #2d4373;
-        }
-
-        .facebook-logo {
-            height: 20px;
-            vertical-align: middle;
-            margin-right: 10px;
-        }
-
-        .cmn-btn {
-            background-color: transparent;
-        }
- 
         .error-section {
             background-size: auto;
         }
@@ -149,21 +190,8 @@
         }
     </style>
 
-    <!--==================================================================-->
-    {% block script %}
-    <script src="{% static 'front/js/jquery.min.js' %}"></script>
-    <script src="{% static 'front/js/jquery-ui.js' %}"></script>
-    <script src="{% static 'front/js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'front/js/fontawesome.js' %}"></script>
-    <script src="{% static 'front/js/plugin/slick.js' %}"></script>
-    <script src="{% static 'front/js/plugin/jquery.nice-select.min.js' %}"></script>
-    <script src="{% static 'front/js/plugin/counter.js"></script>
-    <script src="{% static 'front/js/plugin/jquery.downCount.js' %}"></script>
-    <script src="{% static 'front/js/plugin/waypoint.min.js' %}"></script>
-    <script src="{% static 'front/js/plugin/jquery.magnific-popup.min.js' %}"></script>
-    <script src="{% static 'front/js/plugin/wow.min.js' %}"></script>
-    <script src="{% static 'front/js/plugin/plugin.js' %}"></script>
-    <script src="{% static 'front/js/main.js' %}"></script>
-    {% endblock %}
-    </body>
+	{% endblock %}
+
+</body>
+
 </html>
