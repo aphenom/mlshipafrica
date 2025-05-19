@@ -584,16 +584,16 @@
 									-->
 									<li class="dropdown main-profile-menu nav nav-item nav-link">
 										<a class="profile-user d-flex" href=""><img alt=""
-												src="{{ vendeur.logo.url }}"></a>
+												src="{% if vendeur and vendeur.logo %}{{ vendeur.logo.url }}{% endif %}"></a>
 										<div class="dropdown-menu">
 											<div class="main-header-profile bg-primary border-bottom p-3">
 												<div class="d-flex wd-100p">
 													<div class="main-img-user">
-														<img alt="" src="{{ vendeur.logo.url }}" class="">
+														<img alt="" src="{% if vendeur and vendeur.logo %}{{ vendeur.logo.url }}{% endif %}" class="">
 													</div>
 													<div class="ms-3 my-auto text-white">
-														<h6>{{ vendeur.nom_store }}</h6>
-														<span>{{ vendeur.nom_entreprise|default_if_none:"" }}</span>
+														<h6>{% if vendeur %}{{ vendeur.nom_store }}{% endif %}</h6>
+														<span>{% if vendeur %}{{ vendeur.nom_entreprise|default_if_none:"" }}{% endif %}</span>
 													</div>
 												</div>
 											</div>
