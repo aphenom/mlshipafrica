@@ -175,8 +175,8 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'static'),
 )
 if config('ENVIRONMENT', 'DEV') == 'PROD':
-    STATIC_ROOT = config('STATIC_ROOT', '/var/www/clients/client0/xxx/web/static/')
-    MEDIA_ROOT = config('MEDIA_ROOT', '/var/www/clients/client0/xxx/web/media/')
+    STATIC_ROOT = config('STATIC_ROOT', '/var/www/clients/client0/web16/web/static/')
+    MEDIA_ROOT = config('MEDIA_ROOT', '/var/www/clients/client0/web16/web/media/')
 
 
 # Default primary key field type
