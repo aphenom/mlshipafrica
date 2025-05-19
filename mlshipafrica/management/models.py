@@ -83,7 +83,7 @@ class Vendeur(MyModelAbstract):
     rccm = models.FileField("RCCM", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
 
     # Activité commerciale
-    duree_activite = models.CharField("Ancienneté", max_length=20, choices=DureeActiviteChoice, null=True, blank=True)
+    duree_activite = models.CharField("Ancienneté", max_length=20, choices=DureeActiviteChoice.choices, null=True, blank=True)
 
     plateformes = models.JSONField("Plateformes utilisées", blank=True, null=True)
     # plateformes_facebook = models.BooleanField("Facebook / Instagram", default=False)
@@ -110,8 +110,8 @@ class Vendeur(MyModelAbstract):
     # nature_large = models.BooleanField("Large (plus de 50kg)", default=False)
 
     # Fréquence et volume
-    frequence_envoi = models.CharField("Fréquence d’envoi", max_length=20, choices=FrequenceEnvoiChoice, null=True, blank=True)
-    nombre_colis_semaine = models.CharField("Nombre moyen de colis livré par semaine", max_length=20, choices=NombreColisSemaineChoice, null=True, blank=True)
+    frequence_envoi = models.CharField("Fréquence d’envoi", max_length=20, choices=FrequenceEnvoiChoice.choices, null=True, blank=True)
+    nombre_colis_semaine = models.CharField("Nombre moyen de colis livré par semaine", max_length=20, choices=NombreColisSemaineChoice.choices, null=True, blank=True)
 
     # Paiement à la livraison (COD)
     cod_actif = models.BooleanField("Souhaitez-vous activer le paiement à la livraison ?", default=False)

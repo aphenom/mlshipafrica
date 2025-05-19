@@ -23,21 +23,21 @@ class VendeurForm(forms.ModelForm):
 
     plateformes = forms.MultipleChoiceField(
         label="Plateformes utilisées",
-        choices=PlateformeChoice,
+        choices=PlateformeChoice.choices,
         widget=CheckboxSelectMultiple(),
         required=True,
     )
     
     produits = forms.MultipleChoiceField(
         label="Type de produits à expédier",
-        choices=ProduitsChoice,
+        choices=ProduitsChoice.choices,
         widget=CheckboxSelectMultiple(),
         required=True,
     )
 
     nature_colis = forms.MultipleChoiceField(
         label="Nature moyenne des colis",
-        choices=NatureChoice,
+        choices=NatureChoice.choices,
         widget=CheckboxSelectMultiple(),
         required=True,
     )
@@ -87,28 +87,10 @@ class VendeurForm(forms.ModelForm):
             'dfe': FileInput(attrs={'placeholder':'La DFE de votre entreprise', 'class':'form-control'}),
             'rccm': FileInput(attrs={'placeholder':'Le RCCM de votre entreprise', 'class':'form-control'}),
             'duree_activite': Select(attrs={'placeholder':'Depuis combien de temps vendez-vous en ligne ?', 'class':'form-control', 'required':'required'}),
-            # 'plateformes_facebook': BooleanField(required=False),
-            # 'plateformes_whatsapp': BooleanField(required=False),
-            # 'plateformes_ecommerce': BooleanField(required=False),
             'plateformes_autre': TextInput(attrs={'placeholder':'Autres plateformes utilisés', 'class':'form-control'}),
             'type_produits_vendus': TextInput(attrs={'placeholder':'Décrivez les produits que vous vendez', 'class':'form-control', 'required':'required'}),
-            # 'produits_cosmetiques': BooleanField(required=False),
-            # 'produits_mode': BooleanField(required=False),
-            # 'produits_sante': BooleanField(required=False),
-            # 'produits_high_tech': BooleanField(required=False),
-            # 'produits_maison': BooleanField(required=False),
             'produits_autre': TextInput(attrs={'placeholder':'Autres produits vendus', 'class':'form-control'}),
-            # 'nature_petit': BooleanField(required=False),
-            # 'nature_moyen': BooleanField(required=False),
-            # 'nature_gros': BooleanField(required=False),
-            # 'nature_large': BooleanField(required=False),
             'frequence_envoi': Select(attrs={'placeholder':'Sélectionnez votre fréquence d’envoi', 'class':'form-control', 'required':'required'}),
             'nombre_colis_semaine': Select(attrs={'placeholder':'Sélectionnez le nombre moyen de colis livré par semaine', 'class':'form-control', 'required':'required'}),
-            # 'cod_actif': BooleanField(required=False),
-            # 'collecte_par_mlship': BooleanField(required=False),
-            # 'pays_residence': Select(attrs={'class':'form-control select2', 'data-select' : 'true'}),
-            # "contact": PhoneNumberPrefixWidget(
-            #     attrs={"class": "p2 col-md-6 col-12", "placeholder": "0000000000"},
-            # ),
         }
 
