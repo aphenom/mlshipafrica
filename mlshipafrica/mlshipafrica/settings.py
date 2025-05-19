@@ -33,9 +33,8 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = [
-    'ludo-round.com',  # Domaine principal
-    'www.ludo-round.com',  # Optionnel pour www
-    'gameplay.ludo-round.com',  # Sous-domaine pour le jeu
+    'mlshipcod.com',  # Domaine principal
+    'app.mlshipcod.com',  # Optionnel pour www
     'localhost',  # Pour les tests locaux
     '127.0.0.1',  # Pour les tests locaux
 ]
@@ -239,3 +238,8 @@ EMAIL_HOST_PASSWORD = "contactLR123*"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_USE_TLS = True
 EMAIL_HOST_NAME = "Noreply Ludo Round"
+
+# EMAIL_HOST = "smtp.office365.com"
+# EMAIL_HOST_USER = "support@mlshipcod.com"
+# EMAIL_HOST_PASSWORD = "MLSHIPCOD123"
+# EMAIL_HOST_NAME = "Support ML SHIP COD"
