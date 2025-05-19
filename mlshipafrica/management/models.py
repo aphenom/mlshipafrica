@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypeVendeurChoice
+from mlshipafrica.enums import DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypePieceIdentiteChoice, TypeVendeurChoice
 
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -87,11 +87,11 @@ class Vendeur(MyModelAbstract):
     email = models.CharField("Email", max_length=100, null=True, blank=True)
     adresse = models.CharField("Adresse", max_length=255, null=True, blank=True)
     logo = models.ImageField("Logo", upload_to='uploaded_media/management/logos_vendeur/', null=True, blank=True)
-    nom_contact = models.CharField("Nom contact", max_length=100, null=True, blank=True)
-    prenom_contact = models.CharField("Prénom(s) contact", max_length=255, null=True, blank=True)
-    fonction_contact = models.CharField("Fonction contact", max_length=255, null=True, blank=True)
-    numero_contact = PhoneNumberField("Numéro contact", null=True, blank=True)
-    email_contact = models.CharField("Email contact", max_length=100, null=True, blank=True)
+    nom_contact = models.CharField("Nom", max_length=100, null=True, blank=True)
+    prenom_contact = models.CharField("Prénom(s)", max_length=255, null=True, blank=True)
+    fonction_contact = models.CharField("Fonction", max_length=255, null=True, blank=True)
+    numero_contact = PhoneNumberField("Numéro", null=True, blank=True)
+    email_contact = models.CharField("Email", max_length=100, null=True, blank=True)
     numero_sms = PhoneNumberField("Numéro notification sms", null=True, blank=True)
     email_notification = models.CharField("Email notification", max_length=100, null=True, blank=True)
     etat_approbation = models.BooleanField('Etat approbation', default=False)
@@ -102,7 +102,8 @@ class Vendeur(MyModelAbstract):
     type_vendeur = models.CharField("Type vendeur", max_length=25, choices=TypeVendeurChoice.choices, null=True, blank=True)
 
     # Upload documents
-    cni = models.FileField("Carte Nationale d’Identité", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
+    type_piece_identite = models.CharField("Type pièce d’identité", max_length=25, choices=TypePieceIdentiteChoice.choices, null=True, blank=True)
+    piece_identite = models.FileField("Pièce d’identité", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
     permis = models.FileField("Permis de conduire", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
     passeport = models.FileField("Passeport", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)
     dfe = models.FileField("Déclaration Fiscale d’Exercice (DFE)", upload_to='uploaded_media/management/documents_vendeur/', null=True, blank=True)

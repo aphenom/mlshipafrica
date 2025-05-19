@@ -142,7 +142,7 @@
 											</div>
 										</div>
 									</div>
-									<div class="mb-4 main-content-label">Personne à contacter</div>
+									<div class="mb-4 main-content-label">Vos informations</div>
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
@@ -370,53 +370,23 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.cni.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.piece_identite.label}} <span class="text-danger">*</span></label>
 											</div>
-											<div class="col-md-9">
-												{% if form.cni.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.cni.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.cni }}
+											<div class="col-md-4">
+												{{ form.type_piece_identite }}
                                                 <div class="text-danger">
-                                                    {{ form.cni.errors }}
+                                                    {{ form.type_piece_identite.errors }}
                                                 </div>
 											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.permis.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{% if form.permis.value %}
+											<div class="col-md-5">
+												{% if form.piece_identite.value %}
 												<div>
-													<p>Fichier actuel : <a href="{{ form.permis.value.url }}" target="_blank">Télécharger le fichier</a></p>
+													<p>Fichier actuel : <a href="{{ form.piece_identite.value.url }}" target="_blank">Télécharger le fichier</a></p>
 												</div>
 												{% endif %}
-												{{ form.permis }}
+												{{ form.piece_identite }}
                                                 <div class="text-danger">
-                                                    {{ form.permis.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.passeport.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{% if form.passeport.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.passeport.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.passeport }}
-                                                <div class="text-danger">
-                                                    {{ form.passeport.errors }}
+                                                    {{ form.piece_identite.errors }}
                                                 </div>
 											</div>
 										</div>

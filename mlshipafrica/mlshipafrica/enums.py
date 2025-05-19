@@ -39,6 +39,13 @@ class TypeVendeurChoice(models.TextChoices):
     SOCIETE = 'societe', 'Société'
 
 
+class TypePieceIdentiteChoice(models.TextChoices):
+    # NA = '', 'Placholede'
+    CNI = 'cni', 'Carte nationale d\'identité'
+    PERMIS = 'permis', 'Permis'
+    Passeport = 'passeport', 'Passeport'
+
+
 class DureeActiviteChoice(models.TextChoices):
     DEBUTANT = 'debutant', 'Débutant'
     MOINS_6M = 'moins_6_mois', 'Moins de 6 mois'
@@ -61,16 +68,19 @@ class NombreColisSemaineChoice(models.TextChoices):
 
 
 class PlateformeChoice(models.TextChoices): 
-    FACEBOOK_INSTAGRAM = 'facebook_instagram', 'Facebook / Instagram'
+    FACEBOOK = 'facebook', 'Facebook'
+    INSTAGRAM = 'instagram', 'Instagram'
     WHATSAPP = 'whatsapp', 'WhatsApp'
-    ECOMMERCE = 'ecommerce', 'Shopify / YouCan / Storeino'
+    SHOPIFY = 'shopify', 'Shopify'
+    YOUCAN = 'youcan', 'YouCan'
+    ECOMMERCE = 'storeino', 'Storeino'
     AUTRE = 'autre', 'Autre'
 
 
 class ProduitsChoice(models.TextChoices): 
     COSMETIQUES = 'cosmetiques', 'Cosmétiques'
     MODE = 'mode', 'Mode / Accessoires'
-    ECOMMERCE = 'ecommerce', 'Shopify / YouCan / Storeino'
+    SANTE = 'sante', 'Santé / Bien-être'
     HIGHTECH = 'hightech', 'High-tech'
     MAISON = 'maison', 'Maison / Cuisine'
     AUTRE = 'autre', 'Autre'

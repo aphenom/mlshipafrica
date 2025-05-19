@@ -10,12 +10,14 @@ from mlshipafrica.enums import BOOLEAN_CHOICES, NatureChoice, PlateformeChoice, 
 class VendeurForm(forms.ModelForm):
 
     numero_contact = PhoneNumberField(
+        label="Numéro",
         widget=TextInput(
             attrs={"class": "form-control", "placeholder": "Entrez le numéro avec l'indicatif, exemple : +2250000000000",'required':'required'},
             )
     )
 
     numero_sms = PhoneNumberField(
+        label="Numéro SMS",
         widget=TextInput(
             attrs={"class": "form-control", "placeholder": "Entrez le numéro avec l'indicatif, exemple : +2250000000000",'required':'required'},
             )
@@ -64,7 +66,7 @@ class VendeurForm(forms.ModelForm):
         
         fields = ['nom_entreprise', 'immatriculation', 'nom_gerant', 'nom_store', 'logo', 'email', 'adresse', 
                   'nom_contact', 'prenom_contact', 'fonction_contact', 'numero_contact', 'numero_sms', 'email_notification',
-                  'type_vendeur', 'cni', 'permis', 'passeport', 'dfe', 'rccm', 'duree_activite',
+                  'type_vendeur', 'type_piece_identite', 'piece_identite', 'dfe', 'rccm', 'duree_activite',
                   'plateformes', 'plateformes_autre', 'type_produits_vendus', 'produits', 'produits_autre',
                   'nature_colis', 'frequence_envoi', 'nombre_colis_semaine', 'cod_actif', 'collecte_par_mlship']
 
@@ -76,14 +78,13 @@ class VendeurForm(forms.ModelForm):
             'logo': FileInput(attrs={'placeholder':'Le logo de votre entreprise', 'class':'form-control'}),
             'email': EmailInput(attrs={'placeholder':'L\'adresse mail de votre entreprise', 'class':'form-control'}),
             'adresse': TextInput(attrs={'placeholder':'L\'adresse de votre entreprise', 'class':'form-control'}),
-            'nom_contact': TextInput(attrs={'placeholder':'Le nom de la personne à contacter', 'class':'form-control'}),
-            'prenom_contact': TextInput(attrs={'placeholder':'Le(s) prénom(s) de la personne à contacter', 'class':'form-control'}),
-            'fonction_contact': TextInput(attrs={'placeholder':'Le rôle de la personne à contacter', 'class':'form-control'}),
+            'nom_contact': TextInput(attrs={'placeholder':'votre nom', 'class':'form-control'}),
+            'prenom_contact': TextInput(attrs={'placeholder':'Votre(s) prénom(s)', 'class':'form-control'}),
+            'fonction_contact': TextInput(attrs={'placeholder':'Votre rôle', 'class':'form-control'}),
             'email_notification': EmailInput(attrs={'placeholder':"Votre adresse mail de réception des notifications", 'class':'form-control','required':'required'}),
             'type_vendeur': Select(attrs={'placeholder':'Sélectionnez le type qui correspond à votre profil vendeur', 'class':'form-control', 'required':'required'}),
-            'cni': FileInput(attrs={'placeholder':'La CNI du gérant de votre entreprise', 'class':'form-control'}),
-            'permis': FileInput(attrs={'placeholder':'Le permis du gérant votre entreprise', 'class':'form-control'}),
-            'passeport': FileInput(attrs={'placeholder':'Le passeport du gérant de votre entreprise', 'class':'form-control'}),
+            'type_piece_identite': Select(attrs={'placeholder':'Sélectionnez le type de pièce d\'identité que vous avez', 'class':'form-control', 'required':'required'}),
+            'piece_identite': FileInput(attrs={'placeholder':'Votre pièce d\'identité', 'class':'form-control', 'required':'required'}),
             'dfe': FileInput(attrs={'placeholder':'La DFE de votre entreprise', 'class':'form-control'}),
             'rccm': FileInput(attrs={'placeholder':'Le RCCM de votre entreprise', 'class':'form-control'}),
             'duree_activite': Select(attrs={'placeholder':'Depuis combien de temps vendez-vous en ligne ?', 'class':'form-control', 'required':'required'}),
