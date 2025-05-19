@@ -1,7 +1,7 @@
 {% extends "base_main.html" %}
 
 <!-- titre -->
-{% block title %}Ludo-Round{% endblock %}
+{% block title %}ML SHIP AFRICA - Tableau de bord{% endblock %}
 
 <!-- load static -->
 {% load static %}
@@ -15,7 +15,7 @@
 
     {% block content %}
 
-		{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
+		{% if user.is_authenticated and user.account_vendeur %}
 
 			{% if vendeur.etat_approbation is True %}
 
@@ -270,23 +270,23 @@
 				</div>
 				<!--row-->
 			{% else %}
-			huiuuuuuuuuuuuuuu
 				<div class="row">
-					<div class="col-md-3">
-						<label class="form-label">{{form.logo.label}}</label>
-					</div>
-					<div class="col-md-6">
-						<div class="text-wrap">
-							<div class="example">
-								Merci pour votre enregistrement, votre profil est attente d'approbation, vous serez contacté par l'équipe de ML SHIP Africa
-								<div class="spinner-border" role="status">
-									<span class="sr-only">Loading...</span>
+					<div class="col-md-12">
+						<div class="card" id="spinner">
+							<div class="card-header">
+								<h3 class="card-title">Examination du profil en cours</h3>
+							</div>
+							<div class="card-body">
+								<div class="text-wrap">
+									<div class="example">
+										<div class="spinner-border text-info" role="status">
+											<span class="sr-only">Loading... </span>
+										</div>
+										&nbsp;Merci pour votre enregistrement, votre profil est attente d'approbation, vous serez contacté par l'équipe ML SHIP Africa !
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-					<div class="col-md-3">
-						<label class="form-label">{{form.logo.label}}</label>
 					</div>
 				</div>
 			{% endif %}

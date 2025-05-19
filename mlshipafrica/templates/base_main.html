@@ -53,7 +53,7 @@
 				<div class="container-fluid main-container">
 					<div class="main-header-left">
 						<div class="responsive-logo">
-							<a href="_dashboard.html" class="header-logo">
+							<a href="{% url 'index' %}" class="header-logo">
 								<img src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}" class="logo-1" alt="logo">
 								<img src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}" class="dark-logo-1" alt="logo">
 							</a>
@@ -634,13 +634,13 @@
 			<div class="sticky">
 				<aside class="app-sidebar sidebar-scroll">
 					<div class="main-sidebar-header active">
-						<a class="desktop-logo logo-light active" href="_dashboard.html"><img
+						<a class="desktop-logo logo-light active" href="{% url 'index' %}"><img
 								src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}" class="main-logo" alt="logo"></a>
-						<a class="desktop-logo logo-dark active" href="_dashboard.html"><img
+						<a class="desktop-logo logo-dark active" href="{% url 'index' %}"><img
 								src="{% static 'assets/img/brand/mlshipafrica-logo.png' %}" class="main-logo" alt="logo"></a>
-						<a class="logo-icon mobile-logo icon-light active" href="_dashboard.html"><img
+						<a class="logo-icon mobile-logo icon-light active" href="{% url 'index' %}"><img
 								src="{% static 'assets/img/brand/favicon.png' %}" alt="logo"></a>
-						<a class="logo-icon mobile-logo icon-dark active" href="_dashboard.html"><img
+						<a class="logo-icon mobile-logo icon-dark active" href="{% url 'index' %}"><img
 								src="{% static 'assets/img/brand/favicon-light.png' %}" alt="logo"></a>
 					</div>
 					<div class="main-sidemenu">
@@ -653,10 +653,17 @@
 						<ul class="side-menu">
 							
 							<li class="slide">
-								<a class="side-menu__item" href="{% url 'index' %}"><i
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'index' %} active {% endif %}" href="{% url 'index' %}"><i
 										class="bx bx-desktop side-menu__icon"></i><span
 										class="side-menu__label">Tableau de bord</span></a>
 							</li>
+							{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is False %}
+							<li class="slide">
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_edit_profil' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_profil' %}"><i
+										class="bx bx-edit side-menu__icon"></i><span
+										class="side-menu__label">Modifier mon profil</span></a>
+							</li>
+							{% endif %}
 							{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
 							<li class="slide">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>

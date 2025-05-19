@@ -70,17 +70,17 @@ class PlateformeChoice(models.TextChoices):
 class ProduitsChoice(models.TextChoices): 
     COSMETIQUES = 'cosmetiques', 'Cosmétiques'
     MODE = 'mode', 'Mode / Accessoires'
-    SANTE = 'ecommerce', 'Shopify / YouCan / Storeino'
+    ECOMMERCE = 'ecommerce', 'Shopify / YouCan / Storeino'
     HIGHTECH = 'hightech', 'High-tech'
     MAISON = 'maison', 'Maison / Cuisine'
     AUTRE = 'autre', 'Autre'
 
 
 class NatureChoice(models.TextChoices): 
-    PETIT = 'petit', 'Petit (moins -2kg)'
-    MOYEN = 'moyen', 'Moyen (entre 3 -5kg)'
-    GROS = 'gros', 'Gros (plus de +10kg)'
-    LARGE = 'large', 'Large (plus de +50kg)'
+    PETIT = 'petit', 'Petit (moins de 2kg)'
+    MOYEN = 'moyen', 'Moyen (entre 3 - 5kg)'
+    GROS = 'gros', 'Gros (plus de 10kg)'
+    LARGE = 'large', 'Large (plus de 50kg)'
 
 
 BOOLEAN_CHOICES = (

@@ -52,6 +52,32 @@ class MyModelAbstract(models.Model):
 
 
 """ Vendeur pour lequel on gere la livraison """
+class ProfilStaff(MyModelAbstract):
+
+    email = models.CharField("Email", max_length=100, null=True, blank=True)
+    numero_contact = PhoneNumberField("Numéro", null=True, blank=True)
+    observation = models.CharField("Observation", max_length=255, null=True, blank=True)
+    role_profil = models.CharField("Type vendeur", max_length=25, choices=TypeVendeurChoice.choices, null=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='account_profil_staff', verbose_name = "profil_staff")
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_profils_staffs', related_query_name="license_profil_staff", verbose_name = "license")
+
+    def __str__(self):
+        return '{}'.format(self.user)
+
+    class Meta:
+        verbose_name = 'Profil Staff'
+        verbose_name_plural = 'Profils Staff'      
+        db_table_comment = "Les membre de l'équipe de gestion"
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''                      
+        if self.code and self.user.username != self.code:
+            self.user.username = self.code
+        self.user.save()
+        return super(ProfilStaff, self).save(*args, **kwargs)        
+
+
+""" Vendeur pour lequel on gere la livraison """
 class Vendeur(MyModelAbstract):
 
     nom_entreprise = models.CharField("Nom entreprise", max_length=100, null=True, blank=True)

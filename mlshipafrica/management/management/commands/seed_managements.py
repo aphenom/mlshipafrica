@@ -9,7 +9,7 @@ from django.contrib.auth.models import User, Group
 from allauth.account.models import EmailAddress
 
 from core.models import AchatLicense, Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
-from management.models import Tarification, Vendeur
+from management.models import ProfilStaff, Tarification, Vendeur
 from django.db import transaction
 
 class Command(BaseCommand):
@@ -44,8 +44,8 @@ class Command(BaseCommand):
         ]
 
         vendeurs = [
-            {"nom": "demo1", "email": "demo1@example.com"},
-            {"nom": "demo2", "email": "demo2@example.com"},
+            {"nom_store": "demo1", "email": "demo1@example.com"},
+            {"nom_store": "demo2", "email": "demo2@example.com"},
         ]
 
 
@@ -91,17 +91,29 @@ class Command(BaseCommand):
                   elif email_data['email'] == user_data['email']:
                       self.stdout.write(f"Email {email_data['email']} existe déjà.")
 
+              if 'is_staff' in user_data:
+                    if not ProfilStaff.objects.filter(user=user).exists():
+                        profil_staff = ProfilStaff.objects.create(
+                                  user=user,
+                                  license=license,
+                              )
+                        profil_staff.save()
+                        self.stdout.write(f"Profil staff {profil_staff} créé.")
+                    else:
+                        self.stdout.write(f"Profil staff {user_data['email']} existe déjà.")
+
               if user_data['role'] == "VENDEUR":
                   for vendeur_data in vendeurs:
                     if not Vendeur.objects.filter(user=user).exists() and vendeur_data['email'] == user_data['email']:
                         vendeur = Vendeur.objects.create(
-                                  nom=vendeur_data['nom'],
+                                  nom_store=vendeur_data['nom_store'],
                                   user=user,
+                                  license=license,
                               )
                         vendeur.save()
                         self.stdout.write(f"Vendeur {vendeur} créé.")
                     elif vendeur_data['email'] == user_data['email']:
-                        self.stdout.write(f"vendeur {vendeur_data['nom']} existe déjà.")
+                        self.stdout.write(f"vendeur {vendeur_data['nom_store']} existe déjà.")
 
 
           """Tarification"""

@@ -230,16 +230,12 @@ PHONENUMBER_DEFAULT_REGION = 'CI'
 
 X_FRAME_OPTIONS = 'ALLOWALL'
 
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "mail.ludo-round.com"
+EMAIL_HOST = "smtp.office365.com"
 EMAIL_PORT = 587
-EMAIL_HOST_USER = "contact@ludo-round.com"
-EMAIL_HOST_PASSWORD = "contactLR123*"
+EMAIL_HOST_USER = "support@mlshipcod.com"
+EMAIL_HOST_PASSWORD = "MLSHIPCOD123"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_USE_TLS = True
-EMAIL_HOST_NAME = "Noreply Ludo Round"
-
-# EMAIL_HOST = "smtp.office365.com"
-# EMAIL_HOST_USER = "support@mlshipcod.com"
-# EMAIL_HOST_PASSWORD = "MLSHIPCOD123"
-# EMAIL_HOST_NAME = "Support ML SHIP COD"
+EMAIL_HOST_NAME = "Support ML SHIP COD"
