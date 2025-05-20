@@ -13,6 +13,7 @@ from mlshipafrica.enums import DureeActiviteChoice, FrequenceEnvoiChoice, Nombre
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from phonenumber_field.modelfields import PhoneNumberField
+from django.db.models import Q
 
 # Create your models here.
 class MyModelAbstract(models.Model):
@@ -218,11 +219,11 @@ class Article(MyModelAbstract):
     taux_option_encaissement = models.DecimalField('taux option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option d'encaissement (= %valeur)")
     montant_total_frais = models.DecimalField('Montant total frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout total des frais associé au colis (=montant_frais+cout_option_recuperation+cout_option_encaissement)")
 
-    nom_destinataire = models.CharField("Nom destinataire", max_length=100, null=True, blank=True)
-    prenom_destinataire = models.CharField("Prénom(s) destinataire", max_length=255, null=True, blank=True)
-    numero_principal_destinataire = PhoneNumberField("Numéro principal destinataire", null=True, blank=True)
-    numero_secondaire_destinataire = PhoneNumberField("Numéro secondaire destinataire", null=True, blank=True)
-    adresse_destinataire = models.CharField("Adresse du destinataire", max_length=255, null=True, blank=True)
+    nom_destinataire = models.CharField("Nom", max_length=100, null=True, blank=True)
+    prenom_destinataire = models.CharField("Prénom(s)", max_length=255, null=True, blank=True)
+    numero_principal_destinataire = PhoneNumberField("Numéro principal", null=True, blank=True)
+    numero_secondaire_destinataire = PhoneNumberField("Numéro secondaire", null=True, blank=True)
+    adresse_destinataire = models.CharField("Adresse", max_length=255, null=True, blank=True)
 
     statut_traitement = models.CharField(max_length=25, choices=StatutTraitement.choices,default=StatutTraitement.BROUILLON, null=True, blank=True)
     etat_encaissement = models.BooleanField('état encaissement client', default=False)
@@ -230,14 +231,14 @@ class Article(MyModelAbstract):
     etat_reversement = models.BooleanField('état reversement encaissement', default=False)
 
     tarification = models.ForeignKey(Tarification, models.SET_NULL, null=True, blank=True, related_name='tarification_articles', related_query_name="tarification_article", verbose_name = "partenaire logistique")
-    partenaire_logistique = models.ForeignKey(PartenaireLogistique, models.SET_NULL, null=True, blank=True, related_name='partenaire_logistiquearticles', related_query_name="partenaire_logistiquearticle", verbose_name = "partenaire logistique")
-    zone_depart = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_departarticles', related_query_name="zone_departarticle", verbose_name = "zone départ")
-    zone_arrivee = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_arriveearticles', related_query_name="zone_arriveearticle", verbose_name = "zone arrivée")
-    localite_depart = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='localite_departarticles', related_query_name="localite_departarticle", verbose_name = "localité départ")
-    localite_arrivee = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='localite_arriveearticles', related_query_name="localite_arriveearticle", verbose_name = "localité arrivée")
-    format_article = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='format_articlearticles', related_query_name="format_articlearticle", verbose_name = "format article")
-    vendeur = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='vendeur_articles', related_query_name="vendeur_article", verbose_name = "vendeur")
-    config = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='config_articles', related_query_name="config_article", verbose_name = "Configuration")
+    partenaire_logistique = models.ForeignKey(PartenaireLogistique, models.SET_NULL, null=True, blank=True, related_name='partenaire_logistique_articles', related_query_name="partenaire_logistique_article", verbose_name = "partenaire logistique")
+    zone_depart = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_depart_articles', related_query_name="zone_depart_article", verbose_name = "zone départ")
+    zone_arrivee = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_arrivee_articles', related_query_name="zone_arrivee_article", verbose_name = "zone arrivée")
+    localite_depart = models.ForeignKey(Localite, models.SET_NULL, null=True, blank=True, related_name='localite_depart_articles', related_query_name="localite_depart_article", verbose_name = "localité départ")
+    localite_arrivee = models.ForeignKey(Localite, models.SET_NULL, null=True, blank=True, related_name='localite_arrivee_articles', related_query_name="localite_arrivee_article", verbose_name = "localité destination")
+    format_article = models.ForeignKey(FormatArticle, models.SET_NULL, null=True, blank=True, related_name='format_article_articles', related_query_name="format_article_article", verbose_name = "format article")
+    vendeur = models.ForeignKey(Vendeur, models.SET_NULL, null=True, blank=True, related_name='vendeur_articles', related_query_name="vendeur_article", verbose_name = "vendeur")
+    config = models.ForeignKey(Configuration, models.SET_NULL, null=True, blank=True, related_name='config_articles', related_query_name="config_article", verbose_name = "Configuration")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_articles', related_query_name="license_article", verbose_name = "license")
     
     #last_histo_article
@@ -254,6 +255,29 @@ class Article(MyModelAbstract):
         verbose_name_plural = 'Articles'      
         db_table_comment = "Les articles répresentant les colis à livrer"
 
+    def save(self, *args, **kwargs):
+        if not self.id or not self.tarification:
+            query = Q(localite_depart=self.localite_depart) | Q(localite_depart=None)
+            query &= Q(localite_arrivee=self.localite_arrivee) | Q(localite_arrivee=None)
+            query &= Q(zone_depart=self.localite_depart.zone) | Q(zone_depart=None)
+            query &= Q(zone_arrivee=self.localite_arrivee.zone) | Q(zone_arrivee=None)
+            query &= Q(format_article=self.format_article) | Q(format_article=None)
+            query &= Q(vendeur=self) | Q(vendeur=None)
+            query &= Q(etat_validation=True)
+            query &= Q(etat_suppression=True)
+            query &= Q(license=self.license)
+
+            # Exécutez la requête pour récupérer les paramètres de taux apporteur
+            tarification = Tarification.objects.filter(query).order_by("-vendeur", "-format_article", "-localite_arrivee", "-localite_arrivee", "-zone_depart", "-zone_arrivee").first()
+            self.tarification = tarification
+            self.montant_frais = tarification.montant_frais
+            self.taux_option_recuperation = tarification.taux_option_recuperation
+            self.taux_option_encaissement = tarification.taux_option_encaissement
+            self.cout_option_recuperation = tarification.cout_option_recuperation if tarification.cout_option_recuperation else round((self.montant_frais*tarification.taux_option_recuperation)/100,0)
+            self.cout_option_encaissement = tarification.cout_option_encaissement if tarification.cout_option_encaissement else round((self.montant_frais*tarification.taux_option_encaissement)/100,0)
+            self.montant_total_frais = self.montant_frais + self.cout_option_recuperation + self.cout_option_encaissement
+
+        return super().save(*args, **kwargs)
 
 """ Historisations des mouvements des articles répresentant les colis pendant le traitement"""
 class HistoriqueArticle(MyModelAbstract):

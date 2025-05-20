@@ -32,55 +32,16 @@
 											{{ form.non_field_errors }}
 										</div>
 									{% endif %}
-									<div class="mb-4 main-content-label">Identification</div>
+									<div class="mb-4 main-content-label">Général</div>
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.type_vendeur.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.designation.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{{ form.type_vendeur }}
+												{{ form.designation }}
                                                 <div class="text-danger">
-                                                    {{ form.type_vendeur.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise-required">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_entreprise.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_entreprise }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_entreprise.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise-required">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.immatriculation.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.immatriculation }}
-                                                <div class="text-danger">
-                                                    {{ form.immatriculation.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise-required">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_gerant.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_gerant }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_gerant.errors }}
+                                                    {{ form.designation.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -88,12 +49,12 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.nom_store.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.valeur.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{{ form.nom_store }}
+												{{ form.valeur }}
                                                 <div class="text-danger">
-                                                    {{ form.nom_store.errors }}
+                                                    {{ form.valeur.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -101,172 +62,28 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.email.label}}</label>
+												<label class="form-label">{{form.format_article.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{{ form.email }}
+												{{ form.format_article }}
                                                 <div class="text-danger">
-                                                    {{ form.email.errors }}
+                                                    {{ form.format_article.errors }}
                                                 </div>
 											</div>
 										</div>
 									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.adresse.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.adresse }}
-                                                <div class="text-danger">
-                                                    {{ form.adresse.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.logo.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{% if form.logo.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.logo.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.logo }}
-                                                <div class="text-danger">
-                                                    {{ form.logo.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Vos informations</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_contact.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.prenom_contact.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.prenom_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.prenom_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.fonction_contact.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.fonction_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.fonction_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.numero_contact.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.numero_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.numero_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Activité commerciale</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.duree_activite.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.duree_activite }}
-                                                <div class="text-danger">
-                                                    {{ form.duree_activite.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.plateformes.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.plateformes }}
-                                                <div class="text-danger">
-                                                    {{ form.plateformes.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.plateformes_autre.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{{ form.plateformes_autre }}
-                                                <div class="text-danger">
-                                                    {{ form.plateformes_autre.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.type_produits_vendus.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.type_produits_vendus }}
-                                                <div class="text-danger">
-                                                    {{ form.type_produits_vendus.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
+									<div class="form-group">
 										<div class="row">
 											<div class="col-md-3">
 												<label class="form-label">{{form.produits.label}} <span class="text-danger">*</span></label>
 											</div>
-											<div class="col-md-9">
+											<div class="col-md-4">
 												{{ form.produits }}
                                                 <div class="text-danger">
                                                     {{ form.produits.errors }}
                                                 </div>
 											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.produits_autre.label}} </label>
-											</div>
-											<div class="col-md-9">
+											<div class="col-md-5">
 												{{ form.produits_autre }}
                                                 <div class="text-danger">
                                                     {{ form.produits_autre.errors }}
@@ -274,28 +91,16 @@
 											</div>
 										</div>
 									</div>
+									<div class="mb-4 main-content-label">Destinataire</div>
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.nature_colis.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.nom_destinataire.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{{ form.nature_colis }}
+												{{ form.nom_destinataire }}
                                                 <div class="text-danger">
-                                                    {{ form.nature_colis.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.frequence_envoi.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.frequence_envoi }}
-                                                <div class="text-danger">
-                                                    {{ form.frequence_envoi.errors }}
+                                                    {{ form.nom_destinataire.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -303,12 +108,12 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.nombre_colis_semaine.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.prenom_destinataire.label}}</label>
 											</div>
 											<div class="col-md-9">
-												{{ form.nombre_colis_semaine }}
+												{{ form.prenom_destinataire }}
                                                 <div class="text-danger">
-                                                    {{ form.nombre_colis_semaine.errors }}
+                                                    {{ form.prenom_destinataire.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -316,12 +121,12 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.cod_actif.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.adresse_destinataire.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{{ form.cod_actif }}
+												{{ form.adresse_destinataire }}
                                                 <div class="text-danger">
-                                                    {{ form.cod_actif.errors }}
+                                                    {{ form.adresse_destinataire.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -329,26 +134,12 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.collecte_par_mlship.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.numero_principal_destinataire.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{{ form.collecte_par_mlship }}
+												{{ form.numero_principal_destinataire }}
                                                 <div class="text-danger">
-                                                    {{ form.collecte_par_mlship.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Notification</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.numero_sms.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.numero_sms }}
-                                                <div class="text-danger">
-                                                    {{ form.numero_sms.errors }}
+                                                    {{ form.numero_principal_destinataire.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -356,73 +147,52 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.email_notification.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.numero_secondaire_destinataire.label}}</label>
 											</div>
 											<div class="col-md-9">
-												{{ form.email_notification }}
+												{{ form.numero_secondaire_destinataire }}
                                                 <div class="text-danger">
-                                                    {{ form.email_notification.errors }}
+                                                    {{ form.numero_secondaire_destinataire.errors }}
                                                 </div>
 											</div>
 										</div>
 									</div>
-									<div class="mb-4 main-content-label">Documents à fournir</div>
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.piece_identite.label}} <span class="text-danger">*</span></label>
+												<label class="form-label">{{form.localite_arrivee.label}} <span class="text-danger">*</span></label>
 											</div>
-											<div class="col-md-4">
-												{{ form.type_piece_identite }}
+											<div class="col-md-9">
+												{{ form.localite_arrivee }}
                                                 <div class="text-danger">
-                                                    {{ form.type_piece_identite.errors }}
-                                                </div>
-											</div>
-											<div class="col-md-5">
-												{% if form.piece_identite.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.piece_identite.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.piece_identite }}
-                                                <div class="text-danger">
-                                                    {{ form.piece_identite.errors }}
+                                                    {{ form.localite_arrivee.errors }}
                                                 </div>
 											</div>
 										</div>
 									</div>
-									<div class="form-group div-entreprise">
+									<div class="mb-4 main-content-label">Options</div>
+									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.dfe.label}} </label>
+												<label class="form-label">{{form.is_option_recuperation.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{% if form.dfe.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.dfe.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.dfe }}
+												{{ form.is_option_recuperation }}
                                                 <div class="text-danger">
-                                                    {{ form.dfe.errors }}
+                                                    {{ form.is_option_recuperation.errors }}
                                                 </div>
 											</div>
 										</div>
 									</div>
-									<div class="form-group div-entreprise">
+									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
-												<label class="form-label">{{form.rccm.label}} </label>
+												<label class="form-label">{{form.is_option_encaissement.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
-												{% if form.rccm.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.rccm.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.rccm }}
+												{{ form.is_option_encaissement }}
                                                 <div class="text-danger">
-                                                    {{ form.rccm.errors }}
+                                                    {{ form.is_option_encaissement.errors }}
                                                 </div>
 											</div>
 										</div>
@@ -435,8 +205,7 @@
 									</div>
 								</div>
 								<div class="card-footer">
-									<button type="submit" class="btn-lg btn-primary waves-effect waves-light">Mettre à jour
-										Profil</button>
+									<button type="submit" class="btn-lg btn-primary waves-effect waves-light">Enregistre colis</button>
 								</div>
 							</form>
 

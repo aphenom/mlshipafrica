@@ -146,13 +146,13 @@ class VendeurColisForm(forms.ModelForm):
                   'localite_arrivee', 'format_article', 'is_option_recuperation', 'is_option_encaissement']
 
         widgets = {
-            'valeur': TextInput(attrs={'placeholder':'La valeur de votre colis', 'class':'form-control'}),
-            'designation': TextInput(attrs={'placeholder':'La désignation de votre colis', 'class':'form-control'}),
+            'valeur': TextInput(attrs={'placeholder':'La valeur de votre colis', 'class':'form-control', 'required':'required'}),
+            'designation': TextInput(attrs={'placeholder':'La désignation de votre colis', 'class':'form-control', 'required':'required'}),
             'produits_autre': TextInput(attrs={'placeholder':'Autres produits', 'class':'form-control'}),
-            'nom_destinataire': TextInput(attrs={'placeholder':'Le nom du destinataire', 'class':'form-control'}),
+            'nom_destinataire': TextInput(attrs={'placeholder':'Le nom du destinataire', 'class':'form-control', 'required':'required'}),
             'prenom_destinataire': TextInput(attrs={'placeholder':'Le(s) prénom(s) du destinataire', 'class':'form-control'}),
-            'adresse_destinataire': TextInput(attrs={'placeholder':'L\'adresse du destinataire', 'class':'form-control'}),
-            'localite_arrivee': Select(attrs={'placeholder':'Sélectionnez la localité de destination', 'class':'form-control', 'required':'required'}),
-            'format_article': Select(attrs={'placeholder':'Sélectionnez le format de votre colis', 'class':'form-control', 'required':'required'}),
+            'adresse_destinataire': TextInput(attrs={'placeholder':'L\'adresse du destinataire', 'class':'form-control', 'required':'required'}),
+            'localite_arrivee': Select(attrs={'placeholder':'Sélectionnez la localité de destination', 'class':'form-control', 'data-select' : 'true', 'required':'required'}),
+            'format_article': Select(attrs={'placeholder':'Sélectionnez le format de votre colis', 'class':'form-control ', 'required':'required'}),
         }
 

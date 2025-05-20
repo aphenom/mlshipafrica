@@ -7,6 +7,9 @@ from management.forms import VendeurColisForm, VendeurForm
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 
+from core.models import Configuration, Localite
+from mlshipafrica.enums import StatutTraitement
+
 
 # Create edition profil vendeur
 @login_required
@@ -40,15 +43,23 @@ def vendeur_edit_profil(request):
 def vendeur_edit_colis(request):
     user = request.user
     form = VendeurColisForm(instance=None)
-
+    current_article = request.GET.get('current_article', None)
 
     if user.is_authenticated and not user.is_staff:
         try:
             vendeur = Vendeur.objects.get(user=user)
-            article = Article()
+            configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).first()  
+            localite_depart = Localite.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False, is_depart=True).first()  
+            article = Article() if current_article is None else Article.objects.filter(code=current_article, vendeur=vendeur, statut_traitement=StatutTraitement.BROUILLON, etat_validation=False, etat_suppression=False).first()
+            article.vendeur = vendeur
+            article.license = vendeur.license
+            article.config = configuration
+            article.localite_depart = localite_depart
+            article.etat_validation = False
+            article.statut_traitement = StatutTraitement.BROUILLON
             if vendeur.collecte_par_mlship is True:
-                article.is_option_encaissement
-        except Vendeur.DoesNotExist:
+                article.is_option_encaissement = True
+        except Exception as e:
             raise Http404
 
         if request.method == 'POST':
@@ -59,7 +70,7 @@ def vendeur_edit_colis(request):
                 return redirect('index')
                 # Tu peux aussi faire : return redirect('management:vendeur_profil')
         else:
-            form = VendeurColisForm(instance=vendeur)
+            form = VendeurColisForm(instance=article)
         return render(request, 'management/vendeur_edit_colis.html', locals())
     return redirect('index')
 

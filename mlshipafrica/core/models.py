@@ -45,6 +45,17 @@ class MyModelAbstract(models.Model):
                 self.date_suppression = timezone.now()                             
         return super(MyModelAbstract, self).save(*args, **kwargs)  
 
+
+class MyModeleManager(models.Manager):
+    def get_queryset(self):
+        # Personnalisez votre requête queryset ici
+        qs = super().get_queryset()
+        # print(hasattr(self.model, 'paroisse'))
+        if hasattr(self.model, 'license') and get_current_user() and get_current_user().account_vendeur:
+            qs = qs.filter(license=get_current_user().account_vendeur.license)
+        return qs 
+    
+
 """ Permet l'utilisation en mode license """
 class License(MyModelAbstract):
 
@@ -160,8 +171,11 @@ class Zone(MyModelAbstract):
     nom = models.CharField('nom', max_length=100)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zones', related_query_name="license_zone", verbose_name = "license")
     
+    objects = MyModeleManager()
+
     def __str__(self):
-        return '{} - {}'.format(self.code, self.nom)
+        # return '{} - {}'.format(self.code, self.nom)
+        return '{}'.format(self.nom)
 
     class Meta:
         verbose_name = 'Zone'
@@ -178,13 +192,17 @@ class Localite(MyModelAbstract):
     zone = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_localites', related_query_name="zone_localite", verbose_name = "zone")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_localites', related_query_name="license_localite", verbose_name = "license")
     
+    objects = MyModeleManager()
+
     def __str__(self):
-        return '{} - {}'.format(self.code, self.nom)
+        # return '{} - {}'.format(self.code, self.nom)
+        return '{}'.format(self.nom)
 
     class Meta:
         verbose_name = 'Localité'
         verbose_name_plural = 'Localités'      
         db_table_comment = "Les localités à couvrir pour l'activité de livraison"
+        ordering = ['nom']
 
 
 """ Détermine les formats des colis pour l'activité """
@@ -194,8 +212,11 @@ class FormatArticle(MyModelAbstract):
     caracteristique = models.CharField('caracteristique', max_length=255)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_formatarticles', related_query_name="license_formatarticle", verbose_name = "license")
     
+    objects = MyModeleManager()
+
     def __str__(self):
-        return '{} - {}'.format(self.code, self.nom)
+        # return '{} - {}'.format(self.code, self.nom)
+        return '{} | {}'.format(self.nom, self.caracteristique) if self.caracteristique else '{}'.format(self.nom)
 
     class Meta:
         verbose_name = 'Format Article'
