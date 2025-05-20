@@ -752,7 +752,7 @@
 
 				<!-- page-header -->
 				<div class="page-header">
-					<ol class="breadcrumb">
+					<ol class="breadcrumb {% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is False %}d-none{% endif %}">
 						<li class="breadcrumb-item"><a href="#">ML SHIP AFRICA</a></li>
 						{% block breadcrumb-li %}
 						<li class="breadcrumb-item active" aria-current="page">Tableau de bord</li>
@@ -2186,8 +2186,8 @@
 		{% block main-footer %}
 		<div class="main-footer">
 			<div class="container-fluid pd-t-0 ht-100p">
-				<span> Copyright © 2025 <a href="javascript:void(0);" class="text-primary">ML SHIP AFRICA</a>. Designed with <span
-						class="fa fa-heart text-danger"></span> by <a href="javascript:void(0);"> Benepub </a> All rights
+				<span> Copyright © {% now 'Y' %} <a href="javascript:void(0);" class="text-primary">ML SHIP AFRICA</a>. <!--Designed with <span
+						class="fa fa-heart text-danger"></span> by <a href="javascript:void(0);"> Benepub </a>--> All rights
 					reserved.</span>
 			</div>
 		</div>

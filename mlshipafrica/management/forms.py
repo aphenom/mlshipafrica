@@ -1,12 +1,12 @@
 from django.forms import BooleanField, CheckboxSelectMultiple, EmailInput, FileInput, ModelForm, TextInput, DateInput, Select, NumberInput, ClearableFileInput, Textarea, CheckboxInput
 from django import forms
-from management.models import Vendeur
+from management.models import Article, Vendeur
 from phonenumber_field.formfields import PhoneNumberField
 from phonenumber_field.widgets import PhoneNumberPrefixWidget
 
 from mlshipafrica.enums import BOOLEAN_CHOICES, NatureChoice, PlateformeChoice, ProduitsChoice
 
-'''formulaire pour remplir informations avant et servant pour la validation'''
+'''formulaire pour remplir informations avant et servant pour la validation du vendeur'''
 class VendeurForm(forms.ModelForm):
 
     numero_contact = PhoneNumberField(
@@ -93,5 +93,66 @@ class VendeurForm(forms.ModelForm):
             'produits_autre': TextInput(attrs={'placeholder':'Autres produits vendus', 'class':'form-control'}),
             'frequence_envoi': Select(attrs={'placeholder':'Sélectionnez votre fréquence d’envoi', 'class':'form-control', 'required':'required'}),
             'nombre_colis_semaine': Select(attrs={'placeholder':'Sélectionnez le nombre moyen de colis livré par semaine', 'class':'form-control', 'required':'required'}),
+        }
+
+
+'''formulaire pour remplir les infos du colis (article)'''
+class VendeurColisForm(forms.ModelForm):
+
+    numero_principal_destinataire = PhoneNumberField(
+        label="Numéro principal",
+        widget=TextInput(
+            attrs={"class": "form-control", "placeholder": "Entrez le numéro avec l'indicatif, exemple : +2250000000000",'required':'required'},
+            )
+    )
+
+    numero_secondaire_destinataire = PhoneNumberField(
+        label="Numéro secondaire",
+        widget=TextInput(
+            attrs={"class": "form-control", "placeholder": "Entrez le numéro avec l'indicatif, exemple : +2250000000000"},
+            )
+    )
+
+    produits = forms.MultipleChoiceField(
+        label="Type de produits",
+        choices=ProduitsChoice.choices,
+        widget=CheckboxSelectMultiple(),
+        required=True,
+    )
+
+    is_option_recuperation = forms.TypedChoiceField(
+        label="Souhaitez-vous que ML SHIP Africa vienne récuperer directement avec vous ?",
+        choices=BOOLEAN_CHOICES,
+        coerce=lambda x: x == 'True',
+        widget=forms.RadioSelect,
+        required=True,
+    )
+
+    is_option_encaissement = forms.TypedChoiceField(
+        label="Souhaitez-vous que ML SHIP Africa collecte l’argent auprès du client et vous le reverse ?",
+        choices=BOOLEAN_CHOICES,
+        coerce=lambda x: x == 'True',
+        widget=forms.RadioSelect,
+        required=True,
+    )
+            
+    class Meta:
+        model = Article
+        # exclude = ['code', 'user', 'creation_par', 'modification_par', 'etat_validation', 'etat_suppression', 'date_suppression', 'date_validation', 'date_modification', 'date_creation', 'etat_approbation', 'approbation_par', 'license']
+        
+        fields = ['valeur', 'designation', 'produits', 'produits_autre',
+                  'nom_destinataire', 'prenom_destinataire', 'prenom_destinataire', 
+                  'numero_principal_destinataire', 'numero_secondaire_destinataire', 'adresse_destinataire', 
+                  'localite_arrivee', 'format_article', 'is_option_recuperation', 'is_option_encaissement']
+
+        widgets = {
+            'valeur': TextInput(attrs={'placeholder':'La valeur de votre colis', 'class':'form-control'}),
+            'designation': TextInput(attrs={'placeholder':'La désignation de votre colis', 'class':'form-control'}),
+            'produits_autre': TextInput(attrs={'placeholder':'Autres produits', 'class':'form-control'}),
+            'nom_destinataire': TextInput(attrs={'placeholder':'Le nom du destinataire', 'class':'form-control'}),
+            'prenom_destinataire': TextInput(attrs={'placeholder':'Le(s) prénom(s) du destinataire', 'class':'form-control'}),
+            'adresse_destinataire': TextInput(attrs={'placeholder':'L\'adresse du destinataire', 'class':'form-control'}),
+            'localite_arrivee': Select(attrs={'placeholder':'Sélectionnez la localité de destination', 'class':'form-control', 'required':'required'}),
+            'format_article': Select(attrs={'placeholder':'Sélectionnez le format de votre colis', 'class':'form-control', 'required':'required'}),
         }
 

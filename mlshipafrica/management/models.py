@@ -204,6 +204,11 @@ class Article(MyModelAbstract):
     code_tracking = models.CharField('Code tracking', max_length=25, null=True, blank=True, db_comment="Code unique auprès du prestatire du colis permettant de le suivre")
     
     valeur = models.DecimalField('Valeur', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
+    designation = models.CharField("Désignation", max_length=100, null=True, blank=True)
+    produits = models.JSONField("Type de produits", blank=True, null=True)
+    produits_autre = models.CharField("Autre type de produit", max_length=100, null=True, blank=True)
+    
+    
     montant_frais = models.DecimalField('Montant frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     is_option_recuperation = models.BooleanField('état option recuperation du colis', default=False, db_comment="Possibilité ou non de récuperer le colis directement chez le vendeur")
     is_option_encaissement = models.BooleanField('état option encaissement du client', default=False, db_comment="Possibilité ou non d'encaisser le paiement du colis directement chez le client")
@@ -214,9 +219,10 @@ class Article(MyModelAbstract):
     montant_total_frais = models.DecimalField('Montant total frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout total des frais associé au colis (=montant_frais+cout_option_recuperation+cout_option_encaissement)")
 
     nom_destinataire = models.CharField("Nom destinataire", max_length=100, null=True, blank=True)
-    nom_destinataire = models.CharField("Prénom(s) destinataire", max_length=255, null=True, blank=True)
+    prenom_destinataire = models.CharField("Prénom(s) destinataire", max_length=255, null=True, blank=True)
     numero_principal_destinataire = PhoneNumberField("Numéro principal destinataire", null=True, blank=True)
     numero_secondaire_destinataire = PhoneNumberField("Numéro secondaire destinataire", null=True, blank=True)
+    adresse_destinataire = models.CharField("Adresse du destinataire", max_length=255, null=True, blank=True)
 
     statut_traitement = models.CharField(max_length=25, choices=StatutTraitement.choices,default=StatutTraitement.BROUILLON, null=True, blank=True)
     etat_encaissement = models.BooleanField('état encaissement client', default=False)
