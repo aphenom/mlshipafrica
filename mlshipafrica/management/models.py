@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypePieceIdentiteChoice, TypeVendeurChoice
+from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypePieceIdentiteChoice, TypeVendeurChoice
 
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -204,17 +204,19 @@ class Article(MyModelAbstract):
 
     code_tracking = models.CharField('Code tracking', max_length=25, null=True, blank=True, db_comment="Code unique auprès du prestatire du colis permettant de le suivre")
     
-    valeur = models.DecimalField('Valeur', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
+    valeur = models.DecimalField('Valeur unitaire', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     designation = models.CharField("Désignation", max_length=100, null=True, blank=True)
+    quantite = models.PositiveSmallIntegerField(default=1, null=True, blank=True, verbose_name = "Quantité")
+    valeur_totale = models.DecimalField('Valeur totale', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout global selon la quantité")
     produits = models.JSONField("Type de produits", blank=True, null=True)
     produits_autre = models.CharField("Autre type de produit", max_length=100, null=True, blank=True)
     
     
     montant_frais = models.DecimalField('Montant frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
-    is_option_recuperation = models.BooleanField('état option recuperation du colis', default=False, db_comment="Possibilité ou non de récuperer le colis directement chez le vendeur")
+    is_option_recuperation = models.BooleanField('état option récupération du colis', default=False, db_comment="Possibilité ou non de récupérer le colis directement chez le vendeur")
     is_option_encaissement = models.BooleanField('état option encaissement du client', default=False, db_comment="Possibilité ou non d'encaisser le paiement du colis directement chez le client")
-    cout_option_recuperation = models.DecimalField('cout fixe option recuperation colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option de récupération au cas où il serait uniforme pour chaque colis (= self+%valeur)")
-    taux_option_recuperation = models.DecimalField('taux option recuperation colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option de récupération (= %valeur)")
+    cout_option_recuperation = models.DecimalField('cout fixe option récupération colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option de récupération au cas où il serait uniforme pour chaque colis (= self+%valeur)")
+    taux_option_recuperation = models.DecimalField('taux option récupération colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option de récupération (= %valeur)")
     cout_option_encaissement = models.DecimalField('cout fixe option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis (= self+%valeur)")
     taux_option_encaissement = models.DecimalField('taux option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option d'encaissement (= %valeur)")
     montant_total_frais = models.DecimalField('Montant total frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout total des frais associé au colis (=montant_frais+cout_option_recuperation+cout_option_encaissement)")
@@ -246,10 +248,35 @@ class Article(MyModelAbstract):
 
     def __str__(self):
         return '{}'.format(self.code)
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._init_statut_traitement = self.statut_traitement
+
     def get_statut_traitement_couleur(self):
         return STATUT_TRAITEMENT_COULEURS.get(self.statut_traitement, 'black')  # couleur par défaut si non trouvée
  
+    def get_statut_traitement_commentaire(self):
+        return STATUT_TRAITEMENT_COMMENTAIRES.get(self.statut_traitement, '')  # commentaire par défaut si non trouvée
+ 
+    def get_statut_traitement_icone(self):
+        return STATUT_TRAITEMENT_ICONES.get(self.statut_traitement, '')  # icon par défaut si non trouvée
+ 
+    def get_produits_display(self):
+        if not self.produits:
+            return ""
+        
+        produits = [
+            f'{ProduitsChoice(choix).label}'
+            for choix in self.produits
+            if choix != ProduitsChoice.AUTRE and choix in ProduitsChoice.values
+        ]
+        produits.append(
+            self.produits_autre
+        )
+        
+        return ", ".join(produits)
+
     class Meta:
         verbose_name = 'Article'
         verbose_name_plural = 'Articles'      
@@ -262,20 +289,30 @@ class Article(MyModelAbstract):
             query &= Q(zone_depart=self.localite_depart.zone) | Q(zone_depart=None)
             query &= Q(zone_arrivee=self.localite_arrivee.zone) | Q(zone_arrivee=None)
             query &= Q(format_article=self.format_article) | Q(format_article=None)
-            query &= Q(vendeur=self) | Q(vendeur=None)
+            query &= Q(vendeur=self.vendeur) | Q(vendeur=None)
             query &= Q(etat_validation=True)
-            query &= Q(etat_suppression=True)
+            query &= Q(etat_suppression=False)
             query &= Q(license=self.license)
+            # print(query)
 
-            # Exécutez la requête pour récupérer les paramètres de taux apporteur
+            # Exécutez la requête pour récupérer les paramètres de tarification
             tarification = Tarification.objects.filter(query).order_by("-vendeur", "-format_article", "-localite_arrivee", "-localite_arrivee", "-zone_depart", "-zone_arrivee").first()
+            self.valeur_totale = self.valeur_totale if self.valeur_totale and self.valeur_totale > 0 else self.valeur*self.quantite
             self.tarification = tarification
             self.montant_frais = tarification.montant_frais
             self.taux_option_recuperation = tarification.taux_option_recuperation
             self.taux_option_encaissement = tarification.taux_option_encaissement
-            self.cout_option_recuperation = tarification.cout_option_recuperation if tarification.cout_option_recuperation else round((self.montant_frais*tarification.taux_option_recuperation)/100,0)
-            self.cout_option_encaissement = tarification.cout_option_encaissement if tarification.cout_option_encaissement else round((self.montant_frais*tarification.taux_option_encaissement)/100,0)
+            self.cout_option_recuperation = tarification.cout_option_recuperation if tarification.cout_option_recuperation else round((self.valeur_totale*tarification.taux_option_recuperation)/100,0)
+            self.cout_option_encaissement = tarification.cout_option_encaissement if tarification.cout_option_encaissement else round((self.valeur_totale*tarification.taux_option_encaissement)/100,0)
             self.montant_total_frais = self.montant_frais + self.cout_option_recuperation + self.cout_option_encaissement
+        
+        if self.statut_traitement != self._init_statut_traitement:
+            histo_article = HistoriqueArticle()
+            histo_article.article = self
+            histo_article.statut_traitement = self.statut_traitement
+            histo_article.license = self.license
+            histo_article.dernier_historique_article = self.article_historiquearticles.all().order_by("-date_creation").first()
+            histo_article.save()
 
         return super().save(*args, **kwargs)
 
@@ -291,6 +328,12 @@ class HistoriqueArticle(MyModelAbstract):
     def get_statut_traitement_couleur(self):
         return STATUT_TRAITEMENT_COULEURS.get(self.statut_traitement, 'black')  # couleur par défaut si non trouvée
     
+    def get_statut_traitement_commentaire(self):
+        return STATUT_TRAITEMENT_COMMENTAIRES.get(self.statut_traitement, '') if self.commentaire is None or self.commentaire == '' else self.commentaire  # commentaire par défaut si non trouvée
+ 
+    def get_statut_traitement_icone(self):
+        return STATUT_TRAITEMENT_ICONES.get(self.statut_traitement, '')  # icon par défaut si non trouvée
+     
     def __str__(self):
         return '{} {}'.format(self.article, self.statut_traitement)
 

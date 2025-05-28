@@ -1,0 +1,165 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Facture colis{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Colis</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Facture</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row row-sm">
+					<div class="col-md-12 col-xl-12">
+						<div class=" main-content-body-invoice">
+							<div class="card card-invoice">
+								<div class="card-body">
+									<div class="invoice-header">
+										<h1 class="invoice-title">Facture</h1>
+										<div class="billed-from">
+											<h6>ML SHIP Africa</h6>
+											<p>{% if configuration.adresse %} {{ configuration.adresse }}<br> {% endif %}
+												{% if configuration.contact %} Tel No: {{ configuration.contact }}<br> {% endif %}
+												{% if configuration.email %} Email: {{ configuration.email }} {% endif %}</p>
+										</div><!-- billed-from -->
+									</div><!-- invoice-header -->
+									<div class="row mg-t-20">
+										<div class="col-md">
+											<label class="tx-gray-600">Facturé à</label>
+											<div class="billed-to">
+												<h6>{{ vendeur.nom_store }}</h6>
+												<p>{% if vendeur.adresse %} {{ vendeur.adresse }}<br> {% endif %}
+													{% if vendeur.numero_contact %} Tel No: {{ vendeur.numero_contact }}<br> {% endif %}
+													{% if vendeur.email %} Email: {{ vendeur.email }} {% endif %}</p>
+											</div>
+										</div>
+										<div class="col-md">
+											<label class="tx-gray-600">Informations Colis</label>
+											<p class="invoice-info-row"><span>Colis No</span> <span>{{ article.code }}</span>
+											</p>
+											<p class="invoice-info-row"><span>Format colis</span> <span>{{ article.format_article }}</span>
+											</p>
+											<p class="invoice-info-row"><span>Destinataire</span> <span>{{ article.nom_destinataire }} {{ article.nom_destinataire|default_if_none:"" }}</span>
+											</p>
+											<p class="invoice-info-row"><span>Contact Destinataire</span> <span>{{ article.numero_principal_destinataire }}</span>
+											</p>
+											<p class="invoice-info-row"><span>Ville Destinatation</span> <span>{{ article.localite_arrivee }}</span>
+											</p>
+											<p class="invoice-info-row"><span>Adresse Destinatation</span> <span>{{ article.adresse_destinataire }}</span>
+											</p>
+											<p class="invoice-info-row"> 
+											{% if article.etat_validation == True %}<span>Date Validation :</span> <span>{{ article.date_validation|date:"d-m-Y" }}</span>{% else %}<span class="text-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span>{% endif %}</p>
+										</div>
+									</div>
+									<div class="table-responsive mg-t-40">
+										<table class="table table-invoice border text-md-nowrap mb-0">
+											<thead>
+												<tr>
+													<th class="wd-25p">Type</th>
+													<th class="wd-25p">Désignation</th>
+													<th class="tx-right text-center">Valeur unitaire {{ configuration.monnaie|default:'FCFA' }}</th>
+													<th class="tx-center">Quantité</th>
+													<th class="tx-right text-center">Valeur Totale {{ configuration.monnaie|default:'FCFA' }}</th>
+													<th class="tx-right text-center">Frais {{ configuration.monnaie|default:'FCFA' }}</th>
+												</tr>
+											</thead>
+											<tbody>
+
+												<tr>
+													<td class="tx-12">
+													{{ article.get_produits_display }}
+													</td>
+													<td class="tx-12">
+													{{ article.designation }}
+													</td>
+													<td class="tx-right text-end">{{ article.valeur|floatformat:-2|intcomma }}</td>
+													<td class="tx-center">{{ article.quantite }}</td>
+													<td class="tx-right text-end">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
+													<td class="tx-right text-end">{{ article.montant_frais|floatformat:-2|intcomma }}</td>
+												</tr>
+												<tr>
+												<!--
+													<td class="valign-middle" colspan="2" rowspan="4">
+														<div class="invoice-notes">
+															<label class="main-content-label tx-13">Notes</label>
+															<p>Sed ut perspiciatis unde omnis iste natus error sit
+																voluptatem accusantium doloremque laudantium, totam rem
+																aperiam, eaque ipsa quae ab illo inventore veritatis et
+																quasi architecto beatae vitae dicta sunt explicabo.</p>
+														</div><!- invoice-notes ->
+													</td>
+													-->
+													<td class="tx-right text-end" colspan="3">Sous-Total Frais</td>
+													<td class="tx-right text-end" colspan="3">{{ article.montant_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
+												</tr>
+												{% if article.is_option_recuperation == True %}
+												<tr>
+													<td class="tx-right text-end" colspan="3">Récuperation du colis</td>
+													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
+												</tr>
+												{% endif %}
+												{% if article.is_option_encaissement == True %}
+												<tr>
+													<td class="tx-right text-end" colspan="3">Encaissement du client</td>
+													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
+												</tr>
+												{% endif %}
+												<tr>
+													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="3">Total à payer</td>
+													<td class="tx-right text-end" colspan="3">
+														<h4 class="tx-primary tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<form method="POST" onsubmit="alert('Voulez-vous continuer ?')">
+										{% csrf_token %}
+										{% if article.statut_traitement != statut_traitement.BROUILLON %}
+										<a class="btn btn-purple float-end mt-3 ms-2" href="#"  onclick="javascript:window.print();">
+											<i class="mdi mdi-printer me-1"></i>Imprimer
+										</a>
+										<a class="btn btn-info float-end mt-3 ms-2" href="{% url 'management:management_vendeur_detail_colis' article.code %}">
+											<i class="mdi mdi-eye me-1"></i>Voir détail
+										</a>
+										{% endif %}
+										{% if article.statut_traitement == statut_traitement.BROUILLON %}
+										<button type="submit" name="submit_modification" value="submit_modification" class="btn btn-danger float-end mt-3 ms-2">
+											<i class="zmdi zmdi-edit me-1"></i>Modifier
+										</button>
+										<button type="submit" name="submit_validation" value="submit_validation" class="btn btn-success float-end mt-3">
+											<i class="zmdi zmdi-assignment-check me-1"></i>Valider
+										</button>
+										{% endif %}
+									</form>
+								</div>
+							</div>
+						</div>
+					</div><!-- COL-END -->
+				</div>
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}

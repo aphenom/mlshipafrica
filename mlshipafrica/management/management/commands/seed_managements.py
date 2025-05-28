@@ -135,7 +135,7 @@ class Command(BaseCommand):
                 tarification.zone_depart = tarification.localite_depart.zone
               tarification.localite_arrivee = Localite.objects.filter(nom=tarification_data["localite_arrivee"]).first()
               if tarification.localite_arrivee:
-                tarification.zone_depart = tarification.localite_arrivee.zone
+                tarification.zone_arrivee = tarification.localite_arrivee.zone
               tarification.config = configuration
               tarification.license = configuration.license if configuration else license
               tarification.save()

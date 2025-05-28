@@ -1,0 +1,172 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Détail colis{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Colis</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ article.code }}</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row">
+					<div class="col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Produits -  Colis #{{ article.code }} - <span class="badge me-1 my-2 bg-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span></h3>
+								<a href="{% url 'management:management_vendeur_facture_colis' article.code %}" class="btn ripple btn-sm btn-outline-light ms-auto"><i class="fe fe-file me-1"></i>Facture</a>
+							</div>
+							<div class="card-body">
+								<div class="table-responsive">
+									<table class="table table-bordered border text-nowrap mb-0" id="new-edit">
+										<thead>
+											<tr>
+												<th class="wd-25p">Type</th>
+												<th class="wd-25p">Désignation</th>
+												<th>Format</th>
+												<th>Valeur unitaire {{ configuration.monnaie|default:'FCFA' }}</th>
+												<th>Quantité</th>
+												<th>Valeur Totale {{ configuration.monnaie|default:'FCFA' }}</th>
+												<th>Frais {{ configuration.monnaie|default:'FCFA' }}</th>
+										</tr></thead>
+										<tbody>
+											<tr>
+												<td>{{ article.get_produits_display }}</td>
+												<td>{{ article.designation }}</td>
+												<td>{{ article.format_article.nom }}</td>
+												<td class="tx-right text-end">{{ article.valeur|floatformat:-2|intcomma }}</td>
+												<td class="tx-center">{{ article.quantite }}</td>
+												<td class="tx-right text-end">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
+												<td class="tx-right text-end">{{ article.montant_frais|floatformat:-2|intcomma }}</td>
+											</tr>
+												<tr>
+												<!--
+													<td class="valign-middle" colspan="2" rowspan="4">
+														<div class="invoice-notes">
+															<label class="main-content-label tx-13">Notes</label>
+															<p>Sed ut perspiciatis unde omnis iste natus error sit
+																voluptatem accusantium doloremque laudantium, totam rem
+																aperiam, eaque ipsa quae ab illo inventore veritatis et
+																quasi architecto beatae vitae dicta sunt explicabo.</p>
+														</div><!- invoice-notes ->
+													</td>
+													-->
+													<td class="tx-right text-end" colspan="4">Sous-Total Frais</td>
+													<td class="tx-right text-end" colspan="3">{{ article.montant_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
+												</tr>
+												{% if article.is_option_recuperation == True %}
+												<tr>
+													<td class="tx-right text-end" colspan="4">Récuperation du colis</td>
+													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
+												</tr>
+												{% endif %}
+												{% if article.is_option_encaissement == True %}
+												<tr>
+													<td class="tx-right text-end" colspan="4">Encaissement du client</td>
+													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
+												</tr>
+												{% endif %}
+												<tr>
+													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total à payer</td>
+													<td class="tx-right text-end" colspan="3">
+														<h4 class="tx-primary tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
+													</td>
+												</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-lg-12 col-md-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Livraison</h3>
+							</div>
+							<div class="card-body">
+
+								<div class="table-responsive ">
+									<table class="table row table-borderless">
+										<tbody class="col-lg-12 col-xl-6 p-0">
+											<tr>
+												<td><strong>Départ :</strong> {{ article.localite_depart }}</td>
+											</tr>
+											<tr>
+												<td><strong>Option récupération colis :</strong> {% if article.is_option_recuperation == True %}Oui{% else %}Non{% endif %}</td>
+											</tr>
+										</tbody>
+										<tbody class="col-lg-12 col-xl-6 p-0">
+											<tr>
+												<td><strong>Destination :</strong> {{ article.localite_arrivee }}</td>
+											</tr>
+											<tr>
+												<td><strong>Option encaissement à la livraison :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
+											</tr>
+											<tr>
+												<td><strong>Destinataire :</strong> {{ article.nom_destinataire }} {{ article.prenom_destinataire }}</td>
+											</tr>
+											<tr>
+												<td><strong>Adresse destinataire :</strong> {{ article.adresse_destinataire }}</td>
+											</tr>
+											<tr>
+												<td><strong>Contact(s) destinataire :</strong> {{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-lg-12 col-md-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Suivi</h3>
+							</div>
+							<div class="card-body">
+								<div class="product-timeline">
+									<ul class="timeline-1">
+										{% for historique_article in historique_articles %}
+										<li class="mt-0">
+											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
+											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date_creation|date:"d-m-Y H:i:s" }}</small></span>
+											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
+										</li>
+										{% endfor %}
+									</ul>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>				
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}

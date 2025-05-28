@@ -110,7 +110,8 @@ class VendeurColisForm(forms.ModelForm):
         label="Numéro secondaire",
         widget=TextInput(
             attrs={"class": "form-control", "placeholder": "Entrez le numéro avec l'indicatif, exemple : +2250000000000"},
-            )
+            ),
+        required=False,
     )
 
     produits = forms.MultipleChoiceField(
@@ -140,14 +141,15 @@ class VendeurColisForm(forms.ModelForm):
         model = Article
         # exclude = ['code', 'user', 'creation_par', 'modification_par', 'etat_validation', 'etat_suppression', 'date_suppression', 'date_validation', 'date_modification', 'date_creation', 'etat_approbation', 'approbation_par', 'license']
         
-        fields = ['valeur', 'designation', 'produits', 'produits_autre',
+        fields = ['valeur', 'quantite', 'designation', 'produits', 'produits_autre',
                   'nom_destinataire', 'prenom_destinataire', 'prenom_destinataire', 
                   'numero_principal_destinataire', 'numero_secondaire_destinataire', 'adresse_destinataire', 
                   'localite_arrivee', 'format_article', 'is_option_recuperation', 'is_option_encaissement']
 
         widgets = {
-            'valeur': TextInput(attrs={'placeholder':'La valeur de votre colis', 'class':'form-control', 'required':'required'}),
-            'designation': TextInput(attrs={'placeholder':'La désignation de votre colis', 'class':'form-control', 'required':'required'}),
+            'valeur': TextInput(attrs={'placeholder':'La valeur unitaire de votre produit', 'class':'form-control', 'required':'required'}),
+            'quantite': NumberInput(attrs={'placeholder':'La quantité du produit', 'class':'form-control', 'required':'required'}),
+            'designation': TextInput(attrs={'placeholder':'La désignation de votre produit', 'class':'form-control', 'required':'required'}),
             'produits_autre': TextInput(attrs={'placeholder':'Autres produits', 'class':'form-control'}),
             'nom_destinataire': TextInput(attrs={'placeholder':'Le nom du destinataire', 'class':'form-control', 'required':'required'}),
             'prenom_destinataire': TextInput(attrs={'placeholder':'Le(s) prénom(s) du destinataire', 'class':'form-control'}),

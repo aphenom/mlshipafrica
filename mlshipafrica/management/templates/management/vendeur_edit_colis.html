@@ -62,6 +62,19 @@
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">
+												<label class="form-label">{{form.quantite.label}} <span class="text-danger">*</span></label>
+											</div>
+											<div class="col-md-9">
+												{{ form.quantite }}
+                                                <div class="text-danger">
+                                                    {{ form.quantite.errors }}
+                                                </div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group ">
+										<div class="row">
+											<div class="col-md-3">
 												<label class="form-label">{{form.format_article.label}} <span class="text-danger">*</span></label>
 											</div>
 											<div class="col-md-9">
@@ -170,8 +183,8 @@
 											</div>
 										</div>
 									</div>
-									<div class="mb-4 main-content-label">Options</div>
-									<div class="form-group ">
+									<div class="mb-4 main-content-label {% if configuration.enable_option_recuperation is False and configuration.enable_option_encaissement is False %}d-none{% endif %}">Options</div>
+									<div class="form-group {% if configuration.enable_option_recuperation is False %}d-none{% endif %}">
 										<div class="row">
 											<div class="col-md-3">
 												<label class="form-label">{{form.is_option_recuperation.label}} <span class="text-danger">*</span></label>
@@ -184,7 +197,7 @@
 											</div>
 										</div>
 									</div>
-									<div class="form-group ">
+									<div class="form-group {% if configuration.enable_option_encaissement is False %}d-none{% endif %}">
 										<div class="row">
 											<div class="col-md-3">
 												<label class="form-label">{{form.is_option_encaissement.label}} <span class="text-danger">*</span></label>
@@ -205,7 +218,7 @@
 									</div>
 								</div>
 								<div class="card-footer">
-									<button type="submit" class="btn-lg btn-primary waves-effect waves-light">Enregistre colis</button>
+									<button type="submit" class="btn-lg btn-primary waves-effect waves-light">Enregistrer colis</button>
 								</div>
 							</form>
 
