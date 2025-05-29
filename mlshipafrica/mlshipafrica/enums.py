@@ -13,6 +13,7 @@ class StatutTraitement(models.TextChoices):
     ARRIVE = 'arrive', 'Arrivé à destination'
     LIVRE = 'livre', 'Livré'
     LIVRE_PAYE = 'livre_paye', 'Livré et payé'
+    REVERSE = 'reverse', 'Reversé'
     EN_RETOURNE = 'en_retour', 'En retour'
     RETOURNE = 'retourne', 'Retourné'
 
@@ -28,8 +29,43 @@ STATUT_TRAITEMENT_COULEURS = {
     'arrive': 'info',
     'livre': 'success',
     'livre_paye': 'success',
+    'reverse': 'dark',
     'en_retour': 'light',
     'retourne': 'dark',
+}
+
+
+STATUT_TRAITEMENT_ICONES = {
+    'brouillon': 'dark',
+    'en_attente_ramassage': 'hourglass-half',
+    'ramasse': 'cart-arrow-down',
+    'en_attente_depot': 'hourglass-half',
+    'depot': 'building',
+    'en_transit': 'truck',
+    'en_cours_livraison': 'primary',
+    'arrive': 'map-pin',
+    'livre': 'check-circle',
+    'livre_paye': 'check-circle',
+    'reverse': 'money',
+    'en_retour': 'light',
+    'retourne': 'dark',
+}
+
+
+STATUT_TRAITEMENT_COMMENTAIRES = {
+    'brouillon': 'La commande est en cours de préparation par le vendeur. Elle n\'a pas encore été validée pour le ramassage.',
+    'en_attente_ramassage': 'La commande est prête chez le vendeur. Notre équipe est en route pour effectuer le ramassage à l’adresse indiquée.',
+    'ramasse': 'Le colis a été récupéré avec succès. Il est maintenant en direction de notre centre logistique pour traitement.',
+    'en_attente_depot': 'Le colis est attendu à notre hub. Il sera pris en charge dès qu\'il sera déposé par le vendeur.',
+    'depot': 'Le colis est enregistré dans notre hub. Il sera préparé pour l’expédition selon la destination du client.',
+    'en_transit': 'Le colis est actuellement en cours d’acheminement vers la ville ou la zone de livraison finale.',
+    'en_cours_livraison': 'Le colis est en cours de livraison chez le client. Notre livreur est en route.',
+    'arrive': 'Le colis est arrivé dans la zone de livraison. Il est en attente de retrait par le client.',
+    'livre': 'Le client a reçu son colis.',
+    'livre_paye': 'Le client a reçu son colis et a réglé le montant à la livraison. La transaction est confirmée.',
+    'reverse': 'Le montant collecté a été reversé au vendeur selon le mode de paiement convenu.',
+    'en_retour': 'Le colis est en cours de retour vers le vendeur suite à un échec de livraison ou une demande du client.',
+    'retourne': 'Le colis est retourné au vendeur avec succès.',
 }
 
 

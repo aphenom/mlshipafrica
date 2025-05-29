@@ -49,12 +49,13 @@ def vendeur_edit_colis(request):
     user = request.user
     form = VendeurColisForm(instance=None)
     current_article = request.GET.get('current_article', None)
+    statut_traitement = StatutTraitement
 
     if user.is_authenticated and not user.is_staff:
         try:
             with transaction.atomic():
                 vendeur = Vendeur.objects.get(user=user)
-                configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).first()  
+                configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
                 localite_depart = Localite.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False, is_depart=True).first()  
                 article = Article() if current_article is None else Article.objects.get(code=current_article, vendeur=vendeur, statut_traitement=StatutTraitement.BROUILLON, etat_validation=False, etat_suppression=False)
                 article.vendeur = vendeur
@@ -62,13 +63,18 @@ def vendeur_edit_colis(request):
                 article.config = configuration
                 article.localite_depart = localite_depart
                 article.etat_validation = False
-                article.statut_traitement = StatutTraitement.BROUILLON
+                article.statut_traitement = statut_traitement.BROUILLON
                 if vendeur.collecte_par_mlship is True and configuration.enable_option_encaissement is True:
                     article.is_option_encaissement = True
         except Exception as e:
             raise Http404
 
         if request.method == 'POST':
+            if "submit_suppression" in request.POST and request.POST["submit_suppression"]:
+                # rediriger vers details colis
+                article.etat_suppression =  True
+                article.save()
+                return redirect('index')
             form = VendeurColisForm(data=(request.POST or None), files=(request.FILES or None), instance=article)
             if form.is_valid():
                 article = form.save(commit=False)
@@ -87,6 +93,7 @@ def vendeur_facture_colis(request, code):
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
         article = Article.objects.get(code=code, vendeur=vendeur, etat_suppression=False)
+        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
         statut_traitement = StatutTraitement
         if request.method == 'POST':
             if "submit_validation" in request.POST and request.POST["submit_validation"]:
@@ -111,8 +118,24 @@ def vendeur_detail_colis(request, code):
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
         article = Article.objects.all().exclude(statut_traitement=StatutTraitement.BROUILLON).get(code=code, vendeur=vendeur, etat_suppression=False)
+        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
         statut_traitement = StatutTraitement
-        historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+        historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
     except Exception as e:
         raise Http404
     return render(request, 'management/vendeur_detail_colis.html', locals())
+
+
+@login_required
+def vendeur_liste_colis(request):
+    try:
+        user = request.user
+        vendeur = Vendeur.objects.get(user=user)
+        articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False)
+        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        statut_traitement = StatutTraitement
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/vendeur_liste_colis.html', locals())

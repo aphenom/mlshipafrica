@@ -47,9 +47,9 @@
 											</p>
 											<p class="invoice-info-row"><span>Format colis</span> <span>{{ article.format_article }}</span>
 											</p>
-											<p class="invoice-info-row"><span>Destinataire</span> <span>{{ article.nom_destinataire }} {{ article.nom_destinataire|default_if_none:"" }}</span>
+											<p class="invoice-info-row"><span>Destinataire</span> <span>{{ article.nom_destinataire }} {{ article.prenom_destinataire|default_if_none:"" }}</span>
 											</p>
-											<p class="invoice-info-row"><span>Contact Destinataire</span> <span>{{ article.numero_principal_destinataire }}</span>
+											<p class="invoice-info-row"><span>Contact Destinataire</span> <span>{{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</span>
 											</p>
 											<p class="invoice-info-row"><span>Ville Destinatation</span> <span>{{ article.localite_arrivee }}</span>
 											</p>
@@ -65,10 +65,10 @@
 												<tr>
 													<th class="wd-25p">Type</th>
 													<th class="wd-25p">Désignation</th>
-													<th class="tx-right text-center">Valeur unitaire {{ configuration.monnaie|default:'FCFA' }}</th>
+													<th class="tx-right text-center">Valeur unitaire ({{ configuration.monnaie|default:'FCFA' }})</th>
 													<th class="tx-center">Quantité</th>
-													<th class="tx-right text-center">Valeur Totale {{ configuration.monnaie|default:'FCFA' }}</th>
-													<th class="tx-right text-center">Frais {{ configuration.monnaie|default:'FCFA' }}</th>
+													<th class="tx-right text-center">Valeur Totale ({{ configuration.monnaie|default:'FCFA' }})</th>
+													<th class="tx-right text-center">Frais ({{ configuration.monnaie|default:'FCFA' }})</th>
 												</tr>
 											</thead>
 											<tbody>

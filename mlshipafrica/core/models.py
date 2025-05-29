@@ -27,8 +27,8 @@ class MyModelAbstract(models.Model):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._init_date_validation = self.date_validation
-        self._init_date_suppression = self.date_suppression
+        self._init_etat_validation = self.etat_validation
+        self._init_etat_suppression = self.etat_suppression
 
     def save(self, *args, **kwargs):
         ''' On save, update timestamps '''
@@ -37,10 +37,10 @@ class MyModelAbstract(models.Model):
             self.creation_par = get_current_user()
         else:
             self.modification_par = get_current_user()
-        if self.date_validation != self._init_date_validation:
+        if self.etat_validation != self._init_etat_validation:
             if self.etat_validation == True:
                 self.date_validation = timezone.now()
-        if self.date_suppression != self._init_date_suppression:
+        if self.etat_suppression != self._init_etat_suppression:
             if self.etat_suppression == True:
                 self.date_suppression = timezone.now()                             
         return super(MyModelAbstract, self).save(*args, **kwargs)  

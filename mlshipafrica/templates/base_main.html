@@ -665,7 +665,7 @@
 							</li>
 							{% endif %}
 							{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
-							<li class="slide">
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
 									<li class="panel sidetab-menu">
@@ -677,10 +677,10 @@
 															<a href="javascript:void(0);">Colis</a>
 														</li>
 														<li>
-															<a class="slide-item" href="_add_colis.html">Nouveau colis</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Nouveau colis</a>
 														</li>
 														<li>
-															<a class="slide-item" href="_colis.html">Liste des colis</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Liste des colis</a>
 														</li>
 													</ul>
 												</div>

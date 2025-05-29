@@ -32,10 +32,10 @@
 												<th class="wd-25p">Type</th>
 												<th class="wd-25p">Désignation</th>
 												<th>Format</th>
-												<th>Valeur unitaire {{ configuration.monnaie|default:'FCFA' }}</th>
+												<th>Valeur unitaire ({{ configuration.monnaie|default:'FCFA' }})</th>
 												<th>Quantité</th>
-												<th>Valeur Totale {{ configuration.monnaie|default:'FCFA' }}</th>
-												<th>Frais {{ configuration.monnaie|default:'FCFA' }}</th>
+												<th>Valeur Totale ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th>Frais ({{ configuration.monnaie|default:'FCFA' }})</th>
 										</tr></thead>
 										<tbody>
 											<tr>
@@ -102,16 +102,25 @@
 											<tr>
 												<td><strong>Départ :</strong> {{ article.localite_depart }}</td>
 											</tr>
+											{% if article.is_option_recuperation == True or configuration.enable_option_recuperation == True %}
 											<tr>
 												<td><strong>Option récupération colis :</strong> {% if article.is_option_recuperation == True %}Oui{% else %}Non{% endif %}</td>
 											</tr>
+											{% endif %}
+											{% if article.is_option_encaissement == True or configuration.enable_option_encaissement == True %}
+											<tr>
+												<td><strong>Option encaissement à la livraison :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
+											</tr>
+											{% endif %}
+											{% if article.is_option_encaissement == True %}
+											<tr>
+												<td><strong>Montant à renversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }}</td>
+											</tr>
+											{% endif %}
 										</tbody>
 										<tbody class="col-lg-12 col-xl-6 p-0">
 											<tr>
 												<td><strong>Destination :</strong> {{ article.localite_arrivee }}</td>
-											</tr>
-											<tr>
-												<td><strong>Option encaissement à la livraison :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
 											</tr>
 											<tr>
 												<td><strong>Destinataire :</strong> {{ article.nom_destinataire }} {{ article.prenom_destinataire }}</td>

@@ -33,8 +33,8 @@ class MyModelAbstract(models.Model):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._init_date_validation = self.date_validation
-        self._init_date_suppression = self.date_suppression
+        self._init_etat_validation = self.etat_validation
+        self._init_etat_suppression = self.etat_suppression
 
     def save(self, *args, **kwargs):
         ''' On save, update timestamps '''
@@ -43,10 +43,10 @@ class MyModelAbstract(models.Model):
             self.creation_par = get_current_user()
         else:
             self.modification_par = get_current_user()
-        if self.date_validation != self._init_date_validation:
+        if self.etat_validation != self._init_etat_validation:
             if self.etat_validation == True:
                 self.date_validation = timezone.now()
-        if self.date_suppression != self._init_date_suppression:
+        if self.etat_suppression != self._init_etat_suppression:
             if self.etat_suppression == True:
                 self.date_suppression = timezone.now()                             
         return super(MyModelAbstract, self).save(*args, **kwargs)  
@@ -293,18 +293,26 @@ class Article(MyModelAbstract):
             query &= Q(etat_validation=True)
             query &= Q(etat_suppression=False)
             query &= Q(license=self.license)
-            # print(query)
+
+            # print(self.tarification)
 
             # Exécutez la requête pour récupérer les paramètres de tarification
             tarification = Tarification.objects.filter(query).order_by("-vendeur", "-format_article", "-localite_arrivee", "-localite_arrivee", "-zone_depart", "-zone_arrivee").first()
             self.valeur_totale = self.valeur_totale if self.valeur_totale and self.valeur_totale > 0 else self.valeur*self.quantite
-            self.tarification = tarification
+            if self.statut_traitement != StatutTraitement.BROUILLON:
+                self.tarification = tarification
             self.montant_frais = tarification.montant_frais
-            self.taux_option_recuperation = tarification.taux_option_recuperation
-            self.taux_option_encaissement = tarification.taux_option_encaissement
-            self.cout_option_recuperation = tarification.cout_option_recuperation if tarification.cout_option_recuperation else round((self.valeur_totale*tarification.taux_option_recuperation)/100,0)
-            self.cout_option_encaissement = tarification.cout_option_encaissement if tarification.cout_option_encaissement else round((self.valeur_totale*tarification.taux_option_encaissement)/100,0)
-            self.montant_total_frais = self.montant_frais + self.cout_option_recuperation + self.cout_option_encaissement
+            self.taux_option_recuperation = tarification.taux_option_recuperation if self.is_option_recuperation is True else None
+            self.taux_option_encaissement = tarification.taux_option_encaissement if self.is_option_encaissement is True else None
+            if self.is_option_recuperation is True:
+                self.cout_option_recuperation = tarification.cout_option_recuperation if tarification.cout_option_recuperation else round((self.valeur_totale*tarification.taux_option_recuperation)/100,0)
+            else:
+                self.cout_option_recuperation = None
+            if self.is_option_encaissement is True:
+                self.cout_option_encaissement = tarification.cout_option_encaissement if tarification.cout_option_encaissement else round((self.valeur_totale*tarification.taux_option_encaissement)/100,0)
+            else:
+                self.cout_option_encaissement = None
+            self.montant_total_frais = self.montant_frais + (self.cout_option_recuperation if self.cout_option_recuperation else 0) + (self.cout_option_encaissement if self.cout_option_encaissement else 0)
         
         if self.statut_traitement != self._init_statut_traitement:
             histo_article = HistoriqueArticle()
