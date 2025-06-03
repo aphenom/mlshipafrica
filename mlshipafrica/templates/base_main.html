@@ -597,16 +597,18 @@
 													</div>
 												</div>
 											</div>
-											<a class="dropdown-item d-none" href="profile.html"><i
-													class="bx bx-user-circle"></i>Profile</a>
-											<a class="dropdown-item d-none" href="editprofile.html"><i class="bx bx-cog"></i>
-												Edit Profile</a>
+											{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
+											<a class="dropdown-item active" href="{% url 'management:management_vendeur_profil' %}"><i
+													class="bx bx-user-circle"></i>Profil</a>
+											<a class="dropdown-item" href="{% url 'management:management_vendeur_edit_profil' %}"><i class="bx bx-edit"></i>
+												Modifier Profil</a>
+											{% endif %}
+											<a class="dropdown-item" href="{% url 'account_change_password' %}"><i
+													class="bx bx-cog"></i> Changer Mot de Passe</a>
 											<a class="dropdown-item d-none" href="mail.html"><i
 													class="bx bxs-inbox"></i>Inbox</a>
 											<a class="dropdown-item d-none" href="chat.html"><i
 													class="bx bx-envelope"></i>Messages</a>
-											<a class="dropdown-item d-none" href="settings.html"><i
-													class="bx bx-slider-alt"></i> Account Settings</a>
 											<a class="dropdown-item" href="{% url 'account_logout' %}"><i class="bx bx-log-out"></i>
 												Déconnexion</a>
 										</div>
@@ -690,16 +692,176 @@
 								</ul>
 							</li>
 							<li class="slide">
-								<a class="side-menu__item" href="_encaissements.html"><i
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis_reversement' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis_reversement' %}"><i
 										class="bx bx-money side-menu__icon"></i><span
-										class="side-menu__label">Encaissements</span></a>
+										class="side-menu__label">Reversements</span></a>
 							</li>
 							<li class="slide">
-								<a class="side-menu__item" href="#_profil.html"><i
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_profil' %} active {% endif %}" href="{% url 'management:management_vendeur_profil' %}"><i
 										class="bx bx-user side-menu__icon"></i><span
 										class="side-menu__label">Mon profil</span></a>
 							</li>
+							<li class="slide d-none">
+								<a class="side-menu__item" href="#_support.html"><i
+										class="bx bx-headphone side-menu__icon"></i><span
+										class="side-menu__label">Support</span></a>
+							</li>
+							{% endif %}
+							{% if user.is_authenticated and user.account_profil_staff %}
 							<li class="slide">
+								<a class="side-menu__item" href="_agent_scan_colis.html"><i class="bx bx-scan side-menu__icon"></i><span class="side-menu__label">Scanner colis</span></a>
+							</li>
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-store side-menu__icon"></i><span class="side-menu__label">Vendeurs</span><i class="angle fe fe-chevron-down"></i></a>
+								<ul class="slide-menu">
+									<li class="panel sidetab-menu">
+										<div class="panel-body tabs-menu-body p-0 border-0">
+											<div class="tab-content">
+												<div class="tab-pane tab-content-show" id="side32" role="tabpanel">
+													<ul class="sidemenu-list">
+														<li class="side-menu__label1">
+															<a href="javascript:void(0);">Vendeurs</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">En attente approbation</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Liste des vendeurs actifs</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Liste des vendeurs déscativés</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Liste des vendeurs réjétés</a>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</li>
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>
+								<ul class="slide-menu">
+									<li class="panel sidetab-menu">
+										<div class="panel-body tabs-menu-body p-0 border-0">
+											<div class="tab-content">
+												<div class="tab-pane tab-content-show" id="side32" role="tabpanel">
+													<ul class="sidemenu-list">
+														<li class="side-menu__label1">
+															<a href="javascript:void(0);">Colis</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">En attente rammassage</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">En attente dépôt</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">En cours</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Retournés</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Historique</a>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</li>
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-wallet-alt side-menu__icon"></i><span class="side-menu__label">Paiements</span><i class="angle fe fe-chevron-down"></i></a>
+								<ul class="slide-menu">
+									<li class="panel sidetab-menu">
+										<div class="panel-body tabs-menu-body p-0 border-0">
+											<div class="tab-content">
+												<div class="tab-pane tab-content-show" id="side32" role="tabpanel">
+													<ul class="sidemenu-list">
+														<li class="side-menu__label1">
+															<a href="javascript:void(0);">Paiements</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">En attente</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Historique</a>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</li>
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-money side-menu__icon"></i><span class="side-menu__label">Reversements</span><i class="angle fe fe-chevron-down"></i></a>
+								<ul class="slide-menu">
+									<li class="panel sidetab-menu">
+										<div class="panel-body tabs-menu-body p-0 border-0">
+											<div class="tab-content">
+												<div class="tab-pane tab-content-show" id="side32" role="tabpanel">
+													<ul class="sidemenu-list">
+														<li class="side-menu__label1">
+															<a href="javascript:void(0);">Reversements</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">En attente</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Historique</a>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</li>
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-cog side-menu__icon"></i><span class="side-menu__label">Paramétrages</span><i class="angle fe fe-chevron-down"></i></a>
+								<ul class="slide-menu">
+									<li class="panel sidetab-menu">
+										<div class="panel-body tabs-menu-body p-0 border-0">
+											<div class="tab-content">
+												<div class="tab-pane tab-content-show" id="side32" role="tabpanel">
+													<ul class="sidemenu-list">
+														<li class="side-menu__label1">
+															<a href="javascript:void(0);">Paramétrages</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Tarifications</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Partenaires logistiques</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Localités</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_liste_colis' %}">Zones</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Formats colis</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">Configurations</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_colis' %}">License</a>
+														</li>
+													</ul>
+												</div>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</li>
+							<li class="slide d-none">
 								<a class="side-menu__item" href="#_support.html"><i
 										class="bx bx-headphone side-menu__icon"></i><span
 										class="side-menu__label">Support</span></a>

@@ -54,6 +54,10 @@ def CodeGenerator(model, start_by_text=None, end_by_text=None):
         start_by_text = "FA{:%y}".format(timezone.now())
         end_by_text = "{:%m}".format(timezone.now())
 
+    if model == apps.get_model(app_label='management', model_name='ProfilStaff'): 
+        start_by_text = "PR{:%y}".format(timezone.now())
+        end_by_text = "{:%m}".format(timezone.now())
+
     if model == apps.get_model(app_label='management', model_name='Vendeur'): 
         start_by_text = "V{:%y}".format(timezone.now())
         end_by_text = "{:%m}".format(timezone.now())

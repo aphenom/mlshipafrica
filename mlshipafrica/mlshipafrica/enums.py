@@ -71,7 +71,7 @@ STATUT_TRAITEMENT_COMMENTAIRES = {
 
 class TypeVendeurChoice(models.TextChoices):
     # NA = '', 'Placholede'
-    PHYSIQUE = 'physique', 'Physique'
+    PARTICULIER = 'particulier', 'Particulier'
     SOCIETE = 'societe', 'Société'
 
 
@@ -133,3 +133,11 @@ BOOLEAN_CHOICES = (
     (True, 'Oui'),
     (False, 'Non'),
 )    
+
+
+class TypeProfilStaffChoice(models.TextChoices):
+    # NA = '', 'Placholede'
+    AGENT = 'agent', 'Agent'
+    COMPTABLE = 'comptable', 'Comptable'
+    ADMINISTRATEUR = 'administrateur', 'Administrateur'
+    SUPER = 'super', 'Super Administrateur'

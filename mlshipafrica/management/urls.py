@@ -5,8 +5,10 @@ from . import views # import views so we can use them in urls.
 app_name = 'management'
 urlpatterns = [
     path('vendeur_edit_profil/', views.vendeur_edit_profil, name='management_vendeur_edit_profil'),
+    path('vendeur_profil/', views.vendeur_profil, name='management_vendeur_profil'),
     path('vendeur_edit_colis/', views.vendeur_edit_colis, name='management_vendeur_edit_colis'),
     path('vendeur_liste_colis/', views.vendeur_liste_colis, name='management_vendeur_liste_colis'),
+    path('vendeur_liste_colis_reversement/', views.vendeur_liste_colis_reversement, name='management_vendeur_liste_colis_reversement'),
     path('vendeur_facture_colis/<str:code>/', views.vendeur_facture_colis, name='management_vendeur_facture_colis'),
     path('vendeur_detail_colis/<str:code>/', views.vendeur_detail_colis, name='management_vendeur_detail_colis'),
 ]

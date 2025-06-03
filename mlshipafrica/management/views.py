@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
 
 from core.models import Configuration, License, Localite
-from mlshipafrica.enums import StatutTraitement
+from mlshipafrica.enums import StatutTraitement, TypeProfilStaffChoice, TypeVendeurChoice
 from django.db import transaction
 
 
@@ -30,6 +30,8 @@ def vendeur_edit_profil(request):
             form = VendeurForm(data=(request.POST or None), files=(request.FILES or None), instance=vendeur)
             if form.is_valid():
                 vendeur = form.save(commit=False)
+                if form.has_changed():
+                    vendeur.etat_approbation = False
                 if not vendeur.user:
                     vendeur.user = user
                     vendeur.license = license
@@ -40,6 +42,19 @@ def vendeur_edit_profil(request):
             form = VendeurForm(instance=vendeur)
         return render(request, 'management/vendeur_edit_profil.html', locals())
     return redirect('index')
+
+
+@login_required
+def vendeur_profil(request):
+    try:
+        user = request.user
+        vendeur = Vendeur.objects.get(user=user)
+        type_vendeur = TypeVendeurChoice
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/vendeur_profil.html', locals())
+
     
 
 # Create edit colis vendeur.
@@ -139,3 +154,37 @@ def vendeur_liste_colis(request):
     except Exception as e:
         raise Http404
     return render(request, 'management/vendeur_liste_colis.html', locals())
+
+
+@login_required
+def vendeur_liste_colis_reversement(request):
+    try:
+        user = request.user
+        vendeur = Vendeur.objects.get(user=user)
+        articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False)
+        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        statut_traitement = StatutTraitement
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/vendeur_liste_colis_reversement.html', locals())
+
+
+@login_required
+def admin_liste_vendeurs(request):
+    try:
+        type_vendeur = request.GET.get('current_article', None)
+        user = request.user
+        profil_staff = user.account_profil_staff
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            vendeurs = Vendeur.objects.filter(license=profil_staff.license)
+            configuration = Configuration.objects.filter(license=profil_staff.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+            type_profil_staff = TypeProfilStaffChoice
+            # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+   
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/admin_liste_vendeurs.html', locals())

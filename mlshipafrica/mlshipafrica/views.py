@@ -34,7 +34,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from allauth.account.views import SignupView
 
-from management.models import Vendeur
+from management.models import ProfilStaff, Vendeur
 
 
 #@login_required
@@ -45,6 +45,13 @@ def index(request):
     if user.is_authenticated:
         if user.is_staff is True:
             user_is_staff = True
+            profil_staff_pk = None
+            try:
+                profil_staff = ProfilStaff.objects.get(user=request.user)
+                profil_staff_pk = profil_staff.pk
+            except ProfilStaff.DoesNotExist:
+                profil_staff_pk = None
+                profil_staff = None
         else:
             user_is_staff = False
                 

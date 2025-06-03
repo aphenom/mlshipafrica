@@ -1,0 +1,149 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Liste colis{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item active" aria-current="page">Profil</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row row-sm">
+					<div class="col-xl-4">
+						<div class="card mg-b-20">
+							<div class="card-body">
+								<div class="ps-0">
+									<div class="main-profile-overview">
+										<div class="main-img-user profile-user">
+											<img alt="" src="{% if vendeur and vendeur.logo %}{{ vendeur.logo.url }}{% endif %}"><a class="bi bi-camera profile-edit d-none" href="JavaScript:void(0);"></a>
+										</div>
+										<div class="d-flex justify-content-between mg-b-20">
+											<div>
+												<h5 class="main-profile-name">{{ vendeur.nom_store }}</h5>
+												<p class="main-profile-name-text">{% if vendeur.type_vendeur == type_vendeur.PARTICULIER %} {{ vendeur.get_type_vendeur_display }} {% else %} {{ vendeur.nom_entreprise|default:"" }} {% endif %}</p>
+												<p class="main-profile-name-text">{{ vendeur.numero_contact|default:"" }}</p>
+												<p class="main-profile-name-text">{{ vendeur.email|default:"" }}</p>
+												<p class="main-profile-name-text">{{ vendeur.adresse|default:"" }}</p>
+											</div>
+										</div>
+									</div><!-- main-profile-overview -->
+								</div>
+							</div>
+						</div>
+						
+					</div>
+					<div class="col-xl-8">
+						<div class="row">
+							<div class="col-lg-12 col-md-12">
+								<div class="card">
+									<div class="card-header">
+										<h3 class="card-title">Informations</h3>
+									</div>
+									<div class="card-body">
+
+										<div class="table-responsive mb-4">
+											<div class="mb-2 main-content-label">Identification</div>
+											<table class="table row table-borderless">
+												<tbody class="col-lg-12 col-xl-6 p-0">
+													<tr>
+														<td><strong>Type vendeur :</strong> {{ vendeur.get_type_vendeur_display }}</td>
+													</tr>
+													{% if vendeur.type_vendeur == type_vendeur.SOCIETE %}
+													<tr>
+														<td><strong>Immatriculation :</strong> {{ vendeur.immatriculation|default:"" }}</td>
+													</tr>
+													{% endif %}
+													<tr>
+														<td><strong>Store :</strong> {{ vendeur.nom_store|default:"" }}</td>
+													</tr>
+													
+													<tr>
+														<td><strong>Adresse :</strong> {{ vendeur.adresse|default:"" }}</td>
+													</tr>
+												</tbody>
+												<tbody class="col-lg-12 col-xl-6 p-0">
+													{% if vendeur.type_vendeur == type_vendeur.SOCIETE %}
+													<tr>
+														<td><strong>Entreprise  :</strong> {{ vendeur.nom_entreprise|default:"" }}</td>
+													</tr>
+													<tr>
+														<td><strong>Gérant  :</strong> {{ vendeur.nom_gerant|default:"" }}</td>
+													</tr>
+													{% endif %}
+													<tr>
+														<td><strong>Email :</strong> {{ vendeur.email|default:"" }}</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+
+										<div class="table-responsive mb-4">
+											<div class="mb-2 main-content-label">Informations personnelles</div>
+											<table class="table row table-borderless">
+												<tbody class="col-lg-12 col-xl-6 p-0">
+													<tr>
+														<td><strong>Nom :</strong> {{ vendeur.nom_contact|default:"" }}</td>
+													</tr>
+													<tr>
+														<td><strong>Fonction :</strong> {{ vendeur.fonction_contact|default:"" }}</td>
+													</tr>
+												</tbody>
+												<tbody class="col-lg-12 col-xl-6 p-0">
+													<tr>
+														<td><strong>Prénom(s) :</strong> {{ vendeur.prenom_contact|default:"" }}</td>
+													</tr>
+													<tr>
+														<td><strong>Numéro :</strong> {{ vendeur.numero_contact|default:"" }}</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+
+										<div class="table-responsive ">
+											<div class="mb-2 main-content-label">Notification</div>
+											<table class="table row table-borderless">
+												<tbody class="col-lg-12 col-xl-6 p-0">
+													<tr>
+														<td><strong>Numéro SMS :</strong> {{ vendeur.numero_sms|default:"" }}</td>
+													</tr>
+												</tbody>
+												<tbody class="col-lg-12 col-xl-6 p-0">
+													<tr>
+														<td><strong>Email notification :</strong> {{ vendeur.email_notification|default:"" }}</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>		
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}

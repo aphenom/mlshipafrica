@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypePieceIdentiteChoice, TypeVendeurChoice
+from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -58,7 +58,7 @@ class ProfilStaff(MyModelAbstract):
     email = models.CharField("Email", max_length=100, null=True, blank=True)
     numero_contact = PhoneNumberField("Numéro", null=True, blank=True)
     observation = models.CharField("Observation", max_length=255, null=True, blank=True)
-    role_profil = models.CharField("Type vendeur", max_length=25, choices=TypeVendeurChoice.choices, null=True, blank=True)
+    role_profil = models.CharField("Type profil", max_length=25, choices=TypeProfilStaffChoice.choices, null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='account_profil_staff', verbose_name = "profil_staff")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_profils_staffs', related_query_name="license_profil_staff", verbose_name = "license")
 
@@ -83,7 +83,7 @@ class Vendeur(MyModelAbstract):
 
     nom_entreprise = models.CharField("Nom entreprise", max_length=100, null=True, blank=True)
     immatriculation = models.CharField("RCCM / Numéro d'immatriculation", max_length=100, null=True, blank=True)
-    nom_gerant = models.CharField("Nom gerant", max_length=255, null=True, blank=True)
+    nom_gerant = models.CharField("Nom gérant", max_length=255, null=True, blank=True)
     nom_store = models.CharField("Nom boutique / store", max_length=100)
     email = models.CharField("Email", max_length=100, null=True, blank=True)
     adresse = models.CharField("Adresse", max_length=255, null=True, blank=True)

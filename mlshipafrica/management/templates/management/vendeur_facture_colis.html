@@ -45,6 +45,8 @@
 											<label class="tx-gray-600">Informations Colis</label>
 											<p class="invoice-info-row"><span>Colis No</span> <span>{{ article.code }}</span>
 											</p>
+											<p class="invoice-info-row"><span>Créé le</span> <span>{{ article.date_creation|date:'d-m-Y H:i:s' }}</span>
+											</p>
 											<p class="invoice-info-row"><span>Format colis</span> <span>{{ article.format_article }}</span>
 											</p>
 											<p class="invoice-info-row"><span>Destinataire</span> <span>{{ article.nom_destinataire }} {{ article.prenom_destinataire|default_if_none:"" }}</span>
