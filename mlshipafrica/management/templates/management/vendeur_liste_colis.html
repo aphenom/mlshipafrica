@@ -57,13 +57,13 @@
 										{% for article in articles %}
 											<tr>
 												<td data-order="{{ article.date_creation|date:'Y-m-d H:i:s' }}">{{ article.date_creation|date:'d-m-Y H:i:s' }}</td>
-												<td><a href="{% if article.statut_traitement == statut_traitement.BROUILLON %}{% url 'management:management_vendeur_edit_colis' %}?current_article={{article.code}}{% else %}{% url 'management:management_vendeur_detail_colis' article.code %}{% endif %}">#{{article.code}}</a></td>
+												<td><a href="{% if article.statut_traitement == statut_traitement.BROUILLON %}{% url 'management:management_vendeur_edit_colis' %}?current_article={{article.code}}{% else %}{% url 'management:management_vendeur_detail_colis' article.code %}{% endif %}">{{article.code}}</a></td>
 												<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
 												<td>{{ article.localite_arrivee }}</td>
 												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
 												<td>
 													{% if article.is_option_recuperation == True %}
-													<p>- Rammassage</p>
+													<p>- Ramassage</p>
 													{% endif %}
 													{% if article.is_option_encaissement == True %}
 													<p>- Encaissement</p>

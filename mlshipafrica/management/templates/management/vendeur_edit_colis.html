@@ -24,7 +24,7 @@
 							<div class="card-header">
 								<h3 class="card-title">Edition Colis</h3>
 							</div>
-							<form class="form-horizontal" method="POST" enctype="multipart/form-data"  onsubmit="alert('Voulez-vous continuer ?')">
+							<form class="form-horizontal" method="POST" enctype="multipart/form-data"  onsubmit="return confirm('Voulez-vous continuer ?')">
 								<div class="card-body">
 									{% csrf_token %}
 									{% if form.errors and form.non_field_errors %}
@@ -218,9 +218,9 @@
 									</div>
 								</div>
 								<div class="card-footer">
-									<button type="submit" class="btn-lg btn-primary waves-effect waves-light">Enregistrer colis</button>
+									<button type="submit" class="btn btn-primary waves-effect waves-light">Enregistrer colis</button>
 									{% if article.statut_traitement == statut_traitement.BROUILLON %}
-										<button type="submit" name="submit_suppression" value="submit_suppression" class="btn-lg btn-danger waves-effect waves-light">Supprimer colis</button>
+										<button type="submit" name="submit_suppression" value="submit_suppression" class="btn btn-danger waves-effect waves-light">Supprimer colis</button>
 									{% endif %}
 								</div>
 							</form>
@@ -243,30 +243,7 @@
 		<script>
 		$(document).ready(function () {
 			
-			function updateSwitchType() {
 
-				const valeur = $('#id_type_vendeur').val();
-
-				if (valeur === 'societe') {
-					$('.div-entreprise-required input').attr('required', true);
-					$('.div-entreprise-required').fadeIn('slow');
-					$('.div-entreprise').fadeIn('slow');
-				} else {
-					$('.div-entreprise-required input').val('');
-					$('.div-entreprise-required file').val('');
-					$('.div-entreprise input').val('');
-					$('.div-entreprise file').val('');
-					$('.div-entreprise-required input').removeAttr('required');
-					$('.div-entreprise-required').fadeOut('slow');
-					$('.div-entreprise').fadeOut('slow');
-				}
-			}
-
-			// Exécute la fonction au changement du select
-			$('#id_type_vendeur').on('change', updateSwitchType);
-
-			// Exécute la fonction immédiatement à l’ouverture de la page
-			updateSwitchType();
 
 		});
 		</script>

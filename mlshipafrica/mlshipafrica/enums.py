@@ -14,7 +14,7 @@ class StatutTraitement(models.TextChoices):
     LIVRE = 'livre', 'Livré'
     LIVRE_PAYE = 'livre_paye', 'Livré et payé'
     REVERSE = 'reverse', 'Reversé'
-    EN_RETOURNE = 'en_retour', 'En retour'
+    EN_RETOUR = 'en_retour', 'En retour'
     RETOURNE = 'retourne', 'Retourné'
 
 
@@ -141,3 +141,19 @@ class TypeProfilStaffChoice(models.TextChoices):
     COMPTABLE = 'comptable', 'Comptable'
     ADMINISTRATEUR = 'administrateur', 'Administrateur'
     SUPER = 'super', 'Super Administrateur'
+
+
+class StatutVendeur(models.TextChoices):
+    # NA = '', 'Placholede'
+    ATTENTE_APPROBATION = 'attente_approbation', 'Attente approbation'
+    ACTIF = 'actif', 'Actif'
+    INACTIF = 'inactif', 'Inactif'
+    SUPPRIME = 'supprime', 'Supprimé'
+
+STATUT_VENDEUR_COULEURS = {
+    'attente_approbation': 'warning',
+    'actif': 'success',
+    'inactif': 'black',
+    'supprime': 'danger',
+}
+

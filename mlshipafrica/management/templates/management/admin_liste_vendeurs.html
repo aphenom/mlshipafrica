@@ -1,0 +1,86 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Liste vendeurs - {{ suite_breadcrumb }}{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Vendeurs</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ suite_breadcrumb }}</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row">
+					<!--row-->
+					<div class="col-xl-12 col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<div class="card-title">Liste des vendeurs - {{ suite_breadcrumb }}</div>
+							</div>
+							<div class="card-body mt-2">
+								<div class="table-responsive">
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Date inscription</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Boutique</th>
+												<th class="fw-bold">Type</th>
+												<th class="fw-bold">Contact</th>
+												<th class="fw-bold">Email</th>
+												<th class="fw-bold">Adresse</th>
+												<th class="fw-bold">Actions</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for vendeur in vendeurs %}
+											<tr>
+												<td data-order="{{ vendeur.date_creation|date:'Y-m-d H:i:s' }}">{{ vendeur.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a></td>
+												<td>{{ vendeur.nom_store|default_if_none:"" }}</td>
+												<td>{{ vendeur.get_type_vendeur_display|default_if_none:"" }}</td>
+												<td>{{ vendeur.numero_contact|default_if_none:"" }}</td>
+												<td>{{ vendeur.email|default_if_none:"" }}</td>
+												<td>{{ vendeur.adresse|default_if_none:"" }}</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+														<a href="{% url 'management:management_admin_vendeur_edit_profil' vendeur.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14"><i class="fe fe-file"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!--row-->
+
+				</div>			
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+
+		});
+		</script>
+
+    {% endblock %}

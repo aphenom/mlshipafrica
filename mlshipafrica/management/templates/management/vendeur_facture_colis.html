@@ -123,7 +123,7 @@
 											</tbody>
 										</table>
 									</div>
-									<form method="POST" onsubmit="alert('Voulez-vous continuer ?')">
+									<form method="POST" onsubmit="return confirm('Voulez-vous continuer ?')">
 										{% csrf_token %}
 										{% if article.statut_traitement != statut_traitement.BROUILLON %}
 										<a class="btn btn-purple float-end mt-3 ms-2" href="#"  onclick="javascript:window.print();">

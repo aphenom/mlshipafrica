@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
 
 from core.models import Configuration, License, Localite
-from mlshipafrica.enums import StatutTraitement, TypeProfilStaffChoice, TypeVendeurChoice
+from mlshipafrica.enums import StatutTraitement, StatutVendeur, TypeProfilStaffChoice, TypeVendeurChoice
 from django.db import transaction
 
 
@@ -64,7 +64,7 @@ def vendeur_edit_colis(request):
     user = request.user
     form = VendeurColisForm(instance=None)
     current_article = request.GET.get('current_article', None)
-    statut_traitement = StatutTraitement
+    # statut_traitement = StatutTraitement
 
     if user.is_authenticated and not user.is_staff:
         try:
@@ -78,7 +78,7 @@ def vendeur_edit_colis(request):
                 article.config = configuration
                 article.localite_depart = localite_depart
                 article.etat_validation = False
-                article.statut_traitement = statut_traitement.BROUILLON
+                article.statut_traitement = StatutTraitement.BROUILLON
                 if vendeur.collecte_par_mlship is True and configuration.enable_option_encaissement is True:
                     article.is_option_encaissement = True
         except Exception as e:
@@ -108,8 +108,8 @@ def vendeur_facture_colis(request, code):
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
         article = Article.objects.get(code=code, vendeur=vendeur, etat_suppression=False)
-        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
-        statut_traitement = StatutTraitement
+        # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        # statut_traitement = StatutTraitement
         if request.method == 'POST':
             if "submit_validation" in request.POST and request.POST["submit_validation"]:
                 # rediriger vers details colis
@@ -133,8 +133,8 @@ def vendeur_detail_colis(request, code):
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
         article = Article.objects.all().exclude(statut_traitement=StatutTraitement.BROUILLON).get(code=code, vendeur=vendeur, etat_suppression=False)
-        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
-        statut_traitement = StatutTraitement
+        # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        # statut_traitement = StatutTraitement
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
         historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
     except Exception as e:
@@ -148,8 +148,8 @@ def vendeur_liste_colis(request):
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
         articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False)
-        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
-        statut_traitement = StatutTraitement
+        # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        # statut_traitement = StatutTraitement
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
     except Exception as e:
         raise Http404
@@ -162,8 +162,8 @@ def vendeur_liste_colis_reversement(request):
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
         articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False)
-        configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
-        statut_traitement = StatutTraitement
+        # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        # statut_traitement = StatutTraitement
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
     except Exception as e:
         raise Http404
@@ -173,7 +173,7 @@ def vendeur_liste_colis_reversement(request):
 @login_required
 def admin_liste_vendeurs(request):
     try:
-        type_vendeur = request.GET.get('current_article', None)
+        type_vendeur = request.GET.get('type_vendeur', StatutVendeur.ACTIF)
         user = request.user
         profil_staff = user.account_profil_staff
 
@@ -181,10 +181,141 @@ def admin_liste_vendeurs(request):
             and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
 
             vendeurs = Vendeur.objects.filter(license=profil_staff.license)
-            configuration = Configuration.objects.filter(license=profil_staff.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+            suite_breadcrumb = "" 
+            if type_vendeur == StatutVendeur.ATTENTE_APPROBATION:
+                suite_breadcrumb = "En attente approbation" 
+                vendeurs = vendeurs.filter(etat_approbation=False, etat_suppression=False, etat_validation=True)
+            if type_vendeur == StatutVendeur.ACTIF:
+                suite_breadcrumb = "Actifs" 
+                vendeurs = vendeurs.filter(etat_approbation=True, etat_suppression=False, etat_validation=True)
+            if type_vendeur == StatutVendeur.INACTIF:
+                suite_breadcrumb = "Inactifs" 
+                vendeurs = vendeurs.filter(etat_approbation=True, etat_suppression=False, etat_validation=False)
+            if type_vendeur == StatutVendeur.SUPPRIME:
+                suite_breadcrumb = "Supprimés" 
+                vendeurs = vendeurs.filter(etat_suppression=True)
+            #configuration = Configuration.objects.filter(license=profil_staff.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
             type_profil_staff = TypeProfilStaffChoice
             # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
    
     except Exception as e:
         raise Http404
     return render(request, 'management/admin_liste_vendeurs.html', locals())
+
+
+@login_required
+def admin_vendeur_edit_profil(request, code):
+    try:
+        user = request.user
+        profil_staff = user.account_profil_staff
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            vendeur = Vendeur.objects.get(code=code)
+            configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+            if request.method == 'POST':
+                form = VendeurForm(data=(request.POST or None), files=(request.FILES or None), instance=vendeur)
+                if "submit_approbation" in request.POST and request.POST["submit_approbation"]:
+                    vendeur.etat_approbation = True
+                    vendeur.save()
+                if "submit_activation" in request.POST and request.POST["submit_activation"]:
+                    vendeur.etat_validation = True
+                    vendeur.etat_suppression = False
+                    vendeur.save()
+                if "submit_desactivation" in request.POST and request.POST["submit_desactivation"]:
+                    vendeur.etat_validation = False
+                    vendeur.save()
+                if "submit_suppression" in request.POST and request.POST["submit_suppression"]:
+                    vendeur.etat_suppression = True
+                    vendeur.save()
+                return redirect('management:management_admin_vendeur_edit_profil', vendeur.code)
+
+            else:
+                form = VendeurForm(instance=vendeur)
+
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/admin_vendeur_edit_profil.html', locals())
+
+
+
+@login_required
+def admin_vendeur_profil(request, code):
+    try:
+        user = request.user
+        profil_staff = user.account_profil_staff
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            vendeur = Vendeur.objects.get(code=code)
+            type_vendeur = TypeVendeurChoice
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/admin_vendeur_profil.html', locals())
+
+    
+@login_required
+def admin_liste_colis(request):
+    try:
+        type_colis = request.GET.get('type_colis', "en_cours")
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff:
+
+            articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False)
+            suite_breadcrumb = "" 
+            if type_colis == StatutTraitement.EN_ATTENTE_RAMASSAGE:
+                suite_breadcrumb = "En attente de ramassage" 
+                articles = articles.filter(statut_traitement=StatutTraitement.EN_ATTENTE_RAMASSAGE)
+            if type_colis == StatutTraitement.EN_ATTENTE_DEPOT:
+                suite_breadcrumb = "En attente de dépôt" 
+                articles = articles.filter(statut_traitement=StatutTraitement.EN_ATTENTE_DEPOT)
+            if type_colis == "en_cours":
+                suite_breadcrumb = "En cours" 
+                articles = articles.filter(statut_traitement__in=[
+                    StatutTraitement.RAMASSE,
+                    StatutTraitement.DEPOT,
+                    StatutTraitement.EN_TRANSIT,
+                    StatutTraitement.EN_COURS_LIVRAISON,
+                    StatutTraitement.ARRIVE,
+                    StatutTraitement.EN_RETOUR
+                ])
+            if type_colis == StatutTraitement.RETOURNE:
+                articles = articles.filter(statut_traitement=StatutTraitement.RETOURNE)
+                suite_breadcrumb = "Retournés"  
+            if type_colis == StatutTraitement.LIVRE:
+                suite_breadcrumb = "Historique" 
+                articles = articles.filter(statut_traitement__in=[
+                    StatutTraitement.LIVRE,
+                    StatutTraitement.LIVRE_PAYE,
+                    StatutTraitement.REVERSE
+                ])
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/admin_liste_colis.html', locals())
+
+
+@login_required
+def admin_detail_colis(request, code):
+    try:
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff:
+            #vendeur = Vendeur.objects.get(user=user)
+            article = Article.objects.all().exclude(statut_traitement=StatutTraitement.BROUILLON).get(code=code)
+            # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+            # statut_traitement = StatutTraitement
+            # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+            historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
+    except Exception as e:
+        raise Http404
+    return render(request, 'management/admin_detail_colis.html', locals())

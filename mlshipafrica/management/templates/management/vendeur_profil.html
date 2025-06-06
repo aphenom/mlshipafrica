@@ -37,6 +37,12 @@
 									</div><!-- main-profile-overview -->
 								</div>
 							</div>
+							
+							<div class="card-footer">
+								<span class="badge badge-pill bg-{{ vendeur.get_statut_vendeur_couleur }}-transparent tx-{{ vendeur.get_statut_vendeur_couleur }} px-3 py-2 tx-14">
+									{{vendeur.get_statut_vendeur.label}}
+								</span>
+							</div>
 						</div>
 						
 					</div>

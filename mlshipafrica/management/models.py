@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
+from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -96,6 +96,7 @@ class Vendeur(MyModelAbstract):
     numero_sms = PhoneNumberField("Numéro notification sms", null=True, blank=True)
     email_notification = models.CharField("Email notification", max_length=100, null=True, blank=True)
     etat_approbation = models.BooleanField('Etat approbation', default=False)
+    date_approbation = models.DateTimeField('Date validation', null=True, blank=True)
     approbation_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='approbation_vendeurs', related_query_name="approbation_vendeur", verbose_name = "approuvé par")
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='account_vendeur', verbose_name = "vendeur")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_vendeurs', related_query_name="license_vendeur", verbose_name = "license")
@@ -148,10 +149,31 @@ class Vendeur(MyModelAbstract):
     def __str__(self):
         return '{}'.format(self.nom_store)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._init_etat_approbation = self.etat_approbation
+
     class Meta:
         verbose_name = 'Vendeur'
         verbose_name_plural = 'Vendeurs'      
         db_table_comment = "Les Vendeurs pour lesquels il faut gérer la livraison"
+        ordering = ['-date_creation']
+
+    def get_statut_vendeur(self):
+        if self.etat_suppression is False:
+            if self.etat_approbation is True:
+                if self.etat_validation is True:
+                    return StatutVendeur.ACTIF
+                else:
+                    return StatutVendeur.INACTIF
+            else:
+                return StatutVendeur.ATTENTE_APPROBATION
+        else:
+            return StatutVendeur.SUPPRIME
+
+    def get_statut_vendeur_couleur(self):
+        return STATUT_VENDEUR_COULEURS.get(self.get_statut_vendeur(), 'warning')  # couleur par défaut si non trouvée
+
 
     def save(self, *args, **kwargs):
         ''' On save, update timestamps '''                      
@@ -160,6 +182,10 @@ class Vendeur(MyModelAbstract):
         if self.nom_store and self.user.last_name != self.nom_store:
             self.user.last_name = self.nom_store
         self.user.save()
+        if self.etat_approbation != self._init_etat_approbation:
+            if self.etat_approbation == True:
+                self.date_approbation = timezone.now() 
+                self.approbation_par = get_current_user()
         return super(Vendeur, self).save(*args, **kwargs)        
 
     
@@ -197,6 +223,7 @@ class Tarification(MyModelAbstract):
         verbose_name = 'Tarification'
         verbose_name_plural = 'Tarifications'      
         db_table_comment = "Les tarifs définis selon les critères souhaités"
+        ordering = ['-date_creation']
 
 
 """ Les articles répresentant les colis à livrer """
@@ -281,6 +308,7 @@ class Article(MyModelAbstract):
         verbose_name = 'Article'
         verbose_name_plural = 'Articles'      
         db_table_comment = "Les articles répresentant les colis à livrer"
+        ordering = ['-date_creation']
 
     def save(self, *args, **kwargs):
         if not self.id or not self.tarification:
