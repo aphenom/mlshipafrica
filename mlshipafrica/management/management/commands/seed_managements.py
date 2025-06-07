@@ -12,6 +12,8 @@ from core.models import AchatLicense, Configuration, FormatArticle, License, Loc
 from management.models import ProfilStaff, Tarification, Vendeur
 from django.db import transaction
 
+from mlshipafrica.mlshipafrica.enums import TypeProfilStaffChoice
+
 class Command(BaseCommand):
     help = 'Seed the database with initial data'
 
@@ -94,6 +96,7 @@ class Command(BaseCommand):
               if 'is_staff' in user_data:
                     if not ProfilStaff.objects.filter(user=user).exists():
                         profil_staff = ProfilStaff.objects.create(
+                                  role_profil=TypeProfilStaffChoice.values[TypeProfilStaffChoice.names.index(user_data['role'])],
                                   user=user,
                                   license=license,
                               )
