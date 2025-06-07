@@ -584,20 +584,20 @@
 									-->
 									<li class="dropdown main-profile-menu nav nav-item nav-link">
 										<a class="profile-user d-flex" href=""><img alt=""
-												src="{% if vendeur and vendeur.logo %}{{ vendeur.logo.url }}{% endif %}"></a>
+												src="{% if user.account_vendeur and user.account_vendeur.logo %}{{ user.account_vendeur.logo.url }}{% endif %}"></a>
 										<div class="dropdown-menu">
 											<div class="main-header-profile bg-primary border-bottom p-3">
 												<div class="d-flex wd-100p">
 													<div class="main-img-user">
-														<img alt="" src="{% if vendeur and vendeur.logo %}{{ vendeur.logo.url }}{% endif %}" class="">
+														<img alt="" src="{% if user.account_vendeur and user.account_vendeur.logo %}{{ user.account_vendeur.logo.url }}{% endif %}" class="">
 													</div>
 													<div class="ms-3 my-auto text-white">
-														<h6>{% if vendeur %}{{ vendeur.nom_store }}{% endif %}</h6>
-														<span>{% if vendeur %}{{ vendeur.nom_entreprise|default_if_none:"" }}{% endif %}</span>
+														<h6>{% if user.account_vendeur %}{{ user.account_vendeur.nom_store }}{% endif %}</h6>
+														<span>{% if user.account_vendeur %}{{ user.account_vendeur.nom_entreprise|default_if_none:"" }}{% endif %}</span>
 													</div>
 												</div>
 											</div>
-											{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
+											{% if user.is_authenticated and user.account_vendeur and user.account_vendeur.etat_approbation is True %}
 											<a class="dropdown-item active" href="{% url 'management:management_vendeur_profil' %}"><i
 													class="bx bx-user-circle"></i>Profil</a>
 											<a class="dropdown-item" href="{% url 'management:management_vendeur_edit_profil' %}"><i class="bx bx-edit"></i>
@@ -659,14 +659,14 @@
 										class="bx bx-desktop side-menu__icon"></i><span
 										class="side-menu__label">Tableau de bord</span></a>
 							</li>
-							{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is False %}
+							{% if user.is_authenticated and user.account_vendeur and user.account_vendeur.etat_approbation is False %}
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_edit_profil' %} active {% endif %}" href="{% url 'management:management_vendeur_edit_profil' %}"><i
 										class="bx bx-edit side-menu__icon"></i><span
 										class="side-menu__label">Modifier mon profil</span></a>
 							</li>
 							{% endif %}
-							{% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is True %}
+							{% if user.is_authenticated and user.account_vendeur and user.account_vendeur.etat_approbation is True %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -923,7 +923,7 @@
 
 				<!-- page-header -->
 				<div class="page-header">
-					<ol class="breadcrumb {% if user.is_authenticated and user.account_vendeur and vendeur.etat_approbation is False %}d-none{% endif %}">
+					<ol class="breadcrumb {% if user.is_authenticated and user.account_vendeur and user.account_vendeur.etat_approbation is False %}d-none{% endif %}">
 						<li class="breadcrumb-item"><a href="#">ML SHIP AFRICA</a></li>
 						{% block breadcrumb-li %}
 						<li class="breadcrumb-item active" aria-current="page">Tableau de bord</li>
