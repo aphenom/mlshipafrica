@@ -383,6 +383,7 @@ class HistoriqueArticle(MyModelAbstract):
 class ReglementArticle(MyModelAbstract):
 
     montant_reglement = models.DecimalField('Montant réglé', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant réglé par le vendeur")
+    montant_reduction = models.DecimalField('Montant réduction', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant réduction appliqué à ce règlement")
     montant_restant = models.DecimalField('Montant restant', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant restant après ce règlement")
     commentaire  = models.TextField('Commentaire', null=True, blank=True)
     dernier_reglement_article = models.OneToOneField('self', models.SET_NULL, related_name="prochain_reglement", verbose_name="dernier reglement article", null=True, blank=True)

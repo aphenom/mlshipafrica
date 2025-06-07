@@ -103,6 +103,9 @@
 									<table class="table row table-borderless">
 										<tbody class="col-lg-12 col-xl-6 p-0">
 											<tr>
+												<td><strong>Vendeur :</strong> <a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.code }} - {{ article.vendeur.nom_store|default:"" }}</a></td>
+											</tr>
+											<tr>
 												<td><strong>Départ :</strong> {{ article.localite_depart }}</td>
 											</tr>
 											{% if article.is_option_recuperation == True or configuration.enable_option_recuperation == True %}
@@ -117,13 +120,16 @@
 											{% endif %}
 											{% if article.is_option_encaissement == True %}
 											<tr>
-												<td><strong>Montant à renversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }}</td>
+												<td><strong>Montant à reversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} <span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span></td>
 											</tr>
 											{% endif %}
 										</tbody>
 										<tbody class="col-lg-12 col-xl-6 p-0">
 											<tr>
-												<td><strong>Destination :</strong> {{ article.localite_arrivee }}</td>
+												<td><strong></strong>
+													{% if article.vendeur.adresse %} {{ article.vendeur.adresse }}<br> {% endif %}
+													{% if article.vendeur.numero_contact %} Tel No : {{ article.vendeur.numero_contact }}<br> {% endif %}
+													{% if article.vendeur.email %} Email : {{ article.vendeur.email }} {% endif %}</td>
 											</tr>
 											<tr>
 												<td><strong>Destinataire :</strong> {{ article.nom_destinataire }} {{ article.prenom_destinataire }}</td>
@@ -133,6 +139,9 @@
 											</tr>
 											<tr>
 												<td><strong>Contact(s) destinataire :</strong> {{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</td>
+											</tr>
+											<tr>
+												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} <span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span></td>
 											</tr>
 										</tbody>
 									</table>
@@ -146,7 +155,7 @@
 					<div class="col-lg-12 col-md-12">
 						<div class="card">
 							<div class="card-header">
-								<h3 class="card-title">Suivi</h3>
+								<h3 class="card-title">Suivi - N/A (Code tracking)</h3>
 							</div>
 							<div class="card-body">
 								<div class="product-timeline">
@@ -156,14 +165,132 @@
 											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
 											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date_creation|date:"d-m-Y H:i:s" }}</small></span>
 											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
+											<div class="alert alert-light tx-12 mb-0" role="alert">
+												Commentaires
+											</div>
 										</li>
 										{% endfor %}
 									</ul>
+									<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Nouveau mouvement</button>
+									<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler mouvement</button>
+									<div class="div-mouvement d-none">
+										<form class="form-horizontal mb-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
+											{% csrf_token %}
+											{% if form.errors and form.non_field_errors %}
+												<div class="alert alert-danger">
+													{{ form.non_field_errors }}
+												</div>
+											{% endif %}
+											<div class="row row-xs formgroup-wrapper">
+												<div class="col-md-3">
+													<div class="main-form-group ">
+														<label class="form-label">Code Traking</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+													</div><!-- main-form-group -->
+												</div>
+												<div class="col-md-3">
+													<div class="main-form-group ">
+														<label class="form-label">Date mouvement</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+													</div><!-- main-form-group -->
+												</div>
+												<div class="col-md-3 mg-t-20 mg-md-t-0">
+													<div class="main-form-group ">
+														<label class="form-label">Satut</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													</div><!-- main-form-group -->
+												</div>
+												<div class="col-md-6 mg-t-20 mg-md-t-0">
+													<div class="main-form-group ">
+														<label class="form-label">Commentaire</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													</div><!-- main-form-group -->
+												</div>
+											</div>
+											<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+											<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+										</form>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>				
+				</div>			
+
+				<div class="row">
+					<div class="col-lg-12 col-md-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Comptabilité</h3>
+							</div>
+							<div class="card-body">
+								<form class="form-horizontal mb-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="mb-4 main-content-label">Paiement service</div>
+									<button class="btn btn-main-primary pd-x-30">Enregistrer paiement</button>
+									<div class="div-paiement d-none">
+										<div class="row row-xs formgroup-wrapper">
+											<div class="col-md-3">
+												<div class="main-form-group ">
+													<label class="form-label">Date de paiement</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Réduction</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Montant payé</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Référence</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+												</div><!-- main-form-group -->
+											</div>
+										</div>
+										<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+										<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+									</div>
+								</form>
+								<form class="form-horizontal bd-t pt-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="mb-4 main-content-label">Reversement</div>
+									<button class="btn btn-main-primary pd-x-30">Enregistrer reversement</button>
+									<div class=" div-reversement d-none">
+										<div class="row row-xs formgroup-wrapper">
+											<div class="col-md-3">
+												<div class="main-form-group ">
+													<label class="form-label">Date de reversement</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Montant reversé</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Référence</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+												</div><!-- main-form-group -->
+											</div>
+										</div>
+										<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+										<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>		
 				<!-- row closed -->
 
     {% endblock %}
