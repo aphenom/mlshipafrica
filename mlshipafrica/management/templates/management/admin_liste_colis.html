@@ -43,6 +43,7 @@
 												<th class="fw-bold">Date</th>
 												<th class="fw-bold">ID Colis</th>
 												<th class="fw-bold">Vendeur</th>
+												<th class="fw-bold">Tracking</th>
 												<th class="fw-bold">Valeur ({{ configuration.monnaie|default:'FCFA' }})</th>
 												<th class="fw-bold">Destination</th>
 												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
@@ -60,6 +61,7 @@
 												<td data-order="{{ article.date_creation|date:'Y-m-d H:i:s' }}">{{ article.date_creation|date:'d-m-Y H:i:s' }}</td>
 												<td><a href="{% url 'management:management_admin_detail_colis' article.code %}">{{article.code}}</a></td>
 												<td><a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{article.vendeur.code}} - {{article.vendeur.nom_store}}</a></td>
+												<td>{{ article.code_tracking|default:"-" }}</td>
 												<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
 												<td>{{ article.localite_arrivee }}</td>
 												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
@@ -74,7 +76,12 @@
 												{% endif %}
 												<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.montant_total_frais|floatformat:-2|intcomma }}</td>
 												<td><span class="badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
-												<td>Impayé<span class="d-none badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
+												<td>
+												{% if article.etat_reglement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
+												{% endif %}
 												</td>
 												<td>
 													<div class="btn-list">

@@ -303,6 +303,18 @@ class Article(MyModelAbstract):
         )
         
         return ", ".join(produits)
+    
+    def get_last_historique(self):
+        return self.article_historiquearticles.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation").first()
+
+    def get_last_reglement(self):
+        return self.article_reglementarticles.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation").first()
+
+    def get_last_encaissement(self):
+        return self.article_encaissements.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation").first()
+
+    def get_last_reversement(self):
+        return self.article_reversements.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation").first()
 
     class Meta:
         verbose_name = 'Article'
@@ -342,12 +354,13 @@ class Article(MyModelAbstract):
                 self.cout_option_encaissement = None
             self.montant_total_frais = self.montant_frais + (self.cout_option_recuperation if self.cout_option_recuperation else 0) + (self.cout_option_encaissement if self.cout_option_encaissement else 0)
         
-        if self.statut_traitement != self._init_statut_traitement:
+        if self.statut_traitement != self._init_statut_traitement and get_current_user().is_staff is False: #, StatutTraitement.EN_ATTENTE_DEPOT, StatutTraitement.EN_ATTENTE_RAMASSAGE):
             histo_article = HistoriqueArticle()
             histo_article.article = self
+            histo_article.date = timezone.now()
             histo_article.statut_traitement = self.statut_traitement
             histo_article.license = self.license
-            histo_article.dernier_historique_article = self.article_historiquearticles.all().order_by("-date_creation").first()
+            histo_article.dernier_historique_article = self.get_last_historique()
             histo_article.save()
 
         return super().save(*args, **kwargs)
@@ -356,8 +369,9 @@ class Article(MyModelAbstract):
 class HistoriqueArticle(MyModelAbstract):
 
     statut_traitement = models.CharField(max_length=25, choices=StatutTraitement.choices,default=StatutTraitement.BROUILLON, null=True, blank=True)
+    date = models.DateTimeField('Date historique', null=True, blank=True)
     commentaire  = models.TextField('Commentaire', null=True, blank=True)
-    dernier_historique_article = models.OneToOneField('self', models.SET_NULL, related_name="prochain_historique", verbose_name="dernier historique article", null=True, blank=True)
+    dernier_historique_article = models.ForeignKey('self', on_delete=models.CASCADE, related_name="prochain_historiques", related_query_name="prochain_historique", verbose_name="dernier historique article", null=True, blank=True)
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='article_historiquearticles', related_query_name="article_historiquearticle", verbose_name = "article")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_historiquearticles', related_query_name="license_historiquearticle", verbose_name = "license")
 
@@ -365,7 +379,7 @@ class HistoriqueArticle(MyModelAbstract):
         return STATUT_TRAITEMENT_COULEURS.get(self.statut_traitement, 'black')  # couleur par défaut si non trouvée
     
     def get_statut_traitement_commentaire(self):
-        return STATUT_TRAITEMENT_COMMENTAIRES.get(self.statut_traitement, '') if self.commentaire is None or self.commentaire == '' else self.commentaire  # commentaire par défaut si non trouvée
+        return STATUT_TRAITEMENT_COMMENTAIRES.get(self.statut_traitement, '') # if self.commentaire is None or self.commentaire == '' else self.commentaire  # commentaire par défaut si non trouvée
  
     def get_statut_traitement_icone(self):
         return STATUT_TRAITEMENT_ICONES.get(self.statut_traitement, '')  # icon par défaut si non trouvée
@@ -386,7 +400,9 @@ class ReglementArticle(MyModelAbstract):
     montant_reduction = models.DecimalField('Montant réduction', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant réduction appliqué à ce règlement")
     montant_restant = models.DecimalField('Montant restant', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant restant après ce règlement")
     commentaire  = models.TextField('Commentaire', null=True, blank=True)
-    dernier_reglement_article = models.OneToOneField('self', models.SET_NULL, related_name="prochain_reglement", verbose_name="dernier reglement article", null=True, blank=True)
+    date = models.DateTimeField('Date reglement', null=True, blank=True)
+    reference = models.CharField('Référence reglement', max_length=255, null=True, blank=True)
+    dernier_reglement_article = models.ForeignKey('self', on_delete=models.CASCADE, related_name="prochain_reglement", related_query_name="prochain_reglements", verbose_name="dernier reglement article", null=True, blank=True)
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='article_reglementarticles', related_query_name="article_reglementarticle", verbose_name = "article")
     vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='vendeur_reglementarticles', related_query_name="vendeur_reglementarticle", verbose_name = "vendeur")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_reglementarticles', related_query_name="license_reglementarticle", verbose_name = "license")
@@ -399,6 +415,18 @@ class ReglementArticle(MyModelAbstract):
         verbose_name_plural = 'Reglement Articles'      
         db_table_comment = "Les reglements des frais de livraison du vendeur"
 
+    def save(self, *args, **kwargs):
+        if not self.id:
+            montant_initial = self.article.get_last_reglement().montant_restant if self.article.get_last_reglement() and self.article.get_last_reglement().montant_restant else self.article.montant_total_frais
+            self.montant_restant = int(montant_initial) - int(self.montant_reduction) - int(self.montant_reglement)
+            self.vendeur = self.article.vendeur
+            self.license = self.article.license
+            self.dernier_reglement_article = self.article.get_last_reglement()
+            if self.montant_restant == 0:
+                self.article.statut_traitement = StatutTraitement.LIVRE_PAYE
+                self.article.etat_reglement = True
+                self.article.save()
+        return super().save(*args, **kwargs)
 
 """ Les encaissements des paiements des clients pour le vendeur """
 class Encaissement(MyModelAbstract):
@@ -418,6 +446,12 @@ class Encaissement(MyModelAbstract):
         verbose_name_plural = 'Encaissements'      
         db_table_comment = "Les encaissements des paiements des clients pour le vendeur"
 
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.montant = self.article.valeur_totale
+            self.vendeur = self.article.vendeur
+            self.license = self.article.license
+        return super().save(*args, **kwargs)
 
 """ Les reversments aux vendeurs des encaissements des paiements de leurs clients """
 class Reversement(MyModelAbstract):
@@ -425,7 +459,9 @@ class Reversement(MyModelAbstract):
     montant_reversement = models.DecimalField('Montant reversé', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant reversé au vendeur")
     montant_restant = models.DecimalField('Montant restant', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Montant restant après reversement au vendeur")
     commentaire  = models.TextField('Commentaire', null=True, blank=True)
-    dernier_reversement = models.OneToOneField('self', models.SET_NULL, related_name="prochain_reversement", verbose_name="dernier reversement", null=True, blank=True)
+    date = models.DateTimeField('Date reversement', null=True, blank=True)
+    reference = models.CharField('Référence reversement', max_length=255, null=True, blank=True)
+    dernier_reversement = models.ForeignKey('self', on_delete=models.CASCADE, related_name="prochain_reversement", related_query_name="prochain_reversements", verbose_name="dernier reversement", null=True, blank=True)
     encaissement = models.ForeignKey(Encaissement, on_delete=models.CASCADE, related_name='encaissement_reversements', related_query_name="encaissement_reversement", verbose_name = "article")
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='article_reversements', related_query_name="article_reversement", verbose_name = "article")
     vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='vendeur_reversements', related_query_name="vendeur_reversement", verbose_name = "vendeur")
@@ -438,3 +474,25 @@ class Reversement(MyModelAbstract):
         verbose_name = 'Reversement'
         verbose_name_plural = 'Reversements'      
         db_table_comment = "Les reversments aux vendeurs des encaissements des paiements de leurs clients"
+
+    def save(self, *args, **kwargs):
+        if not self.id and self.article.statut_traitement == StatutTraitement.LIVRE_PAYE:
+            montant_initial = self.article.get_last_reversement().montant_restant if self.article.get_last_reversement() and self.article.get_last_reversement().montant_restant else self.encaissement.montant
+            self.montant_restant = int(montant_initial) - int(self.montant_reversement)
+            self.vendeur = self.article.vendeur
+            self.license = self.article.license
+            self.dernier_reglement_article = self.article.get_last_reglement()
+            if self.montant_restant == 0:
+                 # historique
+                histo_article = HistoriqueArticle()
+                histo_article.article = self.article
+                histo_article.date = timezone.now() if self.date < self.article.get_last_historique().date.strftime("%Y-%m-%d %H:%M") else self.date
+                histo_article.statut_traitement = StatutTraitement.REVERSE
+                histo_article.license = self.license
+                histo_article.dernier_historique_article = self.article.get_last_historique()
+                histo_article.save()
+                #article
+                self.article.statut_traitement = StatutTraitement.REVERSE
+                self.article.etat_reversement = True
+                self.article.save()
+        return super().save(*args, **kwargs)        

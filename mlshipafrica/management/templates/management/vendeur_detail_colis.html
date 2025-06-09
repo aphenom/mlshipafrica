@@ -114,7 +114,13 @@
 											{% endif %}
 											{% if article.is_option_encaissement == True %}
 											<tr>
-												<td><strong>Montant à reversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} <span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span></td>
+												<td><strong>Montant à reversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
+												{% if article.etat_reversement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Reversé</span> 
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span>
+												{% endif %}
+												</td>
 											</tr>
 											{% endif %}
 										</tbody>
@@ -132,7 +138,13 @@
 												<td><strong>Contact(s) destinataire :</strong> {{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</td>
 											</tr>
 											<tr>
-												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} <span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span></td>
+												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
+												{% if article.etat_reglement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span> {% if article.get_last_reglement.montant_reduction and article.get_last_reglement.montant_reduction > 0 %} (Réduction = {{ article.get_last_reglement.montant_reduction|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }}) {% endif %}
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
+												{% endif %}
+												</td>
 											</tr>
 										</tbody>
 									</table>
@@ -154,9 +166,20 @@
 										{% for historique_article in historique_articles %}
 										<li class="mt-0">
 											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date_creation|date:"d-m-Y H:i:s" }}</small></span>
+											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date|date:"d-m-Y H:i:s" }}</small></span>
 											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
+											{% if historique_article.commentaire %}
+												<div class="alert alert-light tx-12 mb-0" role="alert">
+													{{ historique_article.commentaire }}
+												</div>
+											{% endif %}
 										</li>
+										{% if article.etat_suppression is True %} 
+										<li class="mt-0">
+											<i class="fa fa-trash text-danger bg-danger-transparent product-icon p-2 rounded-50"></i>
+											<span class="fw-semibold mb-4 tx-15">Supprimé <small>- {{ article.date_suppression|date:"d-m-Y H:i:s" }}</small></span>
+										</li>
+										{% endif %}
 										{% endfor %}
 									</ul>
 								</div>

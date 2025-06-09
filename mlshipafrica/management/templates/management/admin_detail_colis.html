@@ -21,7 +21,7 @@
 					<div class="col-lg-12">
 						<div class="card">
 							<div class="card-header">
-								<h3 class="card-title">Produits -  Colis #{{ article.code }} - Créé le {{ article.date_creation|date:'d-m-Y H:i:s' }} - <span class="badge me-1 my-2 bg-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span></h3>
+								<h3 class="card-title">Produits -  Colis #{{ article.code }} - Créé le {{ article.date_creation|date:'d-m-Y H:i:s' }} - <span class="badge me-1 my-2 bg-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span> {% if article.etat_suppression is True %} <span class="badge me-1 my-2 bg-danger">Supprimé</span> {% endif %}</h3>
 								<div class="ms-auto">
 								<a href="#" class="btn ripple btn-sm btn-outline-light"><i class="fe fe-file me-1"></i>Facture vendeur</a>
 								<a href="#" class="btn ripple btn-sm btn-outline-light"><i class="fe fe-file me-1"></i>Facture Client</a>
@@ -120,7 +120,13 @@
 											{% endif %}
 											{% if article.is_option_encaissement == True %}
 											<tr>
-												<td><strong>Montant à reversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} <span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span></td>
+												<td><strong>Montant à reversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
+												{% if article.etat_reversement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Reversé</span> 
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span>
+												{% endif %}
+												</td>
 											</tr>
 											{% endif %}
 										</tbody>
@@ -141,7 +147,13 @@
 												<td><strong>Contact(s) destinataire :</strong> {{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</td>
 											</tr>
 											<tr>
-												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} <span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span></td>
+												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
+												{% if article.etat_reglement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span> {% if reglement_article.montant_reduction and reglement_article.montant_reduction > 0 %} (Réduction = {{ reglement_article.montant_reduction|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }}) {% endif %}
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
+												{% endif %}
+												</td>
 											</tr>
 										</tbody>
 									</table>
@@ -155,7 +167,7 @@
 					<div class="col-lg-12 col-md-12">
 						<div class="card">
 							<div class="card-header">
-								<h3 class="card-title">Suivi - N/A (Code tracking)</h3>
+								<h3 class="card-title">Suivi - {{ article.code_tracking|default:"N/A" }} (Code tracking)</h3>
 							</div>
 							<div class="card-body">
 								<div class="product-timeline">
@@ -163,50 +175,78 @@
 										{% for historique_article in historique_articles %}
 										<li class="mt-0">
 											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date_creation|date:"d-m-Y H:i:s" }}</small></span>
+											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date|date:"d-m-Y H:i:s" }}</small></span>
 											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
-											<div class="alert alert-light tx-12 mb-0" role="alert">
-												Commentaires
-											</div>
+											{% if historique_article.commentaire %}
+												<div class="alert alert-light tx-12 mb-0" role="alert">
+													{{ historique_article.commentaire }}
+												</div>
+											{% endif %}
 										</li>
 										{% endfor %}
+										{% if article.etat_suppression is True %} 
+										<li class="mt-0">
+											<i class="fa fa-trash text-danger bg-danger-transparent product-icon p-2 rounded-50"></i>
+											<span class="fw-semibold mb-4 tx-15">Supprimé <small>- {{ article.date_suppression|date:"d-m-Y H:i:s" }}</small></span>
+										</li>
+										{% endif %}
 									</ul>
-									<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Nouveau mouvement</button>
-									<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler mouvement</button>
-									<div class="div-mouvement d-none">
+									{% if article.etat_suppression is False %}
+									<form id="form-init-mouvement" class="mt-2" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
+										{% csrf_token %}
+										{% if statut_traitement_applicables %}
+										<button onclick="initArticleMouvement()" type="button" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5 mt-2">Nouveau mouvement</button>
+										{% endif %}
+										{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+											{% if article.statut_traitement == article.get_last_historique.statut_traitement and article.etat_reversement is False %}
+												<input type="hidden" value="{{article.get_last_historique.pk}}" name="last_mouvement" id="last_mouvement">
+												<button value="submit_annuler_last_mouvement" name="submit_annuler_last_mouvement" type="submit" class="btn btn-dark pd-x-30 mg-t-5 mt-2">Annuler mouvement</button>
+											{% endif %}
+										{% endif %}
+									</form>
+									<div id="div-mouvement" class="mt-4 d-none">
 										<form class="form-horizontal mb-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
 											{% csrf_token %}
+											<input type="hidden" value="{{article.get_last_historique.pk}}" name="last_mouvement" id="last_mouvement">
 											{% if form.errors and form.non_field_errors %}
 												<div class="alert alert-danger">
 													{{ form.non_field_errors }}
 												</div>
 											{% endif %}
-											<div class="row row-xs formgroup-wrapper">
+											<div class="row row-xs formgroup-wrapper div-mouvement">
+												{% if article.code_tracking is None or article.code_tracking == "" %}
 												<div class="col-md-3">
-													<div class="main-form-group ">
-														<label class="form-label">Code Traking</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+													<div class="main-form-group">
+														<label class="form-label">Code Traking</label> <input name="mouvement_code_tracking" class="form-control" type="text">
 													</div><!-- main-form-group -->
 												</div>
-												<div class="col-md-3">
+												{% endif %}
+												<div class="col-md-3 mg-t-20 mg-md-t-0">
 													<div class="main-form-group ">
-														<label class="form-label">Date mouvement</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+														<label class="form-label">Date mouvement</label> <input name="mouvement_date" class="form-control" min="{{article.get_last_historique.date|date:'Y-m-d H:i'}}" max="{% now 'Y-m-d H:i' %}" value="{% now 'Y-m-d H:i' %}" type="datetime-local" required>
 													</div><!-- main-form-group -->
 												</div>
 												<div class="col-md-3 mg-t-20 mg-md-t-0">
 													<div class="main-form-group ">
-														<label class="form-label">Satut</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+														<label class="form-label">Satut</label> 
+														<select name="mouvement_statut" class="form-control" required>
+															{% for value, label in statut_traitement_applicables %}
+																<option value="{{ value }}">{{ label }}</option>
+															{% endfor %}
+														</select>
 													</div><!-- main-form-group -->
 												</div>
 												<div class="col-md-6 mg-t-20 mg-md-t-0">
 													<div class="main-form-group ">
-														<label class="form-label">Commentaire</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+														<label class="form-label">Commentaire</label> <input name="mouvement_commentaire" class="form-control" type="text">
 													</div><!-- main-form-group -->
 												</div>
 											</div>
-											<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
-											<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+											<button value="submit_new_mouvement"  name="submit_new_mouvement" type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+											<button onclick="closeArticleMouvement()" type="button" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
 										</form>
 									</div>
+									{% endif %}
 								</div>
 							</div>
 						</div>
@@ -228,65 +268,92 @@
 										</div>
 									{% endif %}
 									<div class="mb-4 main-content-label">Paiement service</div>
-									<button class="btn btn-main-primary pd-x-30">Enregistrer paiement</button>
-									<div class="div-paiement d-none">
+									{% if reglement_article is None or article.etat_reglement is False %}
+									<button id="btn-init-paiement" onclick="initPaiement()" type="button" class="btn btn-main-primary pd-x-30">Enregistrer paiement</button>
+									{% endif %}
+									<div id="div-paiement" class="{% if reglement_article is None or article.etat_reglement is False %} d-none {% endif %}">
 										<div class="row row-xs formgroup-wrapper">
 											<div class="col-md-3">
 												<div class="main-form-group ">
-													<label class="form-label">Date de paiement</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+													<label class="form-label">Date de paiement</label> <input name="paiement_date" class="form-control" min="{{article.date_creation|date:'Y-m-d H:i'}}" max="{% now 'Y-m-d H:i' %}" value="{{ reglement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reglement_article or article.etat_reglement is True %} readonly {% endif %}>
 												</div><!-- main-form-group -->
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
 												<div class="main-form-group ">
-													<label class="form-label">Réduction</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													<label class="form-label">Réduction ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="paiement_reduction"name="paiement_reduction" onchange="recalculMontantPaiement()" class="form-control" type="number" min="0" max="{{article.montant_total_frais|default:0|stringformat:'d'}}" value="{{reglement_article.montant_reduction|default:0|stringformat:'d'}}" {% if reglement_article or article.etat_reglement is True %} readonly {% endif %}>
 												</div><!-- main-form-group -->
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
 												<div class="main-form-group ">
-													<label class="form-label">Montant payé</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													<label class="form-label">Montant payé ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="paiement_montant" name="paiement_montant" class="form-control" type="number" min="0" max="{{article.montant_total_frais|default:0|stringformat:'d'}}" value="{{reglement_article.montant_reglement|default:article.montant_total_frais|stringformat:'d'}}" required readonly>
 												</div><!-- main-form-group -->
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
 												<div class="main-form-group ">
-													<label class="form-label">Référence</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													<label class="form-label">Référence</label> <input id="paiement_reference" name="paiement_reference" class="form-control" value="{{ reglement_article.reference }}" type="text" {% if reglement_article or article.etat_reglement is True %} readonly {% endif %}>
 												</div><!-- main-form-group -->
 											</div>
 										</div>
-										<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
-										<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+										{% if reglement_article is None or article.etat_reglement is False %}
+											<button name="submit_new_reglement" value="submit_new_reglement" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+											<button onclick="closePaiement()" type="button" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+										{% else %}
+											{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+												{% if article.etat_reglement is True %}
+													<input type="hidden" value="{{article.get_last_reglement.pk}}" name="last_reglement" id="last_reglement">
+													<button value="submit_annuler_reglement" name="submit_annuler_reglement" type="submit" class="btn btn-dark pd-x-30 mg-t-5 mt-2">Annuler paiement</button>
+												{% endif %}
+											{% endif %}
+										{% endif %}
 									</div>
 								</form>
+
+
+								{% if encaissement_article and article.etat_encaissement is True %}
 								<form class="form-horizontal bd-t pt-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
 									{% csrf_token %}
+									<input type="hidden" value="{{encaissement_article.pk}}" name="last_encaissement" id="last_encaissement">
 									{% if form.errors and form.non_field_errors %}
 										<div class="alert alert-danger">
 											{{ form.non_field_errors }}
 										</div>
 									{% endif %}
 									<div class="mb-4 main-content-label">Reversement</div>
-									<button class="btn btn-main-primary pd-x-30">Enregistrer reversement</button>
-									<div class=" div-reversement d-none">
+									{% if reversement_article is None or article.etat_reversement is False %}
+									<button id="btn-init-reversement" onclick="initReversement()" type="button" class="btn btn-main-primary pd-x-30">Enregistrer reversement</button>
+									{% endif %}
+									<div id="div-reversement" class="{% if reversement_article is None or article.etat_reversement is False %} d-none {% endif %}">
 										<div class="row row-xs formgroup-wrapper">
 											<div class="col-md-3">
 												<div class="main-form-group ">
-													<label class="form-label">Date de reversement</label> <input class="form-control" placeholder="Enter your email" type="email" value="me@sprukotechnologies.com">
+													<label class="form-label">Date de reversement</label> <input name="reversement_date" class="form-control" min="{{article.get_last_historique.date|date:'Y-m-d H:i'}}" max="{% now 'Y-m-d H:i' %}" value="{{ reversement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reversement_article or article.etat_reversement is True %} readonly {% endif %}>
 												</div><!-- main-form-group -->
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
 												<div class="main-form-group ">
-													<label class="form-label">Montant reversé</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													<label class="form-label">Montant reversé ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="reversement_montant" name="reversement_montant" class="form-control" type="number" min="0" max="{{article.valeur_totale|default:0|stringformat:'d'}}" value="{{reversement_article.montant_reversement|default:article.valeur_totale|stringformat:'d'}}" required readonly>
 												</div><!-- main-form-group -->
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
 												<div class="main-form-group ">
-													<label class="form-label">Référence</label> <input class="form-control" placeholder="Enter your password" type="password" value="thisismypassword">
+													<label class="form-label">Référence</label> <input id="reversement_reference" name="reversement_reference" class="form-control" value="{{ reversement_article.reference }}" type="text" {% if reversement_article or article.etat_reversement is True %} readonly {% endif %}>
 												</div><!-- main-form-group -->
 											</div>
 										</div>
-										<button class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
-										<button class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+										{% if reversement_article is None or article.etat_reversement is False %}
+											<button name="submit_new_reversement" value="submit_new_reversement" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+											<button onclick="closeReversement()" type="button" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+										{% else %}
+											{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+												{% if article.etat_reversement is True %}
+													<input type="hidden" value="{{article.get_last_reversement.pk}}" name="last_reversement" id="last_reversement">
+													<button value="submit_annuler_reversement" name="submit_annuler_reversement" type="submit" class="btn btn-dark pd-x-30 mg-t-5 mt-2">Annuler reversement</button>
+												{% endif %}
+											{% endif %}
+										{% endif %}
 									</div>
 								</form>
+								{% endif %}
 							</div>
 						</div>
 					</div>
@@ -304,8 +371,39 @@
 
 		<script>
 		$(document).ready(function () {
-			
+			// recalculMontantPaiement();
 		});
+
+		function initArticleMouvement() {
+			$("#form-init-mouvement").addClass('d-none');
+			$("#div-mouvement").removeClass('d-none');
+		}
+		function closeArticleMouvement() {
+			$("#div-mouvement").addClass("d-none");
+			$("#form-init-mouvement").removeClass("d-none");
+		}
+
+		function initPaiement() {
+			$("#btn-init-paiement").addClass('d-none');
+			$("#div-paiement").removeClass('d-none');
+		}
+		function closePaiement() {
+			$("#div-paiement").addClass("d-none");
+			$("#btn-init-paiement").removeClass("d-none");
+		}
+		function recalculMontantPaiement() {
+			montant_total_frais = Number(String("{{ article.montant_total_frais|stringformat:'d' }}").replace(/\s/g, ''));
+			$("#paiement_montant").val(montant_total_frais - Number(String($("#paiement_reduction").val())));
+		}
+
+		function initReversement() {
+			$("#btn-init-reversement").addClass('d-none');
+			$("#div-reversement").removeClass('d-none');
+		}
+		function closeReversement() {
+			$("#div-reversement").addClass("d-none");
+			$("#btn-init-reversement").removeClass("d-none");
+		}
 		</script>
 
     {% endblock %}

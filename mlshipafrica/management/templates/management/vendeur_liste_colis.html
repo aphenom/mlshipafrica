@@ -72,7 +72,12 @@
 												{% endif %}
 												<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.montant_total_frais|floatformat:-2|intcomma }}</td>
 												<td><span class="badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
-												<td>Impayé<span class="d-none badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
+												<td>
+												{% if article.etat_reglement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
+												{% endif %}
 												</td>
 												<td>
 													<div class="btn-list">

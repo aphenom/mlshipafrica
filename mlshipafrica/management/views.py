@@ -2,7 +2,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django_dump_die.middleware import dd
 
-from management.models import Article, HistoriqueArticle, Vendeur
+from management.models import Article, Encaissement, HistoriqueArticle, ReglementArticle, Reversement, Vendeur
 from management.forms import VendeurColisForm, VendeurForm
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
@@ -304,18 +304,171 @@ def admin_liste_colis(request):
 
 @login_required
 def admin_detail_colis(request, code):
-    try:
-        user = request.user
-        profil_staff = user.account_profil_staff
-        #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff:
-            #vendeur = Vendeur.objects.get(user=user)
-            article = Article.objects.all().exclude(statut_traitement=StatutTraitement.BROUILLON).get(code=code)
-            # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
-            # statut_traitement = StatutTraitement
-            # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
-            historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
+    user = request.user
+    profil_staff = user.account_profil_staff
+    #statut_traitement = StatutTraitement
+
+    if user.is_authenticated and user.is_staff:
+        #vendeur = Vendeur.objects.get(user=user)
+        article = Article.objects.all().exclude(statut_traitement=StatutTraitement.BROUILLON).get(code=code)
+        # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+        # statut_traitement = StatutTraitement
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+        historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
+        reglement_articles = article.article_reglementarticles.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation")
+        encaissement_articles = article.article_encaissements.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation")
+        reversement_articles = article.article_reversements.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation")
+        reglement_article = reglement_articles.filter(montant_restant=0).first() if reglement_articles else None 
+        encaissement_article = encaissement_articles.first() if encaissement_articles else None 
+        reversement_article = reversement_articles.filter(montant_restant=0).first() if reversement_articles else None 
+               
+        statuts_exclus = [
+                StatutTraitement.BROUILLON, 
+                StatutTraitement.EN_ATTENTE_DEPOT,
+                StatutTraitement.EN_ATTENTE_RAMASSAGE,
+                StatutTraitement.REVERSE
+            ]
+        
+        if article.is_option_recuperation is True:
+            statuts_exclus.append(StatutTraitement.DEPOT)
+        else:
+            statuts_exclus.append(StatutTraitement.RAMASSE)
+
+        if article.is_option_encaissement is True:
+            statuts_exclus.append(StatutTraitement.LIVRE)
+        else:
+            statuts_exclus.append(StatutTraitement.LIVRE_PAYE)
+
+        for historique in historique_articles:
+            if historique.statut_traitement not in statuts_exclus:
+                statuts_exclus.append(historique.statut_traitement)
+
+        statut_traitement_applicables = [
+            (value, label) for value, label in StatutTraitement.choices
+            if value not in statuts_exclus and \
+            ( \
+                    (article.get_last_historique().statut_traitement == StatutTraitement.EN_ATTENTE_RAMASSAGE and value == StatutTraitement.RAMASSE)
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.EN_ATTENTE_DEPOT and value == StatutTraitement.DEPOT)
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.RAMASSE and value == StatutTraitement.EN_TRANSIT)
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.DEPOT and value == StatutTraitement.EN_TRANSIT)
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.EN_TRANSIT and value == StatutTraitement.EN_COURS_LIVRAISON)
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.EN_COURS_LIVRAISON and value == StatutTraitement.ARRIVE)
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.ARRIVE and (value == StatutTraitement.LIVRE or value == StatutTraitement.LIVRE_PAYE or value == StatutTraitement.EN_RETOUR))
+                    or (article.get_last_historique().statut_traitement == StatutTraitement.EN_RETOUR and value == StatutTraitement.RETOURNE) \
+            )
+        ]
+        
+        # print(statut_traitement_applicables)
+
+        if request.method == 'POST':
+
+            if "submit_annuler_last_mouvement" in request.POST and request.POST["submit_annuler_last_mouvement"]:
+                if str(article.get_last_historique().id) == request.POST["last_mouvement"]:
+                    if article.statut_traitement in (StatutTraitement.BROUILLON, StatutTraitement.EN_ATTENTE_DEPOT, StatutTraitement.EN_ATTENTE_RAMASSAGE):
+                        article.statut_traitement = StatutTraitement.BROUILLON
+                        article.etat_validation = False
+                    else:
+                        article.statut_traitement = article.get_last_historique().dernier_historique_article.statut_traitement 
+                    
+                    if article.etat_encaissement is True and article.get_last_historique().statut_traitement == StatutTraitement.LIVRE_PAYE:
+                        encaissement_a_supprime = article.get_last_encaissement()
+                        encaissement_a_supprime.etat_suppression = True
+                        encaissement_a_supprime.save()
+                        article.etat_encaissement = False
+
+                    historique_a_supprime = article.get_last_historique()
+                    historique_a_supprime.etat_suppression = True
+                    # historique_a_supprime.etat_validation = False
+                    historique_a_supprime.save()
+                    article.save()
+                    
+            if "submit_new_mouvement" in request.POST and request.POST["submit_new_mouvement"]:
+                if str(article.get_last_historique().id) == request.POST["last_mouvement"] and any(value == request.POST["mouvement_statut"] for value, _ in statut_traitement_applicables):
+                    if (article.code_tracking is None or article.code_tracking == "") and request.POST["mouvement_code_tracking"]:
+                        article.code_tracking = request.POST["mouvement_code_tracking"]
+                    article.statut_traitement = request.POST["mouvement_statut"]
+                    article.etat_validation = True
+                    article.save()
+
+                    histo_article = HistoriqueArticle()
+                    histo_article.article = article
+                    histo_article.date = request.POST["mouvement_date"]
+                    histo_article.statut_traitement = request.POST["mouvement_statut"]
+                    histo_article.commentaire = request.POST["mouvement_commentaire"]
+                    histo_article.license = article.license
+                    histo_article.dernier_historique_article = article.get_last_historique()
+                    histo_article.save()
+
+                    if article.etat_encaissement is False and request.POST["mouvement_statut"] == StatutTraitement.LIVRE_PAYE and article.is_option_encaissement is True:
+                        new_encaissement = Encaissement()
+                        new_encaissement.article = article
+                        new_encaissement.save()
+                        article.etat_encaissement = True
+                        article.save()
+            
+     
+            if "submit_annuler_reglement" in request.POST and request.POST["submit_annuler_reglement"]:
+                if str(article.get_last_reglement().id) == request.POST["last_reglement"]:
+
+                    reglement_a_supprime = article.get_last_reglement()
+                    reglement_a_supprime.etat_suppression = True
+                    reglement_a_supprime.save()
+                    
+                    article.etat_reglement = False
+                    article.save()
+                    
+            if "submit_new_reglement" in request.POST and request.POST["submit_new_reglement"]:
+                if article.etat_reglement is False and (int(request.POST["paiement_montant"]) + int(request.POST["paiement_reduction"])) == int(article.montant_total_frais) :
+                    reglement = ReglementArticle()
+                    reglement.article = article
+                    reglement.date = request.POST["paiement_date"]
+                    reglement.reference = request.POST["paiement_reference"]
+                    reglement.montant_reglement = request.POST["paiement_montant"]
+                    reglement.montant_reduction = request.POST["paiement_reduction"]
+                    reglement.save()
+                    
+                # rediriger vers details colis
+                # article.statut_traitement =  StatutTraitement.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation is True else StatutTraitement.EN_ATTENTE_DEPOT
+                # article.save()
+
+
+            if "submit_annuler_reversement" in request.POST and request.POST["submit_annuler_reversement"]:
+                if str(article.get_last_reversement().id) == request.POST["last_reversement"]:
+                    if article.etat_encaissement is True and article.get_last_historique().statut_traitement == StatutTraitement.REVERSE:
+                        reversement_a_supprime = article.get_last_reversement()
+                        reversement_a_supprime.etat_suppression = True
+                        reversement_a_supprime.save()
+
+                        article.statut_traitement = article.get_last_historique().dernier_historique_article.statut_traitement 
+                        article.etat_reversement = False
+
+                        historique_a_supprime = article.get_last_historique()
+                        historique_a_supprime.etat_suppression = True
+                        # historique_a_supprime.etat_validation = False
+                        historique_a_supprime.save()
+
+                        article.save()
+                    
+            if "submit_new_reversement" in request.POST and request.POST["submit_new_reversement"]:             
+                if str(article.get_last_encaissement().pk) == request.POST["last_encaissement"] and article.is_option_encaissement is True and  article.statut_traitement == article.get_last_historique().statut_traitement and article.statut_traitement == StatutTraitement.LIVRE_PAYE:
+                    new_reversement = Reversement()
+                    new_reversement.article = article
+                    new_reversement.encaissement = article.get_last_encaissement()
+                    new_reversement.date = request.POST["reversement_date"]
+                    new_reversement.reference = request.POST["reversement_reference"]
+                    new_reversement.montant_reversement = request.POST["reversement_montant"]
+                    new_reversement.save()
+                    #    new_encaissement.save()
+                    #    article.etat_encaissement = True
+                    #    article.save()
+                        
+            if article.etat_suppression is True:
+                return HttpResponseRedirect(reverse('management:management_admin_liste_colis')) 
+            return redirect('management:management_admin_detail_colis', article.code)
+            
+    try:
+       pass
     except Exception as e:
         raise Http404
     return render(request, 'management/admin_detail_colis.html', locals())
