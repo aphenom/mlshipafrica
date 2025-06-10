@@ -1,0 +1,101 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Liste reversements - {{ suite_breadcrumb }}{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Reversements</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ suite_breadcrumb }}</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row">
+					<!--row-->
+					<div class="col-xl-12 col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<div class="card-title">Liste des reversements - {{ suite_breadcrumb }}</div>
+								<div class="ms-auto d-none">
+									<div class="btn-list">
+										<a class="btn btn-primary btn-sm text-white" href="{% url 'management:management_vendeur_edit_colis' %}">
+											<span>
+												<i class="fe fe-plus-square"></i> Nouveau colis
+											</span>
+											<!-- <i class="fa fa-caret-down"></i> -->
+										</a>
+										<button class="btn ripple btn-sm btn-outline-light d-none"><i class="fe fe-download me-1"></i>Exporter Excel</button>
+									</div>
+								</div>
+							</div>
+							<div class="card-body mt-2">
+								<div class="table-responsive">
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Date</th>
+												<th class="fw-bold">ID Colis</th>
+												<th class="fw-bold">Vendeur</th>
+												<th class="fw-bold">Valeur ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Paiement service</th>
+												<th class="fw-bold">Actions</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for article in articles %}
+											<tr>
+												<td data-order="{{ article.date_creation|date:'Y-m-d H:i:s' }}">{{ article.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'management:management_admin_detail_colis' article.code %}">{{article.code}}</a></td>
+												<td><a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{article.vendeur.code}} - {{article.vendeur.nom_store}}</a></td>
+												<td data-order="{{ article.valeur_totale }}" data-sort="{{ article.valeur_totale }}">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
+												<td><span class="badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
+												<td>
+												{% if article.etat_reglement is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'management:management_admin_detail_colis' article.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+														<a href="{% url 'management:management_vendeur_facture_colis' article.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14"><i class="fe fe-file"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!--row-->
+
+				</div>			
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}

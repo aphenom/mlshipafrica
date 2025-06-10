@@ -777,7 +777,7 @@
 									</li>
 								</ul>
 							</li>
-							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_paiements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-wallet-alt side-menu__icon"></i><span class="side-menu__label">Paiements</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
 									<li class="panel sidetab-menu">
@@ -789,13 +789,13 @@
 															<a href="javascript:void(0);">Paiements</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">En attente</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_paiements' and type_paiements == 'en_attente'  %} active {% endif %}" href="{% url 'management:management_admin_liste_paiements' %}?type_paiements=en_attente">En attente</a>
 														</li>
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Vendeurs</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="#">Historique</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_paiements' and type_paiements == 'historique' %} active {% endif %}" href="{% url 'management:management_admin_liste_paiements' %}?type_paiements=historique">Historique</a>
 														</li>
 													</ul>
 												</div>
@@ -804,7 +804,7 @@
 									</li>
 								</ul>
 							</li>
-							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_admin_liste_reversements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-money side-menu__icon"></i><span class="side-menu__label">Reversements</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
 									<li class="panel sidetab-menu">
@@ -816,13 +816,13 @@
 															<a href="javascript:void(0);">Reversements</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">En attente</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements' and type_reversements == 'en_attente'  %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements' %}?type_reversements=en_attente">En attente</a>
 														</li>
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Vendeurs</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="#">Historique</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements' and type_reversements == 'historique' %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements' %}?type_reversements=historique">Historique</a>
 														</li>
 													</ul>
 												</div>

@@ -62,7 +62,7 @@
 												<td><a href="{% url 'management:management_admin_detail_colis' article.code %}">{{article.code}}</a></td>
 												<td><a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{article.vendeur.code}} - {{article.vendeur.nom_store}}</a></td>
 												<td>{{ article.code_tracking|default:"-" }}</td>
-												<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
+												<td data-order="{{ article.valeur_totale }}" data-sort="{{ article.valeur_totale }}">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
 												<td>{{ article.localite_arrivee }}</td>
 												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
 												<td>
