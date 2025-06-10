@@ -119,7 +119,7 @@ class Command(BaseCommand):
                         self.stdout.write(f"vendeur {vendeur_data['nom_store']} existe déjà.")
 
 
-          """Tarification"""
+          """Tarification
           tarifications = [
               {"format": "Petit", "localite_depart":"Abidjan", "localite_arrivee":"Abidjan", "partenaire_logistique":"Logistique SA", "montant_frais":1500, "cout_option_recuperation":300, "taux_option_encaissement":8},
               {"format": "Petit", "localite_depart":"Abidjan", "localite_arrivee":"Abidjan", "partenaire_logistique":"3000 Logistics", "montant_frais":2000, "cout_option_recuperation":300, "taux_option_encaissement":8},
@@ -143,7 +143,7 @@ class Command(BaseCommand):
               tarification.license = configuration.license if configuration else license
               tarification.save()
               self.stdout.write(f"Tarification {tarification} créé.")
-
+          """
 
           self.stdout.write(self.style.SUCCESS("Creating Management done with success."))
 

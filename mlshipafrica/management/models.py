@@ -214,8 +214,25 @@ class Tarification(MyModelAbstract):
     vendeur = models.ForeignKey(Vendeur, models.SET_NULL, null=True, blank=True, related_name='vendeur_tarifications', related_query_name="vendeur_tarification", verbose_name = "vendeur")
     config = models.ForeignKey(Configuration, models.SET_NULL, null=True, blank=True, related_name='config_tarifications', related_query_name="config_tarification", verbose_name = "Configuration")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_tarifications', related_query_name="license_tarification", verbose_name = "license")
-    
 
+    """ prendre les valeurs globales des configs lorsque la config est definie et pas sur le tarif""" 
+    
+    def get_final_cout_option_recuperation(self):
+        cout = self.cout_option_recuperation if self.cout_option_recuperation else self.config.cout_option_recuperation
+        return cout
+
+    def get_final_cout_option_encaissement(self):
+        cout = self.cout_option_encaissement if self.cout_option_encaissement else self.config.cout_option_encaissement
+        return cout
+
+    def get_final_taux_option_recuperation(self):
+        taux = self.taux_option_recuperation if self.taux_option_recuperation else self.config.taux_option_recuperation
+        return taux
+
+    def get_final_taux_option_encaissement(self):
+        taux = self.taux_option_encaissement if self.taux_option_encaissement else self.config.taux_option_encaissement
+        return taux
+    
     def __str__(self):
         return '{}'.format(self.code)
 
@@ -298,10 +315,11 @@ class Article(MyModelAbstract):
             for choix in self.produits
             if choix != ProduitsChoice.AUTRE and choix in ProduitsChoice.values
         ]
-        produits.append(
-            self.produits_autre
-        )
-        
+        if self.produits_autre:
+            produits.append(
+                self.produits_autre
+            )
+            
         return ", ".join(produits)
     
     def get_last_historique(self):
@@ -338,20 +356,30 @@ class Article(MyModelAbstract):
 
             # Exécutez la requête pour récupérer les paramètres de tarification
             tarification = Tarification.objects.filter(query).order_by("-vendeur", "-format_article", "-localite_arrivee", "-localite_arrivee", "-zone_depart", "-zone_arrivee").first()
+            tarification_taux_option_recuperation = tarification.get_final_taux_option_recuperation() or 0
+            tarification_taux_option_encaissement = tarification.get_final_taux_option_encaissement() or 0
+            tarification_cout_option_recuperation = tarification.get_final_cout_option_recuperation()
+            tarification_cout_option_encaissement = tarification.get_final_cout_option_encaissement()
+            
             self.valeur_totale = self.valeur_totale if self.valeur_totale and self.valeur_totale > 0 else self.valeur*self.quantite
+           
             if self.statut_traitement != StatutTraitement.BROUILLON:
                 self.tarification = tarification
+           
             self.montant_frais = tarification.montant_frais
-            self.taux_option_recuperation = tarification.taux_option_recuperation if self.is_option_recuperation is True else None
-            self.taux_option_encaissement = tarification.taux_option_encaissement if self.is_option_encaissement is True else None
+            self.taux_option_recuperation = tarification_taux_option_recuperation if self.is_option_recuperation is True else None
+            self.taux_option_encaissement = tarification_taux_option_encaissement if self.is_option_encaissement is True else None
+            
             if self.is_option_recuperation is True:
-                self.cout_option_recuperation = tarification.cout_option_recuperation if tarification.cout_option_recuperation else round((self.valeur_totale*tarification.taux_option_recuperation)/100,0)
+                self.cout_option_recuperation = tarification_cout_option_recuperation if tarification_cout_option_recuperation else round((self.valeur_totale*tarification_taux_option_recuperation)/100,0)
             else:
                 self.cout_option_recuperation = None
+
             if self.is_option_encaissement is True:
-                self.cout_option_encaissement = tarification.cout_option_encaissement if tarification.cout_option_encaissement else round((self.valeur_totale*tarification.taux_option_encaissement)/100,0)
+                self.cout_option_encaissement = tarification_cout_option_encaissement if tarification_cout_option_encaissement else round((self.valeur_totale*tarification_taux_option_encaissement)/100,0)
             else:
                 self.cout_option_encaissement = None
+
             self.montant_total_frais = self.montant_frais + (self.cout_option_recuperation if self.cout_option_recuperation else 0) + (self.cout_option_encaissement if self.cout_option_encaissement else 0)
         
         if self.statut_traitement != self._init_statut_traitement and get_current_user().is_staff is False: #, StatutTraitement.EN_ATTENTE_DEPOT, StatutTraitement.EN_ATTENTE_RAMASSAGE):
@@ -364,6 +392,7 @@ class Article(MyModelAbstract):
             histo_article.save()
 
         return super().save(*args, **kwargs)
+    
 
 """ Historisations des mouvements des articles répresentant les colis pendant le traitement"""
 class HistoriqueArticle(MyModelAbstract):
@@ -423,7 +452,6 @@ class ReglementArticle(MyModelAbstract):
             self.license = self.article.license
             self.dernier_reglement_article = self.article.get_last_reglement()
             if self.montant_restant == 0:
-                self.article.statut_traitement = StatutTraitement.LIVRE_PAYE
                 self.article.etat_reglement = True
                 self.article.save()
         return super().save(*args, **kwargs)

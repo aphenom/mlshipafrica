@@ -63,7 +63,7 @@ class Command(BaseCommand):
               self.stdout.write(f"PartenaireLogistique {partenaire_logistique} créé.")
 
 
-          """Zone"""
+          """Zone
           zones = [
               {"nom": "Zone A", "is_depart": True, "is_arrivee":True},
               {"nom": "Zone B", "is_depart": False, "is_arrivee":True},
@@ -77,9 +77,10 @@ class Command(BaseCommand):
               zone.license = license
               zone.save()
               self.stdout.write(f"Zone {zone} créée.")
+          """
 
 
-          """Localité"""
+          """Localité
           localites = [
               {"nom": "Abidjan", "is_depart": True, "is_arrivee":True, "zone":"Zone A"},
               {"nom": "Yamoussoukro", "is_depart": False, "is_arrivee":True, "zone":"Zone B"},
@@ -98,9 +99,10 @@ class Command(BaseCommand):
               localite.license = license
               localite.save()
               self.stdout.write(f"Localite {localite} créée.")
+          """
 
 
-          """FormatArticle"""
+          """FormatArticle
           formatArticles = [
               {"nom": "Petit", "caracteristique":"taille maximale : 30 x 20 x 20 – poids maximal : 3 kg"},
               {"nom": "Moyen", "caracteristique":"taille maximale : 60 x 40 x 40 – poids maximal : 10 kg"},
@@ -114,6 +116,7 @@ class Command(BaseCommand):
               format_article.license = license
               format_article.save()
               self.stdout.write(f"FormatArticle {format_article} créé.")
+          """
 
 
           self.stdout.write(self.style.SUCCESS("Creating Core done with success."))
