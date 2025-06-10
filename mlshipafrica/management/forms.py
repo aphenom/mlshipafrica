@@ -4,6 +4,7 @@ from management.models import Article, Vendeur
 from phonenumber_field.formfields import PhoneNumberField
 from phonenumber_field.widgets import PhoneNumberPrefixWidget
 
+from core.models import Localite
 from mlshipafrica.enums import BOOLEAN_CHOICES, NatureChoice, PlateformeChoice, ProduitsChoice
 
 '''formulaire pour remplir informations avant et servant pour la validation du vendeur'''
@@ -136,6 +137,13 @@ class VendeurColisForm(forms.ModelForm):
         widget=forms.RadioSelect,
         required=True,
     )
+
+    def __init__(self, *args, **kwargs):
+      	# Extract the user from the view
+        # user = kwargs.pop('user')
+        super(VendeurColisForm, self).__init__(*args, **kwargs)
+        # Filter authors related to the logged-in user
+        self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True)
             
     class Meta:
         model = Article
