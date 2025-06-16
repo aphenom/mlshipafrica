@@ -1,0 +1,963 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Paramétrages - {{ suite_breadcrumb }}{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Paramétrages</a></li>
+		<li class="breadcrumb-item"><a href="#">{{ suite_breadcrumb }}</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Edition</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row row-sm">
+					<!-- Col -->
+
+					<div class="col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<h3 class="card-title">Edition {{ suite_libelle_nouveau }} - #{{code}}</h3>
+							</div>
+
+
+							{% if param == "licenses" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="row row-xs formgroup-wrapper mb-4">
+										<div class="col-md-3">
+											<div class="main-form-group ">
+												<label class="form-label">Statut license <span class="text-danger">*</span></label> 
+												<select class="form-control" name="license_statut" required>
+													<option value="1" {% if license.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if license.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mb-4 main-content-label">Historique Achats license</div>
+									
+									{% for achat_license in achat_licenses %}
+									<div id="div-paiement" class="">
+										<div class="row row-xs formgroup-wrapper">
+											<div class="col-md-3">
+												<div class="main-form-group ">
+													<label class="form-label">Début <span class="text-danger">*</span></label> <input class="form-control" min="" max="" value="{{achat_license.debut|date:'Y-m-d'}}" type="date" {% if achat_license != license.get_achat_license_last %} readonly {% else %} name="debut_old" {% endif %}>
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Fin <span class="text-danger">*</span></label> <input class="form-control" min="" max="" value="{{achat_license.fin|date:'Y-m-d'}}" type="date" {% if achat_license != license.get_achat_license_last %} readonly {% else %} name="fin_old" {% endif %}>
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Coût ({{ configuration.monnaie|default:'FCFA' }}) <span class="text-danger">*</span></label> <input class="form-control" type="number" min="0" max="" value="{{achat_license.cout}}" {% if achat_license != license.get_achat_license_last %} readonly {% else %} name="cout_old" {% endif %}>
+												</div><!-- main-form-group -->
+											</div>
+											{% if achat_license == license.get_achat_license_last %}
+												<input type="hidden" value="{{achat_license.pk}}" name="last_achat_license" id="last_achat_license">
+												<button value="submit_annuler_achat_license" name="submit_annuler_achat_license"id="submit_annuler_achat_license" type="submit" class="btn col-md-3 btn-dark pd-x-30 mg-t-5 mt-2">Annuler paiement</button>
+											{% endif %}
+										</div>
+									</div>
+									{% endfor %}
+
+									<div class="mb-4 mt-4 main-content-label">Nouvel Achat license</div>
+									<div id="div-paiement" class="">
+										<div class="row row-xs formgroup-wrapper">
+											<div class="col-md-3">
+												<div class="main-form-group ">
+													<label class="form-label">Début <span class="text-danger">*</span></label> <input name="debut_new" class="form-control" min="{{license.get_achat_license_last.fin|date:'Y-m-d'}}" max="" value="" type="date">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Fin <span class="text-danger">*</span></label> <input name="fin_new" class="form-control" min="{{license.get_achat_license_last.fin|date:'Y-m-d'}}" max="" value="" type="date">
+												</div><!-- main-form-group -->
+											</div>
+											<div class="col-md-3 mg-t-20 mg-md-t-0">
+												<div class="main-form-group ">
+													<label class="form-label">Coût ({{ configuration.monnaie|default:'FCFA' }}) <span class="text-danger">*</span></label> <input id="cout_new" name="cout_new" class="form-control" type="number" min="0" max="" value="">
+												</div><!-- main-form-group -->
+											</div>
+										</div>
+									</div>
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+
+							{% if param == "configurations" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="mb-4 main-content-label">Général</div>
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.app_nom.label}} <span class="text-danger">*</span> 
+												{{ form.app_nom }}
+												<div class="text-danger">
+													{{ form.app_nom.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.slogan.label}} <span class="text-danger">*</span></label> 
+												{{ form.slogan }}
+												<div class="text-danger">
+													{{ form.is_option_encaissement.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.email.label}} <span class="text-danger">*</span></label>
+												{{ form.email }}
+												<div class="text-danger">
+													{{ form.email.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.monnaie.label}} <span class="text-danger">*</span></label>
+												{{ form.monnaie }}
+												<div class="text-danger">
+													{{ form.monnaie.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.contact.label}} <span class="text-danger">*</span></label>
+												{{ form.contact }}
+												<div class="text-danger">
+													{{ form.contact.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.logo.label}} <span class="text-danger">*</span></label>
+												{{ form.logo }}
+												<div class="text-danger">
+													{{ form.logo.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.logo_symbol.label}} <span class="text-danger">*</span></label>
+												{{ form.logo_symbol }}
+												<div class="text-danger">
+													{{ form.logo_symbol.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.favicon.label}} <span class="text-danger">*</span></label>
+												{{ form.favicon }}
+												<div class="text-danger">
+													{{ form.favicon.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+									
+									<div class="mb-4 mt-4 main-content-label">Tarification</div>
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.cout_option_recuperation.label}} <span class="text-danger">*</span> 
+												{{ form.cout_option_recuperation }}
+												<div class="text-danger">
+													{{ form.cout_option_recuperation.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.taux_option_recuperation.label}} <span class="text-danger">*</span></label> 
+												{{ form.taux_option_recuperation }}
+												<div class="text-danger">
+													{{ form.taux_option_recuperation.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.cout_option_encaissement.label}} <span class="text-danger">*</span></label>
+												{{ form.cout_option_encaissement }}
+												<div class="text-danger">
+													{{ form.cout_option_encaissement.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.taux_option_encaissement.label}} <span class="text-danger">*</span></label>
+												{{ form.taux_option_encaissement }}
+												<div class="text-danger">
+													{{ form.taux_option_encaissement.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-6 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.enable_option_recuperation.label}} <span class="text-danger">*</span></label>
+												{{ form.enable_option_recuperation }}
+												<div class="text-danger">
+													{{ form.enable_option_recuperation.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-6 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.enable_option_encaissement.label}} <span class="text-danger">*</span></label>
+												{{ form.enable_option_encaissement }}
+												<div class="text-danger">
+													{{ form.enable_option_encaissement.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+									
+									<div class="mb-4 mt-4 main-content-label">API</div>
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.url_api_sms.label}} <span class="text-danger">*</span> 
+												{{ form.url_api_sms }}
+												<div class="text-danger">
+													{{ form.url_api_sms.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.key_api_sms.label}} <span class="text-danger">*</span></label> 
+												{{ form.key_api_sms }}
+												<div class="text-danger">
+													{{ form.key_api_sms.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.id_api_sms.label}} <span class="text-danger">*</span></label>
+												{{ form.id_api_sms }}
+												<div class="text-danger">
+													{{ form.id_api_sms.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.json_api_sms.label}} <span class="text-danger">*</span></label>
+												{{ form.json_api_sms }}
+												<div class="text-danger">
+													{{ form.json_api_sms.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mb-4 mt-4 main-content-label {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">License</div>
+									<div class="row row-xs formgroup-wrapper {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+										<div class="col-md-3 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span> 
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+							
+
+
+							{% if param == "formats_articles" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.nom.label}} <span class="text-danger">*</span> 
+												{{ form.nom }}
+												<div class="text-danger">
+													{{ form.nom.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.caracteristique.label}} <span class="text-danger">*</span></label> 
+												{{ form.caracteristique }}
+												<div class="text-danger">
+													{{ form.caracteristique.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Statut <span class="text-danger">*</span></label> 
+												<select class="form-control" name="statut" required>
+													<option value="1" {% if format_article.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if format_article.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2 {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span></label>
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+
+							{% if param == "zones" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.nom.label}} <span class="text-danger">*</span> 
+												{{ form.nom }}
+												<div class="text-danger">
+													{{ form.nom.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.is_depart.label}} <span class="text-danger">*</span></label> 
+												{{ form.is_depart }}
+												<div class="text-danger">
+													{{ form.is_depart.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.is_arrivee.label}} <span class="text-danger">*</span></label> 
+												{{ form.is_arrivee }}
+												<div class="text-danger">
+													{{ form.is_arrivee.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Statut <span class="text-danger">*</span></label> 
+												<select class="form-control" name="statut" required>
+													<option value="1" {% if zone.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if zone.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2 {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span></label>
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+
+							{% if param == "localites" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.nom.label}} <span class="text-danger">*</span> 
+												{{ form.nom }}
+												<div class="text-danger">
+													{{ form.nom.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.is_depart.label}} <span class="text-danger">*</span></label> 
+												{{ form.is_depart }}
+												<div class="text-danger">
+													{{ form.is_depart.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.is_arrivee.label}} <span class="text-danger">*</span></label> 
+												{{ form.is_arrivee }}
+												<div class="text-danger">
+													{{ form.is_arrivee.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.zone.label}} <span class="text-danger">*</span></label> 
+												{{ form.zone }}
+												<div class="text-danger">
+													{{ form.zone.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Statut <span class="text-danger">*</span></label> 
+												<select class="form-control" name="statut" required>
+													<option value="1" {% if localite.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if localite.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2 {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span></label>
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+
+							{% if param == "partenaires_logistiques" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.nom.label}} <span class="text-danger">*</span> 
+												{{ form.nom }}
+												<div class="text-danger">
+													{{ form.nom.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.email.label}} <span class="text-danger">*</span></label> 
+												{{ form.email }}
+												<div class="text-danger">
+													{{ form.email.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.contact.label}} <span class="text-danger">*</span></label> 
+												{{ form.contact }}
+												<div class="text-danger">
+													{{ form.contact.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.adresse.label}} <span class="text-danger">*</span></label> 
+												{{ form.adresse }}
+												<div class="text-danger">
+													{{ form.adresse.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Statut <span class="text-danger">*</span></label> 
+												<select class="form-control" name="statut" required>
+													<option value="1" {% if partenaire_logistique.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if partenaire_logistique.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2 {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span></label>
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+
+							{% if param == "tarifications" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="mb-4 main-content-label">Couverture</div>
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.zone_depart.label}} <span class="text-danger">*</span> 
+												{{ form.zone_depart }}
+												<div class="text-danger">
+													{{ form.zone_depart.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.localite_depart.label}} <span class="text-danger">*</span></label> 
+												{{ form.localite_depart }}
+												<div class="text-danger">
+													{{ form.localite_depart.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.zone_arrivee.label}} <span class="text-danger">*</span></label> 
+												{{ form.zone_arrivee }}
+												<div class="text-danger">
+													{{ form.zone_arrivee.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.localite_arrivee.label}} <span class="text-danger">*</span></label> 
+												{{ form.localite_arrivee }}
+												<div class="text-danger">
+													{{ form.localite_arrivee.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.format_article.label}} <span class="text-danger">*</span> 
+												{{ form.format_article }}
+												<div class="text-danger">
+													{{ form.format_article.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.vendeur.label}} <span class="text-danger">*</span></label> 
+												{{ form.vendeur }}
+												<div class="text-danger">
+													{{ form.vendeur.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.partenaire_logistique.label}} <span class="text-danger">*</span></label> 
+												{{ form.partenaire_logistique }}
+												<div class="text-danger">
+													{{ form.partenaire_logistique.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mb-4 mt-3 main-content-label">Coûts</div>
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.cout_option_recuperation.label}} <span class="text-danger">*</span> 
+												{{ form.cout_option_recuperation }}
+												<div class="text-danger">
+													{{ form.cout_option_recuperation.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.taux_option_recuperation.label}} <span class="text-danger">*</span></label> 
+												{{ form.taux_option_recuperation }}
+												<div class="text-danger">
+													{{ form.taux_option_recuperation.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.cout_option_encaissement.label}} <span class="text-danger">*</span></label> 
+												{{ form.cout_option_encaissement }}
+												<div class="text-danger">
+													{{ form.cout_option_encaissement.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.taux_option_encaissement.label}} <span class="text-danger">*</span></label> 
+												{{ form.taux_option_encaissement }}
+												<div class="text-danger">
+													{{ form.taux_option_encaissement.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.montant_frais.label}} <span class="text-danger">*</span></label> 
+												{{ form.montant_frais }}
+												<div class="text-danger">
+													{{ form.montant_frais.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Statut <span class="text-danger">*</span></label> 
+												<select class="form-control" name="statut" required>
+													<option value="1" {% if tarification.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if tarification.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2 {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span></label>
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+
+							{% if param == "profils_staff" %}
+							<form class="form-horizontal" id="form_param" method="POST" enctype="multipart/form-data">
+								<div class="card-body">
+									{% csrf_token %}
+									{% if form.errors and form.non_field_errors %}
+										<div class="alert alert-danger">
+											{{ form.non_field_errors }}
+										</div>
+									{% endif %}
+									<div class="row row-xs formgroup-wrapper">
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.email.label}} <span class="text-danger">*</span> 
+												{{ form.email }}
+												<div class="text-danger">
+													{{ form.email.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Mot de passe <span class="text-danger">*</span></label> 
+												<input class="form-control" name="password">
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Nom <span class="text-danger">*</span></label> 
+												<input class="form-control" name="last_name" value="{{ utilisateur.user.last_name }}">
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Prénom(s) <span class="text-danger">*</span></label> 
+												<input class="form-control" name="first_name" value="{{ utilisateur.user.first_name }}">
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.role_profil.label}} <span class="text-danger">*</span></label> 
+												{{ form.role_profil }}
+												<div class="text-danger">
+													{{ form.role_profil.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.numero_contact.label}} <span class="text-danger">*</span></label> 
+												{{ form.numero_contact }}
+												<div class="text-danger">
+													{{ form.numero_contact.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.observation.label}} <span class="text-danger">*</span></label> 
+												{{ form.observation }}
+												<div class="text-danger">
+													{{ form.observation.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">Statut <span class="text-danger">*</span></label> 
+												<select class="form-control" name="statut" required>
+													<option value="1" {% if utilisateur.etat_validation is True %} selected {% endif %}>Actif</option>
+													<option value="0" {% if utilisateur.etat_validation is False %} selected {% endif %}>Inactif</option>
+												</select>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2 {% if profil_staff.role_profil != type_profil_staff.SUPER %}d-none{% endif %}">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.license.label}} <span class="text-danger">*</span></label>
+												{{ form.license }}
+												<div class="text-danger">
+													{{ form.license.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+									</div>
+
+									<div class="mt-3" id="info_submit">                         
+										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
+										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
+										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
+									</div>
+								</div>
+								<div class="card-footer" id="btn_submit_group">
+									<button type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
+									<button type="reset" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
+								</div>
+							</form>
+							{% endif %}
+
+						</div>
+					</div>
+					<!-- /Col -->
+				</div>
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+
+			$("#btn_submit_group").fadeOut("slow");
+			$("#info_submit").fadeOut("slow");
+			var form = $('#form_param');
+			origForm = form.serialize();
+
+			//on peut soumettre le formulaire uniquement quand il y a modification
+			$('#form_param :input').on('change input', function() {
+				if(form.serialize() !== origForm){
+					$("#btn_submit_group").fadeIn("slow");
+					$("#info_submit").fadeIn("slow");
+				}
+				else{
+					$("#btn_submit_group").fadeOut("slow");
+					$("#info_submit").fadeOut("slow");
+				}
+			});
+
+			function updateSwitchType() {
+
+				const valeur = $('#id_type_vendeur').val();
+
+				if (valeur === 'societe') {
+					$('.div-entreprise-required input').attr('required', true);
+					$('.div-entreprise-required').fadeIn('slow');
+					$('.div-entreprise').fadeIn('slow');
+				} else {
+					$('.div-entreprise-required input').val('');
+					$('.div-entreprise-required file').val('');
+					$('.div-entreprise input').val('');
+					$('.div-entreprise file').val('');
+					$('.div-entreprise-required input').removeAttr('required');
+					$('.div-entreprise-required').fadeOut('slow');
+					$('.div-entreprise').fadeOut('slow');
+				}
+			}
+
+        //on peut soumettre le formulaire uniquement qunand il y a modification
+        $('#form_param').on('submit', function (e) {
+			const submittedButton = event.submitter;
+			// console.log(form.serialize() != origForm);
+            if(form.serialize() !== origForm || submittedButton.id == "submit_annuler_achat_license"){
+                return confirm('Êtes-vous sûr(e) de vouloir appliquer cette modification ?');
+            }
+            else{
+                event.preventDefault();
+                return false;
+            }
+        });
+
+			$(".cible_connected").on("change", emptyCible());
+
+			function emptyCible(){
+				console.log("test");
+			}
+			// Exécute la fonction au changement du select
+			// $('#id_type_vendeur').on('change', updateSwitchType);
+
+			// Exécute la fonction immédiatement à l’ouverture de la page
+			// updateSwitchType();
+
+			// $(':input').attr('disabled','disabled');
+			// $(':button').removeAttr('disabled');
+			// $(':input[type="hidden"]').removeAttr('disabled');
+
+		});
+		</script>
+
+    {% endblock %}

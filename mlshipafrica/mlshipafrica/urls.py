@@ -33,6 +33,8 @@ urlpatterns = [
     path('tinymce/', include('tinymce.urls')),
 
     path('management/', include('management.urls')),
+   
+    path('core/', include('core.urls')),
 
     # path('player/', include('player.urls')),
 

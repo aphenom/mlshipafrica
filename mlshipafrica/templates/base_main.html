@@ -711,6 +711,7 @@
 							<li class="slide">
 								<a class="side-menu__item" href="#"><i class="bx bx-scan side-menu__icon"></i><span class="side-menu__label">Scanner colis</span></a>
 							</li>
+							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR or profil_staff.role_profil == type_profil_staff.COMPTABLE %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_vendeurs' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-store side-menu__icon"></i><span class="side-menu__label">Vendeurs</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -741,6 +742,8 @@
 									</li>
 								</ul>
 							</li>
+							{% endif %}
+
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_colis' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -777,6 +780,8 @@
 									</li>
 								</ul>
 							</li>
+
+							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR or profil_staff.role_profil == type_profil_staff.COMPTABLE %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_paiements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-wallet-alt side-menu__icon"></i><span class="side-menu__label">Paiements</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -821,9 +826,11 @@
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Vendeurs</a>
 														</li>
+														{% if profil_staff.role_profil == type_profil_staff.SUPER %}
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements' and type_reversements == 'historique' %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements' %}?type_reversements=historique">Historique</a>
 														</li>
+														{% endif %}
 													</ul>
 												</div>
 											</div>
@@ -831,7 +838,10 @@
 									</li>
 								</ul>
 							</li>
-							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_vendeur_liste_colis' %} is-expanded {% endif %}">
+							{% endif %}
+
+							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+							<li class="slide {% if request.resolver_match.url_name == 'core_liste' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-cog side-menu__icon"></i><span class="side-menu__label">Paramétrages</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
 									<li class="panel sidetab-menu">
@@ -843,26 +853,39 @@
 															<a href="javascript:void(0);">Paramétrages</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Tarifications</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'tarifications' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=tarifications">Tarifications</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Partenaires logistiques</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'partenaires_logistiques' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=partenaires_logistiques">Partenaires logistiques</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Localités</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'localites' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=localites">Localités</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' %} active {% endif %}" href="#">Zones</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'zones' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=zones">Zones</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Formats colis</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'formats_articles' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=formats_articles">Formats colis</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Configurations</a>
+															{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+																<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'configurations' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=configurations">Configurations</a>
+															{% else %}
+																{% if configuration %}
+																	<a class="slide-item {% if request.resolver_match.url_name == 'core_edit' and param == 'configurations' %} active {% endif %}" href="{% url 'core:core_edit' configuration.code %}?param=configurations">Configurations</a>
+																{% else %}
+																	<a class="slide-item {% if request.resolver_match.url_name == 'core_new' and param == 'configurations' %} active {% endif %}" href="{% url 'core:core_new' %}?param=configurations">Configurations</a>
+																{% endif %}
+															{% endif %}
 														</li>
-														<li class="d-none">
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">License</a>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'profils_staff' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=profils_staff">Utilisateurs</a>
 														</li>
+														{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'licenses' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=licenses">License</a>
+														</li>
+														{% endif %}
 													</ul>
 												</div>
 											</div>
@@ -870,6 +893,9 @@
 									</li>
 								</ul>
 							</li>
+							{% endif %}
+
+
 							<li class="slide d-none">
 								<a class="side-menu__item" href="#_support.html"><i
 										class="bx bx-headphone side-menu__icon"></i><span

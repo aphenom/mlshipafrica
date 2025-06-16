@@ -1,0 +1,460 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Liste des paramétrages - {{ suite_breadcrumb }}{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Paramétrages</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ suite_breadcrumb }}</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row">
+					<!--row-->
+					<div class="col-xl-12 col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<div class="card-title">Liste des paramétrages - {{ suite_breadcrumb }}</div>
+								<div class="ms-auto">
+									<div class="btn-list">
+										<a class="btn btn-primary btn-sm text-white" href="{% url 'core:core_new' %}?param={{param}}">
+											<span>
+												<i class="fe fe-plus-square"></i> Créer {{ suite_libelle_nouveau }}
+											</span>
+											<!-- <i class="fa fa-caret-down"></i> -->
+										</a>
+										<button class="btn ripple btn-sm btn-outline-light d-none"><i class="fe fe-download me-1"></i>Exporter Excel</button>
+									</div>
+								</div>
+							</div>
+							<div class="card-body mt-2">
+								<div class="table-responsive">
+
+									{% if param == "licenses" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créée le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Dernière couverture</th>
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for license in licenses %}
+											<tr>
+												<td data-order="{{ license.date_creation|date:'Y-m-d H:i:s' }}">{{ license.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' license.code %}?param=licenses">{{license.code}}</a></td>
+												<td>{{license.get_achat_license_last.debut|date:"d-m-Y"}} - {{license.get_achat_license_last.fin|date:"d-m-Y"}}</td>
+												<td>
+												{% if license.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' license.code %}?param=licenses" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "configurations" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créée le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">License</th>
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for configuration in configurations %}
+											<tr>
+												<td data-order="{{ configuration.date_creation|date:'Y-m-d H:i:s' }}">{{ configuration.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' configuration.code %}?param=configurations">{{configuration.code}}</a></td>
+												<td><a href="{% url 'core:core_edit' configuration.license.code %}?param=licenses">{{configuration.license.code}}</a></td>
+												<td>
+												{% if configuration.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' configuration.code %}?param=configurations" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "formats_articles" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créé le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Nom</th>
+												<th class="fw-bold">Caractéristiques</th>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<th class="fw-bold">License</th>
+												{% endif %}
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for format_article in formats_articles %}
+											<tr>
+												<td data-order="{{ format_article.date_creation|date:'Y-m-d H:i:s' }}">{{ format_article.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' format_article.code %}?param=formats_articles">{{format_article.code}}</a></td>
+												<td>{{format_article.nom}}</td>
+												<td>{{format_article.caracteristique|default:'-'}}</td>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<td><a href="{% url 'core:core_edit' format_article.license.code %}?param=licenses">{{format_article.license.code}}</a></td>
+												{% endif %}
+												<td>
+												{% if format_article.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' format_article.code %}?param=formats_articles" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "zones" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créée le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Nom</th>
+												<th class="fw-bold">Départ</th>
+												<th class="fw-bold">Arrivée</th>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<th class="fw-bold">License</th>
+												{% endif %}
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for zone in zones %}
+											<tr>
+												<td data-order="{{ zone.date_creation|date:'Y-m-d H:i:s' }}">{{ zone.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' zone.code %}?param=zones">{{zone.code}}</a></td>
+												<td>{{zone.nom}}</td>
+												<td>
+												{% if zone.is_depart is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Oui</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non</span>
+												{% endif %}
+												</td>
+												<td>
+												{% if zone.is_arrivee is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Oui</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non</span>
+												{% endif %}
+												</td>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<td><a href="{% url 'core:core_edit' zone.license.code %}?param=licenses">{{zone.license.code}}</a></td>
+												{% endif %}
+												<td>
+												{% if zone.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' zone.code %}?param=zones" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "localites" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créée le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Nom</th>
+												<th class="fw-bold">Départ</th>
+												<th class="fw-bold">Arrivée</th>
+												<th class="fw-bold">Zone</th>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<th class="fw-bold">License</th>
+												{% endif %}
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for localite in localites %}
+											<tr>
+												<td data-order="{{ localite.date_creation|date:'Y-m-d H:i:s' }}">{{ localite.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' localite.code %}?param=localites">{{localite.code}}</a></td>
+												<td>{{localite.nom}}</td>
+												<td>
+												{% if localite.is_depart is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Oui</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non</span>
+												{% endif %}
+												</td>
+												<td>
+												{% if localite.is_arrivee is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Oui</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non</span>
+												{% endif %}
+												</td>
+												<td>{{localite.zone.nom}}</td>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<td><a href="{% url 'core:core_edit' localite.license.code %}?param=licenses">{{localite.license.code}}</a></td>
+												{% endif %}
+												<td>
+												{% if localite.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' localite.code %}?param=localites" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "partenaires_logistiques" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créé le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Nom</th>
+												<th class="fw-bold">Email</th>
+												<th class="fw-bold">Contact</th>
+												<th class="fw-bold">Adresse</th>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<th class="fw-bold">License</th>
+												{% endif %}
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for partenaire_logistique in partenaires_logistiques %}
+											<tr>
+												<td data-order="{{ partenaire_logistique.date_creation|date:'Y-m-d H:i:s' }}">{{ partenaire_logistique.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' partenaire_logistique.code %}?param=partenaires_logistiques">{{partenaire_logistique.code}}</a></td>
+												<td>{{partenaire_logistique.nom}}</td>
+												<td>{{partenaire_logistique.email|default:""}}</td>
+												<td>{{partenaire_logistique.contact|default:""}}</td>
+												<td>{{partenaire_logistique.adresse|default:""}}</td>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<td><a href="{% url 'core:core_edit' partenaire_logistique.license.code %}?param=licenses">{{partenaire_logistique.license.code}}</a></td>
+												{% endif %}
+												<td>
+												{% if partenaire_logistique.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' partenaire_logistique.code %}?param=partenaires_logistiques" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "tarifications" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créé le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Zone départ</th>
+												<th class="fw-bold">Zone arrivée</th>
+												<th class="fw-bold">Format</th>
+												<th class="fw-bold">Montant ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th class="fw-bold">Infos Supplémentaires</th>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<th class="fw-bold">License</th>
+												{% endif %}
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for tarification in tarifications %}
+											<tr>
+												<td data-order="{{ tarification.date_creation|date:'Y-m-d H:i:s' }}">{{ tarification.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' tarification.code %}?param=tarifications">{{tarification.code}}</a></td>
+												<td>{{tarification.zone_depart.nom|default:""}}</td>
+												<td>{{tarification.zone_arrivee.nom|default:""}}</td>
+												<td>{{tarification.format_article.nom|default:""}}</td>
+												<td>{{tarification.montant_frais|floatformat:-2|intcomma}}</td>
+												<td>
+													<ul>
+														{% if tarification.partenaire_logistique %}
+															<li class="small">Partenaire logistique : {{tarification.partenaire_logistique.nom|default:""}}</li>
+														{% endif %}
+														{% if tarification.vendeur %}
+															<li class="small">Vendeur : {{tarification.vendeur.nom|default:""}}</li>
+														{% endif %}
+														{% if tarification.cout_option_recuperation %}
+															<li class="small">Récuperation : {{tarification.cout_option_recuperation|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</li>
+														{% endif %}
+														{% if tarification.taux_option_recuperation %}
+															<li class="small">Récuperation : {{tarification.taux_option_recuperation}}%</li>
+														{% endif %}
+														{% if tarification.cout_option_encaissement %}
+															<li class="small">Encaissement : {{tarification.cout_option_encaissement|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</li>
+														{% endif %}
+														{% if tarification.taux_option_encaissement %}
+															<li class="small">Encaissement : {{tarification.taux_option_encaissement}}%</li>
+														{% endif %}
+													</ul>
+												</td>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<td><a href="{% url 'core:core_edit' tarification.license.code %}?param=licenses">{{tarification.license.code}}</a></td>
+												{% endif %}
+												<td>
+												{% if tarification.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' tarification.code %}?param=tarifications" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+									{% if param == "profils_staff" %}
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Créé le</th>
+												<th class="fw-bold">Code</th>
+												<th class="fw-bold">Role</th>
+												<th class="fw-bold">Email</th>
+												<th class="fw-bold">Nom</th>
+												<th class="fw-bold">Prénom(s)</th>
+												<th class="fw-bold">Contact</th>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<th class="fw-bold">License</th>
+												{% endif %}
+												<th class="fw-bold">Statut</th>
+												<th class="fw-bold">Action</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for utilisateur in utilisateurs %}
+											<tr>
+												<td data-order="{{ utilisateur.date_creation|date:'Y-m-d H:i:s' }}">{{ utilisateur.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td><a href="{% url 'core:core_edit' utilisateur.code %}?param=profils_staff">{{utilisateur.code}}</a></td>
+												<td>{{utilisateur.get_role_profil_display|default:""}}</td>
+												<td>{{utilisateur.user.email|default:""}}</td>
+												<td>{{utilisateur.user.last_name|default:""}}</td>
+												<td>{{utilisateur.user.first_name|default:""}}</td>
+												<td>{{utilisateur.numero_contact.nom|default:""}}</td>
+												{% if profil_staff.role_profil == type_profil_staff.SUPER %}
+													<td><a href="{% url 'core:core_edit' utilisateur.license.code %}?param=licenses">{{utilisateur.license.code}}</a></td>
+												{% endif %}
+												<td>
+												{% if utilisateur.etat_validation is True %}
+													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Actif</span>
+												{% else %}
+													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Inactif</span>
+												{% endif %}
+												</td>
+												<td>
+													<div class="btn-list">
+														<a href="{% url 'core:core_edit' utilisateur.code %}?param=profils_staff" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
+													</div>
+												</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+									{% endif %}
+
+								</div>
+							</div>
+						</div>
+					</div>
+					<!--row-->
+
+				</div>			
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}

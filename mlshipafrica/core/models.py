@@ -51,7 +51,7 @@ class MyModeleManager(models.Manager):
         # Personnalisez votre requête queryset ici
         qs = super().get_queryset()
         # print(hasattr(self.model, 'paroisse'))
-        if hasattr(self.model, 'license') and get_current_user() and get_current_user().account_vendeur:
+        if hasattr(self.model, 'license') and get_current_user() and hasattr(get_current_user(), 'account_vendeur'):
             qs = qs.filter(license=get_current_user().account_vendeur.license)
         return qs 
     
@@ -69,13 +69,16 @@ class License(MyModelAbstract):
         verbose_name_plural = 'Licenses'      
         db_table_comment = "Les enregistrements pour l'utilisation en mode license"
 
+    def get_achat_license_last(self):
+        return self.license_achats.filter(etat_suppression=False).order_by("-fin").first()
+
 
 """ Permet de determiner les achats pour l'utilisation en mode license """
 class AchatLicense(MyModelAbstract):
 
-    debut = models.DateTimeField('date debut', null=True, blank=True)
+    debut = models.DateTimeField('date début', null=True, blank=True)
     fin = models.DateTimeField('date fin', null=True, blank=True)
-    cout = models.DecimalField('montant mise', max_digits=10, decimal_places=2, null=True, blank=True)
+    cout = models.DecimalField('montant achat', max_digits=10, decimal_places=2, null=True, blank=True)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_achats', related_query_name="license_achat", verbose_name = "license")
 
     def __str__(self):
@@ -93,10 +96,10 @@ class AchatLicense(MyModelAbstract):
 class Configuration(MyModelAbstract):
 
     ''' Stock la configuration générale de la plateforme '''
-    enable_option_recuperation = models.BooleanField('état option recuperation colis', default=True, db_comment="Possibilité ou non de récuperer le colis directement chez le vendeur")
+    enable_option_recuperation = models.BooleanField('état option récupération colis', default=True, db_comment="Possibilité ou non de récuperer le colis directement chez le vendeur")
     enable_option_encaissement = models.BooleanField('état option encaissement client', default=True, db_comment="Possibilité ou non d'encaisser le paiement du colis directement chez le client")
-    cout_option_recuperation = models.DecimalField('cout fixe option recuperation colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option de récupération au cas où il serait uniforme pour chaque colis")
-    taux_option_recuperation = models.DecimalField('taux option recuperation colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option de récupération")
+    cout_option_recuperation = models.DecimalField('cout fixe option récupération colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option de récupération au cas où il serait uniforme pour chaque colis")
+    taux_option_recuperation = models.DecimalField('taux option récupération colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option de récupération")
     cout_option_encaissement = models.DecimalField('cout fixe option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     taux_option_encaissement = models.DecimalField('taux option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option d'encaissement")
     url_api_sms = models.CharField("SMS Base URL", max_length=100, null=True, blank=True)
@@ -129,9 +132,9 @@ class Configuration(MyModelAbstract):
     # transaction_api_id = models.CharField("Paiement API ID", max_length=100, null=True, blank=True)
     # transaction_api_key = models.CharField("Paiement API KEY", max_length=100, null=True, blank=True)
     # transaction_api_password = models.CharField("Paiement API PASSWORD", max_length=100, null=True, blank=True)
-    logo = models.ImageField(upload_to='uploaded_media/config/logos')
-    logo_symbol = models.ImageField(upload_to='uploaded_media/config/logo_symbols')
-    favicon = models.ImageField(upload_to='uploaded_media/config/favicons')
+    logo = models.ImageField(upload_to='uploaded_media/config/logos', null=True, blank=True)
+    logo_symbol = models.ImageField(upload_to='uploaded_media/config/logo_symbols', null=True, blank=True)
+    favicon = models.ImageField(upload_to='uploaded_media/config/favicons', null=True, blank=True)
     # minimum_retrait = models.DecimalField('montant minimum de retrait', max_digits=10, decimal_places=2, null=True, blank=True)
     # minimum_depot = models.DecimalField('montant minimum de dépôt', max_digits=10, decimal_places=2, null=True, blank=True)
     # note_information = HTMLField("note d'information", null=True, blank=True)
@@ -166,8 +169,8 @@ class PartenaireLogistique(MyModelAbstract):
 """ Détermine les zones à couvrir pour activité de livraison """
 class Zone(MyModelAbstract):
 
-    is_depart = models.BooleanField('est depart', default=True, db_comment="Possibilité ou non de faire partir un colis de cette zone")
-    is_arrivee = models.BooleanField('est arrivee', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette zone")
+    is_depart = models.BooleanField('est départ', default=True, db_comment="Possibilité ou non de faire partir un colis de cette zone")
+    is_arrivee = models.BooleanField('est arrivée', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette zone")
     nom = models.CharField('nom', max_length=100)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zones', related_query_name="license_zone", verbose_name = "license")
     
@@ -186,8 +189,8 @@ class Zone(MyModelAbstract):
 """ Détermine les localités à couvrir pour activité de livraison """
 class Localite(MyModelAbstract):
 
-    is_depart = models.BooleanField('est depart', default=True, db_comment="Possibilité ou non de faire partir un colis de cette localité")
-    is_arrivee = models.BooleanField('est arrivee', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette localité")
+    is_depart = models.BooleanField('est départ', default=True, db_comment="Possibilité ou non de faire partir un colis de cette localité")
+    is_arrivee = models.BooleanField('est arrivée', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette localité")
     nom = models.CharField('nom', max_length=100)
     zone = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_localites', related_query_name="zone_localite", verbose_name = "zone")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_localites', related_query_name="license_localite", verbose_name = "license")
@@ -209,7 +212,7 @@ class Localite(MyModelAbstract):
 class FormatArticle(MyModelAbstract):
 
     nom = models.CharField('nom', max_length=100)
-    caracteristique = models.CharField('caracteristique', max_length=255)
+    caracteristique = models.CharField('caractéristiques', max_length=255, null=True, blank=True)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_formatarticles', related_query_name="license_formatarticle", verbose_name = "license")
     
     objects = MyModeleManager()

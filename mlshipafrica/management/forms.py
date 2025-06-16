@@ -1,11 +1,13 @@
 from django.forms import BooleanField, CheckboxSelectMultiple, EmailInput, FileInput, ModelForm, TextInput, DateInput, Select, NumberInput, ClearableFileInput, Textarea, CheckboxInput
 from django import forms
-from management.models import Article, Vendeur
+from management.models import Article, ProfilStaff, Tarification, Vendeur
 from phonenumber_field.formfields import PhoneNumberField
 from phonenumber_field.widgets import PhoneNumberPrefixWidget
 
-from core.models import Localite
+from core.models import Localite, Zone
 from mlshipafrica.enums import BOOLEAN_CHOICES, NatureChoice, PlateformeChoice, ProduitsChoice
+from django_currentuser.middleware import (
+    get_current_user, get_current_authenticated_user)
 
 '''formulaire pour remplir informations avant et servant pour la validation du vendeur'''
 class VendeurForm(forms.ModelForm):
@@ -143,7 +145,13 @@ class VendeurColisForm(forms.ModelForm):
         # user = kwargs.pop('user')
         super(VendeurColisForm, self).__init__(*args, **kwargs)
         # Filter authors related to the logged-in user
-        self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True)
+        user = get_current_user()
+        if user and hasattr(user, 'account_vendeur'):
+            self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True, license=user.account_vendeur.license, etat_validation=True, etat_suppression=False)
+        elif user and hasattr(user, 'profil_staff'):
+            self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True, license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+        else:
+            self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True)
             
     class Meta:
         model = Article
@@ -165,4 +173,74 @@ class VendeurColisForm(forms.ModelForm):
             'localite_arrivee': Select(attrs={'placeholder':'Sélectionnez la localité de destination', 'class':'form-control', 'data-select' : 'true', 'required':'required'}),
             'format_article': Select(attrs={'placeholder':'Sélectionnez le format de votre colis', 'class':'form-control ', 'required':'required'}),
         }
+
+
+
+class TarificationForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+      	# Extract the user from the view
+        # user = kwargs.pop('request')
+        # print(get_current_user())
+        super(TarificationForm, self).__init__(*args, **kwargs)
+        # Filter authors related to the logged-in user
+        user = get_current_user()
+        if user and hasattr(user, 'profil_staff'):
+            self.fields['localite_depart'].queryset = Localite.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+            self.fields['localite_arrivee'].queryset = Localite.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+            self.fields['zone_depart'].queryset = Zone.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+            self.fields['zone_arrivee'].queryset = Zone.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+            self.fields['vendeur'].queryset = Vendeur.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+            self.fields['partenaire_logistique'].queryset = Localite.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+
+    class Meta:
+        model = Tarification
+        exclude = ['date_creation', 'date_modification']
+        
+        fields = ['montant_frais', 'cout_option_recuperation', 'taux_option_recuperation', 'cout_option_encaissement', 'taux_option_encaissement',
+                  'format_article', 'localite_depart', 'localite_arrivee',
+                  'zone_depart', 'zone_arrivee', 'vendeur', 'partenaire_logistique', 'license']
+        
+        #phone2 = PhoneNumberField()
+        widgets = {
+            'montant_frais': NumberInput(attrs={'placeholder':'Le coût du service', 'class':'form-control'}),
+            'cout_option_recuperation': NumberInput(attrs={'data-cible':"id_taux_option_recuperation", 'placeholder':'Le coût fixe option recuperation colis', 'class':'cible_connected form-control'}),
+            'taux_option_recuperation': NumberInput(attrs={'data-cible':"id_cout_option_recuperation", 'placeholder':'Le taux option récupération colis', 'class':'cible_connected form-control'}),
+            'cout_option_encaissement': NumberInput(attrs={'data-cible':"id_taux_option_encaissement", 'placeholder':'Le coût fixe option encaissement client', 'class':'cible_connected form-control'}),
+            'taux_option_encaissement': NumberInput(attrs={'data-cible':"id_cout_option_encaissement", 'placeholder':'Le taux option encaissement client', 'class':'cible_connected form-control'}),
+            'format_article': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'localite_depart': Select(attrs={'data-cible':"id_zone_depart", 'class':'cible_connected form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'localite_arrivee': Select(attrs={'data-cible':"id_zone_arrivee", 'class':'cible_connected form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'zone_depart': Select(attrs={'data-cible':"id_localite_depart", 'class':'cible_connected form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'zone_arrivee': Select(attrs={'data-cible':"id_localite_arrivee", 'class':'cible_connected form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'vendeur': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'partenaire_logistique': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+            'license': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+        }
+
+
+class ProfilStaffForm(forms.ModelForm):
+
+    numero_contact = PhoneNumberField(
+        label="Numéro téléphone",
+        widget=TextInput(
+            attrs={"class": "form-control", "placeholder": "Entrez le numéro avec l'indicatif, exemple : +2250000000000"},
+            ),
+        required=False,
+    )
+
+    class Meta:
+        model = ProfilStaff
+        exclude = ['date_creation', 'date_modification']
+        
+        fields = ['email', 'numero_contact', 'observation', 'role_profil', 'license']
+        
+        #phone2 = PhoneNumberField()
+        widgets = {
+            'email': EmailInput(attrs={'placeholder':'Email utilisateur', 'class':'form-control', 'required':'required'}),
+            'observation': Textarea(attrs={'placeholder':'Observations sur l\'utilisateur', 'class':'form-control'}),
+            'role_profil': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace", 'required':'required'}),
+            'license': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
+        }
+
 

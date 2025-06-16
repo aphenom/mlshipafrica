@@ -34,7 +34,7 @@ def vendeur_edit_profil(request):
                     vendeur.etat_approbation = False
                 if not vendeur.user:
                     vendeur.user = user
-                    vendeur.license = license
+                    vendeur.license = license if license else License.objects.all().first()
                 vendeur.save()
                 return redirect('index')
                 # Tu peux aussi faire : return redirect('management:vendeur_profil')
