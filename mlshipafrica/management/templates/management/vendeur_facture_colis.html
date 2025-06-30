@@ -104,22 +104,30 @@
 												</tr>
 												{% if article.is_option_recuperation == True %}
 												<tr>
-													<td class="tx-right text-end" colspan="3">Récuperation du colis</td>
+													<td class="tx-right text-end" colspan="3">Frais ramassage colis</td>
 													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
 												</tr>
 												{% endif %}
 												{% if article.is_option_encaissement == True %}
 												<tr>
-													<td class="tx-right text-end" colspan="3">Encaissement du client</td>
+													<td class="tx-right text-end" colspan="3">Frais collecte de fond {% if article.taux_option_encaissement %} ({{article.taux_option_encaissement|floatformat:-2}}%) {% endif %}</td>
 													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
 												</tr>
 												{% endif %}
 												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="3">Total à payer</td>
+													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="3">Total frais de service</td>
 													<td class="tx-right text-end" colspan="3">
-														<h4 class="tx-primary tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
+														<h5 class="tx-danger tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h5>
 													</td>
 												</tr>
+												{% if article.is_option_encaissement == True %}
+												<tr>
+													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="3">Total à reverser</td>
+													<td class="tx-right text-end" colspan="3">
+														<h4 class="tx-primary tx-bold">{{ article.montant_a_reverser|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
+													</td>
+												</tr>
+												{% endif %}
 											</tbody>
 										</table>
 									</div>

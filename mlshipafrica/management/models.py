@@ -264,6 +264,7 @@ class Article(MyModelAbstract):
     cout_option_encaissement = models.DecimalField('cout fixe option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis (= self+%valeur)")
     taux_option_encaissement = models.DecimalField('taux option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option d'encaissement (= %valeur)")
     montant_total_frais = models.DecimalField('Montant total frais', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout total des frais associé au colis (=montant_frais+cout_option_recuperation+cout_option_encaissement)")
+    montant_a_reverser = models.DecimalField('Montant à reverser lors de collecte de fond', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout total retranché des frais associé au colis lors des collecte de fond (=valeur_totale-(montant_frais+cout_option_recuperation+cout_option_encaissement))")
 
     nom_destinataire = models.CharField("Nom", max_length=100, null=True, blank=True)
     prenom_destinataire = models.CharField("Prénom(s)", max_length=255, null=True, blank=True)
@@ -333,6 +334,7 @@ class Article(MyModelAbstract):
 
     def get_last_reversement(self):
         return self.article_reversements.filter(etat_validation=True, etat_suppression=False).order_by("-date_creation").first()
+  
 
     class Meta:
         verbose_name = 'Article'

@@ -18,13 +18,14 @@ def vendeur_edit_profil(request):
     user = request.user
     form = VendeurForm(instance=None)
     current_license = request.GET.get('current_license', None)
-    license = License.objects.get(code=current_license, etat_validation=False, etat_suppression=False) if current_license else License.objects.all().first()
+    license = License.objects.get(code=current_license, etat_validation=False, etat_suppression=False) if current_license and current_license.pk else License.objects.all().first()
 
     if user.is_authenticated and not user.is_staff:
         try:
             vendeur = Vendeur.objects.get(user=user)
         except Vendeur.DoesNotExist:
             vendeur = Vendeur(user=user)  # On définit déjà l'user ici
+            vendeur.license = license if license and license.pk else License.objects.all().first()
 
         if request.method == 'POST':
             form = VendeurForm(data=(request.POST or None), files=(request.FILES or None), instance=vendeur)
@@ -34,7 +35,7 @@ def vendeur_edit_profil(request):
                     vendeur.etat_approbation = False
                 if not vendeur.user:
                     vendeur.user = user
-                    vendeur.license = license if license else License.objects.all().first()
+                    vendeur.license = license if license and license.pk else License.objects.all().first()
                 vendeur.save()
                 return redirect('index')
                 # Tu peux aussi faire : return redirect('management:vendeur_profil')
@@ -68,7 +69,6 @@ def vendeur_edit_colis(request):
 
     if user.is_authenticated and not user.is_staff:
         try:
-            with transaction.atomic():
                 vendeur = Vendeur.objects.get(user=user)
                 configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
                 localite_depart = Localite.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False, is_depart=True).first()  
@@ -85,17 +85,18 @@ def vendeur_edit_colis(request):
             raise Http404
 
         if request.method == 'POST':
-            if "submit_suppression" in request.POST and request.POST["submit_suppression"]:
-                # rediriger vers details colis
-                article.etat_suppression =  True
-                article.save()
-                return redirect('index')
-            form = VendeurColisForm(data=(request.POST or None), files=(request.FILES or None), instance=article)
-            if form.is_valid():
-                article = form.save(commit=False)
-                article.save()
-                return redirect('management:management_vendeur_facture_colis', article.code)
-                # Tu peux aussi faire : return redirect('management:vendeur_profil')
+            with transaction.atomic():
+                if "submit_suppression" in request.POST and request.POST["submit_suppression"]:
+                    # rediriger vers details colis
+                    article.etat_suppression =  True
+                    article.save()
+                    return redirect('index')
+                form = VendeurColisForm(data=(request.POST or None), files=(request.FILES or None), instance=article)
+                if form.is_valid():
+                    article = form.save(commit=False)
+                    article.save()
+                    return redirect('management:management_vendeur_facture_colis', article.code)
+                    # Tu peux aussi faire : return redirect('management:vendeur_profil')
         else:
             form = VendeurColisForm(instance=article)
         return render(request, 'management/vendeur_edit_colis.html', locals())
@@ -161,7 +162,7 @@ def vendeur_liste_colis_reversement(request):
     try:
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
-        articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False)
+        articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False, etat_encaissement=True)
         # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
         # statut_traitement = StatutTraitement
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
@@ -450,6 +451,8 @@ def admin_detail_colis(request, code):
                             historique_a_supprime.save()
 
                             article.save()
+
+                            # article = delete_reglement(article)
                         
                 if "submit_new_reversement" in request.POST and request.POST["submit_new_reversement"]:             
                     if str(article.get_last_encaissement().pk) == request.POST["last_encaissement"] and article.is_option_encaissement is True and  article.statut_traitement == article.get_last_historique().statut_traitement and article.statut_traitement == StatutTraitement.LIVRE_PAYE:
@@ -460,6 +463,9 @@ def admin_detail_colis(request, code):
                         new_reversement.reference = request.POST["reversement_reference"]
                         new_reversement.montant_reversement = request.POST["reversement_montant"]
                         new_reversement.save()
+
+                        # if article.etat_reglement:
+                        #    reglement = do_reglement(article, request.POST["reversement_date"], request.POST["reversement_reference"], article.montant_total_frais, None)
                         #    new_encaissement.save()
                         #    article.etat_encaissement = True
                         #    article.save()
@@ -472,6 +478,25 @@ def admin_detail_colis(request, code):
         dd(e)
         raise Http404
     return render(request, 'management/admin_detail_colis.html', locals())
+
+def do_reglement(article, paiement_date, paiement_reference, paiement_montant, paiement_reduction):
+    reglement = ReglementArticle()
+    reglement.article = article
+    reglement.date = paiement_date
+    reglement.reference = paiement_reference
+    reglement.montant_reglement = paiement_montant
+    reglement.montant_reduction = paiement_reduction
+    reglement.save()
+    return reglement
+
+def delete_reglement(article):
+    reglement_a_supprime = article.get_last_reglement()
+    reglement_a_supprime.etat_suppression = True
+    reglement_a_supprime.save()
+    
+    article.etat_reglement = False
+    article.save()
+    return article
 
 
 @login_required

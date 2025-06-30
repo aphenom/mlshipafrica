@@ -34,7 +34,7 @@
 							<div class="card-header">
 								<h3 class="card-title">Edition Profil Vendeur</h3>
 							</div>
-							<form class="form-horizontal" method="POST" enctype="multipart/form-data" >
+							<form class="form-horizontal" method="POST" enctype="multipart/form-data" action="{% url 'management:management_vendeur_edit_profil' %}?current_license={{current_license}}">
 								<div class="card-body">
 									{% csrf_token %}
 									{% if form.errors and form.non_field_errors %}

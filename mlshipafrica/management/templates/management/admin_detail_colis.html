@@ -67,22 +67,30 @@
 												</tr>
 												{% if article.is_option_recuperation == True %}
 												<tr>
-													<td class="tx-right text-end" colspan="4">Récuperation du colis</td>
+													<td class="tx-right text-end" colspan="4">Frais ramassage colis</td>
 													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
 												</tr>
 												{% endif %}
 												{% if article.is_option_encaissement == True %}
 												<tr>
-													<td class="tx-right text-end" colspan="4">Encaissement du client</td>
+													<td class="tx-right text-end" colspan="4">Frais collecte de fond {% if article.taux_option_encaissement %} ({{article.taux_option_encaissement|floatformat:-2}}%) {% endif %}</td>
 													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
 												</tr>
 												{% endif %}
 												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total à payer</td>
+													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total frais de service</td>
 													<td class="tx-right text-end" colspan="3">
-														<h4 class="tx-primary tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
+														<h5 class="tx-danger tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h5>
 													</td>
 												</tr>
+												{% if article.is_option_encaissement == True %}
+												<tr>
+													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total à reverser</td>
+													<td class="tx-right text-end" colspan="3">
+														<h4 class="tx-primary tx-bold">{{ article.montant_a_reverser|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
+													</td>
+												</tr>
+												{% endif %}
 										</tbody>
 									</table>
 								</div>
@@ -110,17 +118,17 @@
 											</tr>
 											{% if article.is_option_recuperation == True or configuration.enable_option_recuperation == True %}
 											<tr>
-												<td><strong>Option récupération colis :</strong> {% if article.is_option_recuperation == True %}Oui{% else %}Non{% endif %}</td>
+												<td><strong>Option ramassage colis :</strong> {% if article.is_option_recuperation == True %}Oui{% else %}Non{% endif %}</td>
 											</tr>
 											{% endif %}
 											{% if article.is_option_encaissement == True or configuration.enable_option_encaissement == True %}
 											<tr>
-												<td><strong>Option encaissement à la livraison :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
+												<td><strong>Option collecte de fond :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
 											</tr>
 											{% endif %}
 											{% if article.is_option_encaissement == True %}
 											<tr>
-												<td><strong>Montant à reversé :</strong> {{ article.valeur_totale|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
+												<td><strong>Montant à reversé :</strong> {{ article.montant_a_reverser|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
 												{% if article.etat_reversement is True %}
 													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Reversé</span> 
 												{% else %}
@@ -175,7 +183,7 @@
 										{% for historique_article in historique_articles %}
 										<li class="mt-0">
 											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date|date:"d-m-Y H:i:s" }}</small></span>
+											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date|date:"d-m-Y H:i:s" }} - <i>by {{historique_article.creation_par.account_profil_staff.last_name|default:historique_article.creation_par.account_profil_staff.code}} {{historique_article.creation_par.first_name}}</i></small></span>
 											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
 											{% if historique_article.commentaire %}
 												<div class="alert alert-light tx-12 mb-0" role="alert">
@@ -262,6 +270,7 @@
 								<h3 class="card-title">Comptabilité</h3>
 							</div>
 							<div class="card-body">
+
 								<form class="form-horizontal mb-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
 									{% csrf_token %}
 									{% if form.errors and form.non_field_errors %}
@@ -333,7 +342,7 @@
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
 												<div class="main-form-group ">
-													<label class="form-label">Montant reversé ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="reversement_montant" name="reversement_montant" class="form-control" type="number" min="0" max="{{article.valeur_totale|default:0|stringformat:'d'}}" value="{{reversement_article.montant_reversement|default:article.valeur_totale|stringformat:'d'}}" required readonly>
+													<label class="form-label">Montant reversé ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="reversement_montant" name="reversement_montant" class="form-control" type="number" min="0" max="{{article.montant_a_reverser|default:0|stringformat:'d'}}" value="{{reversement_article.montant_reversement|default:article.montant_a_reverser|stringformat:'d'}}" required readonly>
 												</div><!-- main-form-group -->
 											</div>
 											<div class="col-md-3 mg-t-20 mg-md-t-0">
