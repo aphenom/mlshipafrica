@@ -18,4 +18,5 @@ urlpatterns = [
     path('admin_detail_colis/<str:code>/', views.admin_detail_colis, name='management_admin_detail_colis'),
     path('admin_liste_paiements/', views.admin_liste_paiements, name='management_admin_liste_paiements'),
     path('admin_liste_reversements/', views.admin_liste_reversements, name='management_admin_liste_reversements'),
+    path('admin_import_vendeur/', views.admin_import_vendeur, name='management_admin_import_vendeur'),
 ]

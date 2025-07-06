@@ -1,10 +1,12 @@
 asgiref==3.8.1
+diff-match-patch==20241021
 Django==4.2.16
 django-allauth==65.7.0
 django-crontab==0.7.1
 django-currentuser==0.9.0
 django-dump-die==0.1.7
 django-humanize==0.1.2
+django-import-export==4.3.8
 django-phonenumber-field==8.1.0
 django-tinymce==4.1.0
 humanize==4.12.3
@@ -13,4 +15,5 @@ phonenumbers==9.0.4
 pillow==11.2.1
 python-decouple==3.8
 sqlparse==0.5.3
+tablib==3.8.0
 tzdata==2025.2

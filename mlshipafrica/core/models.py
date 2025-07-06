@@ -135,6 +135,8 @@ class Configuration(MyModelAbstract):
     logo = models.ImageField(upload_to='uploaded_media/config/logos', null=True, blank=True)
     logo_symbol = models.ImageField(upload_to='uploaded_media/config/logo_symbols', null=True, blank=True)
     favicon = models.ImageField(upload_to='uploaded_media/config/favicons', null=True, blank=True)
+    modele_importation_vendeur = models.FileField("Modèle fichier d'importation de vendeurs", upload_to='uploaded_media/config/modele_importation_vendeur/', null=True, blank=True)
+    modele_importation_article = models.FileField("Modèle fichier d'importation de colis", upload_to='uploaded_media/config/modele_importation_article/', null=True, blank=True)
     # minimum_retrait = models.DecimalField('montant minimum de retrait', max_digits=10, decimal_places=2, null=True, blank=True)
     # minimum_depot = models.DecimalField('montant minimum de dépôt', max_digits=10, decimal_places=2, null=True, blank=True)
     # note_information = HTMLField("note d'information", null=True, blank=True)

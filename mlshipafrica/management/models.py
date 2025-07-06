@@ -98,6 +98,8 @@ class Vendeur(MyModelAbstract):
     etat_approbation = models.BooleanField('Etat approbation', default=False)
     date_approbation = models.DateTimeField('Date validation', null=True, blank=True)
     approbation_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='approbation_vendeurs', related_query_name="approbation_vendeur", verbose_name = "approuvé par")
+    etat_importation = models.BooleanField('Etat importation', default=False)
+    date_approbation = models.DateTimeField('Date importation', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='account_vendeur', verbose_name = "vendeur")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_vendeurs', related_query_name="license_vendeur", verbose_name = "license")
 
@@ -271,6 +273,9 @@ class Article(MyModelAbstract):
     numero_principal_destinataire = PhoneNumberField("Numéro principal", null=True, blank=True)
     numero_secondaire_destinataire = PhoneNumberField("Numéro secondaire", null=True, blank=True)
     adresse_destinataire = models.CharField("Adresse", max_length=255, null=True, blank=True)
+    
+    etat_importation = models.BooleanField('Etat importation', default=False)
+    date_approbation = models.DateTimeField('Date importation', null=True, blank=True)
 
     statut_traitement = models.CharField(max_length=25, choices=StatutTraitement.choices,default=StatutTraitement.BROUILLON, null=True, blank=True)
     etat_encaissement = models.BooleanField('état encaissement client', default=False)

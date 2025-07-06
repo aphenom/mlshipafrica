@@ -72,7 +72,7 @@ class ConfigurationForm(forms.ModelForm):
         fields = ['app_nom', 'slogan', 'email', 'monnaie', 'contact', 'cout_option_recuperation',
                   'taux_option_recuperation', 'cout_option_encaissement', 'taux_option_encaissement',
                   'license', 'url_api_sms', 'key_api_sms', 'id_api_sms', 'json_api_sms', 'logo',
-                  'logo_symbol', 'favicon', 'enable_option_recuperation', 'enable_option_encaissement']
+                  'logo_symbol', 'favicon', 'modele_importation_vendeur', 'modele_importation_article', 'enable_option_recuperation', 'enable_option_encaissement']
         
         #phone2 = PhoneNumberField()
         widgets = {
@@ -93,6 +93,8 @@ class ConfigurationForm(forms.ModelForm):
             'logo': ClearableFileInput(attrs={'placeholder':"Chargez le logo", 'class':'form-control-file', 'accept':'image/jpeg,image/png'}),
             'logo_symbol': ClearableFileInput(attrs={'placeholder':"Chargez le symbole du logo", 'class':'form-control-file', 'accept':'image/jpeg,image/png'}),
             'favicon': ClearableFileInput(attrs={'placeholder':"Chargez le favicon", 'class':'form-control-file', 'accept':'image/jpeg,image/png,image/ico'}),
+            'modele_importation_vendeur': ClearableFileInput(attrs={'placeholder':"Chargez le fichier modèle d'importation de vendeurs", 'class':'form-control-file', 'accept':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+            'modele_importation_article': ClearableFileInput(attrs={'placeholder':"Chargez le fichier modèle d'importation de colis", 'class':'form-control-file', 'accept':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
         }
 
 

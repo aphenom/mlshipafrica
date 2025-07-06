@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'tinymce', 
     "phonenumber_field",
     'django.contrib.humanize',
+    'import_export',
     'core',
     'management',
 ]

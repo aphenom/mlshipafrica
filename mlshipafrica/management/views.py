@@ -10,6 +10,9 @@ from django.http import Http404, HttpResponseRedirect
 from core.models import Configuration, License, Localite
 from mlshipafrica.enums import StatutTraitement, StatutVendeur, TypeProfilStaffChoice, TypeVendeurChoice
 from django.db import transaction
+from tablib import Dataset
+
+from management.resources import VendeurResource
 
 
 # Create edition profil vendeur
@@ -256,6 +259,35 @@ def admin_vendeur_profil(request, code):
     except Exception as e:
         raise Http404
     return render(request, 'management/admin_vendeur_profil.html', locals())
+
+
+@login_required
+def admin_import_vendeur(request):
+    type_vendeur = request.GET.get('type_vendeur', StatutVendeur.ACTIF)
+    user = request.user
+    profil_staff = user.account_profil_staff
+    if user.is_authenticated and user.is_staff:
+        if request.method == 'POST':
+            dataset = Dataset()
+            new_data = request.FILES['import_vendeur_file'] # Assuming 'myfile' is the name of your file input in the form
+
+            # You can choose the format based on the file extension or a form selection
+            if new_data.name.endswith('.xls') or new_data.name.endswith('.xlsx'):
+                imported_data = dataset.load(new_data.read(), format='xlsx')
+            # Add more formats as needed
+
+            resource = VendeurResource()
+            result = resource.import_data(imported_data, dry_run=True) # dry_run for previewing changes
+            dd(result)
+            if not result.has_errors():
+                resource.import_data(imported_data, dry_run=False) # Actual import
+                # return redirect('success_url') # Redirect to a success page
+            else:
+                errors = result.errors
+                # Handle errors, e.g., display them on the template
+                #return render(request, 'myapp/import_form.html', {'errors': result.errors})
+
+    return render(request, 'management/admin_import_vendeur_form.html', locals())
 
     
 @login_required
