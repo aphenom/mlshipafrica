@@ -826,11 +826,9 @@
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements_vendeurs' %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements_vendeurs' %}">Vendeurs</a>
 														</li>
-														{% if profil_staff.role_profil == type_profil_staff.SUPER %}
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements' and type_reversements == 'historique' %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements' %}?type_reversements=historique">Historique</a>
 														</li>
-														{% endif %}
 													</ul>
 												</div>
 											</div>
