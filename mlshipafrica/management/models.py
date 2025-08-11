@@ -388,6 +388,9 @@ class Article(MyModelAbstract):
                 self.cout_option_encaissement = None
 
             self.montant_total_frais = self.montant_frais + (self.cout_option_recuperation if self.cout_option_recuperation else 0) + (self.cout_option_encaissement if self.cout_option_encaissement else 0)
+            
+            if self.is_option_encaissement is True:
+                self.montant_a_reverser = self.valeur_totale - self.montant_total_frais
         
         if self.statut_traitement != self._init_statut_traitement and get_current_user().is_staff is False: #, StatutTraitement.EN_ATTENTE_DEPOT, StatutTraitement.EN_ATTENTE_RAMASSAGE):
             histo_article = HistoriqueArticle()

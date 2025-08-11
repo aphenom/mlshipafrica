@@ -1,0 +1,86 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Reversements par vendeur{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Reversements</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Vendeurs</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row">
+					<!--row-->
+					<div class="col-xl-12 col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<div class="card-title">Reversements par vendeur</div>
+								<div class="ms-auto d-none">
+									<div class="btn-list">
+										<a class="btn btn-primary btn-sm text-white" href="{% url 'management:management_vendeur_edit_colis' %}">
+											<span>
+												<i class="fe fe-plus-square"></i> Nouveau colis
+											</span>
+											<!-- <i class="fa fa-caret-down"></i> -->
+										</a>
+										<button class="btn ripple btn-sm btn-outline-light d-none"><i class="fe fe-download me-1"></i>Exporter Excel</button>
+									</div>
+								</div>
+							</div>
+							<div class="card-body mt-2">
+								<div class="table-responsive">
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">ID Vendeur</th>
+												<th class="fw-bold">Vendeur</th>
+												<th class="fw-bold">En attente ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th class="fw-bold">Reversé ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th class="fw-bold">Total</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for vendeur in vendeurs %}
+											<tr>
+												<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a></td>
+												<td>{{vendeur.nom_store}}</td>
+												<td data-order="{{ vendeur.montant_a_reverser_attente }}" data-sort="{{ vendeur.montant_a_reverser_attente }}">{{ vendeur.montant_a_reverser_attente|floatformat:-2|intcomma }}</td>
+												<td data-order="{{ vendeur.montant_reverse_effectue }}" data-sort="{{ vendeur.montant_total_frais_regles }}">{{ vendeur.montant_reverse_effectue|floatformat:-2|intcomma }}</td>
+												<td data-order="{{ vendeur.montant_reversement_total }}" data-sort="{{ vendeur.montant_reversement_total }}">{{ vendeur.montant_reversement_total|floatformat:-2|intcomma }}</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!--row-->
+
+				</div>			
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}

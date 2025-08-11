@@ -32,11 +32,13 @@
 											{{ errors }}
 										</div>
 									{% endif %}
+									{% if configuration.modele_importation_vendeur %}
 									<div class="alert alert-primary">
 										Le fichier d'importation doit respecter le canevas du fichier d'importation modèle.
 										<br/> 
-										<a href="#"><u>Cliquez ici pour télécharger le modèle du fichier d'importation.</u></a>
+										<a href="{{ configuration.modele_importation_vendeur.url }}"><u>Cliquez ici pour télécharger le modèle du fichier d'importation.</u></a>
 									</div>
+									{% endif %}
 									<div class="form-group ">
 										<div class="row">
 											<div class="col-md-3">

@@ -584,12 +584,12 @@
 									-->
 									<li class="dropdown main-profile-menu nav nav-item nav-link">
 										<a class="profile-user d-flex" href=""><img alt=""
-												src="{% if user.account_vendeur and user.account_vendeur.logo %}{{ user.account_vendeur.logo.url }}{% endif %}"></a>
+												src="{% if user.account_vendeur and user.account_vendeur.logo %}{{ user.account_vendeur.logo.url }}{% else %}{% static 'assets/img/brand/mlshipafrica-logo.png' %}{% endif %}"></a>
 										<div class="dropdown-menu">
 											<div class="main-header-profile bg-primary border-bottom p-3">
 												<div class="d-flex wd-100p">
 													<div class="main-img-user">
-														<img alt="" src="{% if user.account_vendeur and user.account_vendeur.logo %}{{ user.account_vendeur.logo.url }}{% endif %}" class="">
+														<img alt="" src="{% if user.account_vendeur and user.account_vendeur.logo %}{{ user.account_vendeur.logo.url }}{% else %}{% static 'assets/img/brand/mlshipafrica-logo.png' %}{% endif %}" class="">
 													</div>
 													<div class="ms-3 my-auto text-white">
 														<h6>{% if user.account_vendeur %}{{ user.account_vendeur.nom_store }}{% endif %}</h6>
@@ -708,7 +708,7 @@
 							</li>
 							{% endif %}
 							{% if user.is_authenticated and user.account_profil_staff %}
-							<li class="slide">
+							<li class="slide d-none">
 								<a class="side-menu__item" href="#"><i class="bx bx-scan side-menu__icon"></i><span class="side-menu__label">Scanner colis</span></a>
 							</li>
 							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR or profil_staff.role_profil == type_profil_staff.COMPTABLE %}
@@ -782,7 +782,7 @@
 							</li>
 
 							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR or profil_staff.role_profil == type_profil_staff.COMPTABLE %}
-							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_paiements' %} is-expanded {% endif %}">
+							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_paiements_vendeurs' or request.resolver_match.url_name == 'management_admin_liste_paiements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-wallet-alt side-menu__icon"></i><span class="side-menu__label">Paiements</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
 									<li class="panel sidetab-menu">
@@ -797,7 +797,7 @@
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_paiements' and type_paiements == 'en_attente'  %} active {% endif %}" href="{% url 'management:management_admin_liste_paiements' %}?type_paiements=en_attente">En attente</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Vendeurs</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_paiements_vendeurs' %} active {% endif %}" href="{% url 'management:management_admin_liste_paiements_vendeurs' %}">Vendeurs</a>
 														</li>
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_paiements' and type_paiements == 'historique' %} active {% endif %}" href="{% url 'management:management_admin_liste_paiements' %}?type_paiements=historique">Historique</a>
@@ -809,7 +809,7 @@
 									</li>
 								</ul>
 							</li>
-							<li class="slide {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' or request.resolver_match.url_name == 'management_admin_liste_reversements' %} is-expanded {% endif %}">
+							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_reversements_vendeurs' or request.resolver_match.url_name == 'management_admin_liste_reversements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-money side-menu__icon"></i><span class="side-menu__label">Reversements</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
 									<li class="panel sidetab-menu">
@@ -824,13 +824,43 @@
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements' and type_reversements == 'en_attente'  %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements' %}?type_reversements=en_attente">En attente</a>
 														</li>
 														<li>
-															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_edit_colis' %} active {% endif %}" href="#">Vendeurs</a>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements_vendeurs' %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements_vendeurs' %}">Vendeurs</a>
 														</li>
 														{% if profil_staff.role_profil == type_profil_staff.SUPER %}
 														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_reversements' and type_reversements == 'historique' %} active {% endif %}" href="{% url 'management:management_admin_liste_reversements' %}?type_reversements=historique">Historique</a>
 														</li>
 														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</li>
+							{% endif %}
+
+							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+							<li class="slide {% if request.resolver_match.url_name == 'management_admin_mouvements_colis' or request.resolver_match.url_name == 'management_admin_activites_paiements' or request.resolver_match.url_name == 'management_admin_activites_reversements' %} is-expanded {% endif %}">
+								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-pulse side-menu__icon"></i><span class="side-menu__label">Activités</span><i class="angle fe fe-chevron-down"></i></a>
+								<ul class="slide-menu">
+									<li class="panel sidetab-menu">
+										<div class="panel-body tabs-menu-body p-0 border-0">
+											<div class="tab-content">
+												<div class="tab-pane tab-content-show" id="side32" role="tabpanel">
+													<ul class="sidemenu-list">
+														<li class="side-menu__label1">
+															<a href="javascript:void(0);">Activités</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_mouvements_colis' %} active {% endif %}" href="{% url 'management:management_admin_mouvements_colis' %}">Mouvements colis</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_activites_paiements' %} active {% endif %}" href="{% url 'management:management_admin_activites_paiements' %}">Paiements</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_activites_reversements' %} active {% endif %}" href="{% url 'management:management_admin_activites_reversements' %}">Reversements</a>
+														</li>
 													</ul>
 												</div>
 											</div>

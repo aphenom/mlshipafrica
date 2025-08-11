@@ -8,12 +8,22 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
 
 from core.models import Configuration, License, Localite
-from mlshipafrica.enums import StatutTraitement, StatutVendeur, TypeProfilStaffChoice, TypeVendeurChoice
+
+from mlshipafrica.enums import StatutTraitement, StatutVendeur, TypeProfilStaffChoice, TypeVendeurChoice, array_statut_traitement_retour, array_statut_traitement_en_cours, array_statut_traitement_livre
+
+from mlshipafrica.shared import get_articles_stats_by_vendeur, get_global_article_stats, get_global_vendeurs_stats, get_top_n_vendeurs
+
 from django.db import transaction
 from tablib import Dataset
 
 from management.resources import VendeurResource
 
+from django.utils import timezone
+
+from django.db.models import Q, Count, Sum, F, ExpressionWrapper, DecimalField, Value
+from datetime import timedelta
+from django.db.models.functions import Coalesce
+from decimal import Decimal
 
 # Create edition profil vendeur
 @login_required
@@ -336,6 +346,31 @@ def admin_liste_colis(request):
 
 
 @login_required
+def admin_liste_colis_vendeurs(request):
+    user = request.user
+    profil_staff = user.account_profil_staff
+    #statut_traitement = StatutTraitement
+
+    try:
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            vendeurs = get_articles_stats_by_vendeur(request)
+            vendeurs = vendeurs.order_by("-nombre_articles_total") if vendeurs else None
+            suite_breadcrumb = "" 
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        print(e)
+        raise Http404
+    return render(request, 'management/admin_liste_colis_vendeurs.html', locals())
+
+
+@login_required
 def admin_detail_colis(request, code):
 
     try:
@@ -542,7 +577,7 @@ def admin_liste_paiements(request):
         if user.is_authenticated and user.is_staff \
             and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
 
-            articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False)
+            articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON)
             suite_breadcrumb = "" 
             if type_paiements == "en_attente":
                 suite_breadcrumb = "En attente" 
@@ -558,6 +593,31 @@ def admin_liste_paiements(request):
 
 
 @login_required
+def admin_liste_paiements_vendeurs(request):
+    user = request.user
+    profil_staff = user.account_profil_staff
+    #statut_traitement = StatutTraitement
+
+    try:
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            vendeurs = get_articles_stats_by_vendeur(request)
+            vendeurs = vendeurs.order_by("-montant_frais_total") if vendeurs else None
+            suite_breadcrumb = "" 
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        print(e)
+        raise Http404
+    return render(request, 'management/admin_liste_paiements_vendeurs.html', locals())
+
+
+@login_required
 def admin_liste_reversements(request):
     try:
         type_reversements = request.GET.get('type_reversements', "en_attente")
@@ -568,7 +628,7 @@ def admin_liste_reversements(request):
         if user.is_authenticated and user.is_staff \
             and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
 
-            articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False, etat_encaissement=True)
+            articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False, etat_encaissement=True).exclude(statut_traitement=StatutTraitement.BROUILLON).exclude(statut_traitement__in=array_statut_traitement_retour)
             suite_breadcrumb = "" 
             if type_reversements == "en_attente":
                 suite_breadcrumb = "En attente" 
@@ -581,4 +641,133 @@ def admin_liste_reversements(request):
     except Exception as e:
         raise Http404
     return render(request, 'management/admin_liste_reversements.html', locals())
+
+
+@login_required
+def admin_liste_reversements_vendeurs(request):
+    user = request.user
+    profil_staff = user.account_profil_staff
+    #statut_traitement = StatutTraitement
+
+    try:
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            vendeurs = get_articles_stats_by_vendeur(request)
+            vendeurs = vendeurs.order_by("-montant_reversement_total") if vendeurs else None
+            suite_breadcrumb = "" 
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        print(e)
+        raise Http404
+    return render(request, 'management/admin_liste_reversements_vendeurs.html', locals())
+
+
+@login_required
+def admin_mouvements_colis(request):
+    try:
+        statut_traitement_selected = request.GET.get('statut_traitement_selected', None)
+        vendeur_selected = request.GET.get('vendeur_selected', None)
+        debut_selected = request.GET.get('debut_selected', None)
+        fin_selected = request.GET.get('fin_selected', None)
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            historiques = HistoriqueArticle.objects.filter(license=profil_staff.license, etat_suppression=False, article__etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("-date_creation")
+            vendeurs = Vendeur.objects.filter(license=profil_staff.license, vendeur_article__article_historiquearticle__isnull=False).exclude(vendeur_article__article_historiquearticle__statut_traitement=StatutTraitement.BROUILLON).distinct().order_by("-nom_store")
+            statut_traitement_applicables = [
+                (value, label) for value, label in StatutTraitement.choices
+                if value != StatutTraitement.BROUILLON
+            ]
+            suite_breadcrumb = "" 
+            if statut_traitement_selected:
+                historiques = historiques.filter(statut_traitement=statut_traitement_selected)
+            if vendeur_selected:
+                historiques = historiques.filter(article__vendeur__code=vendeur_selected)
+            if debut_selected:
+                historiques = historiques.filter(date_creation__date__gte=debut_selected)
+            if fin_selected:
+                historiques = historiques.filter(date_creation__date__lte=fin_selected)
+            if debut_selected is None and fin_selected is None:
+                debut_selected = timezone.now().strftime("%Y-%m-%d")
+                fin_selected = timezone.now().strftime("%Y-%m-%d")
+                historiques = historiques.filter(date_creation__date__gte=debut_selected, date_creation__date__lte=fin_selected)
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        print(e)
+        raise Http404
+    return render(request, 'management/admin_mouvements_colis.html', locals())
+
+
+@login_required
+def admin_activites_paiements(request):
+    try:
+        vendeur_selected = request.GET.get('vendeur_selected', None)
+        debut_selected = request.GET.get('debut_selected', None)
+        fin_selected = request.GET.get('fin_selected', None)
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            reglements = ReglementArticle.objects.filter(license=profil_staff.license, etat_suppression=False, article__etat_suppression=False).order_by("-date_creation")
+            vendeurs = Vendeur.objects.filter(license=profil_staff.license, vendeur_reglementarticle__isnull=False).distinct().order_by("-nom_store")
+            
+            suite_breadcrumb = "" 
+            if vendeur_selected:
+                reglements = reglements.filter(article__vendeur__code=vendeur_selected)
+            if debut_selected:
+                reglements = reglements.filter(date_creation__date__gte=debut_selected)
+            if fin_selected:
+                reglements = reglements.filter(date_creation__date__lte=fin_selected)
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        print(e)
+        raise Http404
+    return render(request, 'management/admin_activites_paiements.html', locals())
+
+
+@login_required
+def admin_activites_reversements(request):
+    try:
+        vendeur_selected = request.GET.get('vendeur_selected', None)
+        debut_selected = request.GET.get('debut_selected', None)
+        fin_selected = request.GET.get('fin_selected', None)
+        user = request.user
+        profil_staff = user.account_profil_staff
+        #statut_traitement = StatutTraitement
+
+        if user.is_authenticated and user.is_staff \
+            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+
+            reversements = Reversement.objects.filter(license=profil_staff.license, etat_suppression=False, article__etat_suppression=False).order_by("-date_creation")
+            vendeurs = Vendeur.objects.filter(license=profil_staff.license, vendeur_reversement__isnull=False).distinct().order_by("-nom_store")
+            
+            suite_breadcrumb = "" 
+            if vendeur_selected:
+                reversements = reversements.filter(article__vendeur__code=vendeur_selected)
+            if debut_selected:
+                reversements = reversements.filter(date_creation__date__gte=debut_selected)
+            if fin_selected:
+                reversements = reversements.filter(date_creation__date__lte=fin_selected)
+
+        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+    except Exception as e:
+        print(e)
+        raise Http404
+    return render(request, 'management/admin_activites_reversements.html', locals())
+
 

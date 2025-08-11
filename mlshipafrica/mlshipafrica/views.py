@@ -35,6 +35,7 @@ from django.db import transaction
 from allauth.account.views import SignupView
 
 from management.models import ProfilStaff, Vendeur
+from mlshipafrica.shared import get_articles_stats_by_vendeur, get_global_article_stats, get_global_vendeurs_stats, get_top_n_vendeurs
 
 
 #@login_required
@@ -49,6 +50,9 @@ def index(request):
             try:
                 profil_staff = ProfilStaff.objects.get(user=request.user)
                 profil_staff_pk = profil_staff.pk
+                stats_articles = get_global_article_stats(request)
+                stats_vendeurs = get_global_vendeurs_stats(request)
+                top_vendeurs = get_top_n_vendeurs(request, 5, 'ca')
             except ProfilStaff.DoesNotExist:
                 profil_staff_pk = None
                 profil_staff = None
@@ -60,6 +64,7 @@ def index(request):
             try:
                 vendeur = Vendeur.objects.get(user=request.user)
                 vendeur_pk = vendeur.pk
+                stats_articles = get_global_article_stats(request, vendeur.code)
             except Vendeur.DoesNotExist:
                 member_pk = None
                 vendeur = None

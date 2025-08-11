@@ -20,22 +20,14 @@
 			{% if vendeur.etat_approbation is True %}
 
 				<!--row-->
-				<div class="row d-none">
+				<div class="row">
 					<div class="col-xl-3 col-md-12">
 						<div class="card card-img-holder">
 							<div class="card-body">
 								<div class="clearfix">
 									<div class="float-start">
-										<p class="text-muted mb-1">Total Purchase</p>
-										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$77,483</h2>
-										<div class=" tx-12">
-											<span class="tx-muted me-1">since last month</span>
-											<span class="numberfont tx-success min-w-fit-content"><i
-													class="fe fe-arrow-up-right me-1 tx-14"></i>+1.25%</span>
-										</div>
-									</div>
-									<div class="float-end text-end mt-2">
-										<span class="pie" data-peity='{ "fill": ["#1753fc", "#f0f3f7"]}'>220/360</span>
+										<p class="text-muted mb-1">Colis attente dépôt</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.nombre_articles_en_attente_depot|default:0|floatformat:-2|intcomma}}</h2>
 									</div>
 								</div>
 							</div>
@@ -46,16 +38,49 @@
 							<div class="card-body">
 								<div class="clearfix">
 									<div class="float-start">
-										<p class="text-muted mb-1">Total Profit</p>
-										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$21,909</h2>
+										<p class="text-muted mb-1">Colis attente ramassage</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.nombre_articles_en_attente_ramassage|default:0|floatformat:-2|intcomma}}</h2>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Colis en cours de traitement</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.nombre_articles_en_cours|default:0|floatformat:-2|intcomma}}</h2>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Colis retournés</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.nombre_articles_retournes|default:0|floatformat:-2|intcomma}}</h2>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Colis livrés</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.nombre_articles_livres|default:0|floatformat:-2|intcomma}}</h2>
 										<div class="tx-12">
-											<span class="tx-muted me-1">since last month</span>
-											<span class="tx-danger min-w-fit-content"><i
-													class="fe fe-arrow-down-right me-1 tx-14"></i>-5.86%</span>
+											<span class="tx-muted me-1">Valeur :</span>
+											<span class="tx-success min-w-fit-content"><i
+													class="fa fa-money me-1 tx-14"></i>{{stats_articles.montant_valeur_totale_livres|default:0|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</span>
 										</div>
-									</div>
-									<div class="float-end text-end mt-2">
-										<span class="pie" data-peity='{ "fill": ["#9258f1", "#f0f3f7"]}'>306/360</span>
 									</div>
 								</div>
 							</div>
@@ -66,36 +91,47 @@
 							<div class="card-body">
 								<div class="clearfix">
 									<div class="float-start">
-										<p class="text-muted mb-1">Total Sales</p>
-										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$12,129</h2>
-										<div class=" tx-12">
-											<span class="tx-muted me-1">since last month</span>
-											<span class="numberfont tx-success min-w-fit-content"><i
-													class="fe fe-arrow-up-right me-1 tx-14"></i>+3.37%</span>
-										</div>
-									</div>
-									<div class="float-end text-end mt-2">
-										<span class="pie" data-peity='{ "fill": ["#22c03c", "#f0f3f7"]}'>206/360</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="col-xl-3 col-md-12">
-						<div class="card card-img-holder">
-							<div class="card-body">
-								<div class="clearfix">
-									<div class="float-start">
-										<p class="text-muted mb-1">Total Returns</p>
-										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">$43,129</h2>
+										<p class="text-muted mb-1">Total colis</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.nombre_articles_total|default:0|floatformat:-2|intcomma}}</h2>
 										<div class="tx-12">
-											<span class="tx-muted me-1">since last month</span>
-											<span class="tx-danger min-w-fit-content"><i
-													class="fe fe-arrow-down-right me-1 tx-14"></i>-4.56%</span>
+											<span class="tx-muted me-1">Valeur :</span>
+											<span class="tx-primary min-w-fit-content"><i
+													class="fa fa-money me-1 tx-14"></i>{{stats_articles.montant_valeur_totale_globale|default:0|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</span>
 										</div>
 									</div>
-									<div class="float-end text-end mt-2">
-										<span class="pie" data-peity='{ "fill": ["#ffc107", "#f0f3f7"]}'>276/360</span>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Paiements frais</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.montant_frais_total|default:0|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</h2>
+										<div class="tx-12">
+											<span class="tx-muted me-1">En attente :</span>
+											<span class="tx-warning min-w-fit-content"><i
+													class="fa fa-money me-1 tx-14"></i>{{stats_articles.montant_total_frais_attente|default:0|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-3 col-md-12">
+						<div class="card card-img-holder">
+							<div class="card-body">
+								<div class="clearfix">
+									<div class="float-start">
+										<p class="text-muted mb-1">Reversements</p>
+										<h2 class="mb-0 text-dark mainvalue font-weight-semibold">{{stats_articles.montant_reversement_total|default:0|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</h2>
+										<div class="tx-12">
+											<span class="tx-muted me-1">En attente :</span>
+											<span class="tx-warning min-w-fit-content"><i
+													class="fa fa-money me-1 tx-14"></i>{{stats_articles.montant_a_reverser_attente|default:0|floatformat:-2|intcomma}} {{ configuration.monnaie|default:'FCFA' }}</span>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -291,6 +327,206 @@
 				</div>
 			{% endif %}
 		
+
+		{% else%}
+
+			<div class="row">
+				<div class="col-sm-6 col-xl-4 col-lg-6">
+					<div class="card">
+						<div class="card-header d-inline-flex justify-content-between">
+							<h3 class="card-title"> <i class="bx bx-store"></i> Vendeurs</h3>
+						</div>
+						<div class="card-body">
+							<ul class="list-group list-item-spacing1">
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-warning-transparent"><i class="bx bx-hourglass text-warning"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">En attente approbation</h6>
+									</div>
+									<span class="badge bg-warning"><h6>{{stats_vendeurs.vendeurs_en_attente|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-success-transparent"><i class="bx bx-check-circle text-success"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Vendeurs actifs</h6>
+									</div>
+									<span class="badge bg-success"><h6>{{stats_vendeurs.vendeurs_actifs|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-dark-transparent"><i class="bx bx-block text-dark"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Vendeurs déscativés</h6>
+									</div>
+									<span class="badge bg-dark"><h6>{{stats_vendeurs.vendeurs_inactifs|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-danger-transparent"><i class="bx bx-trash text-danger"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Vendeurs supprimés	</h6>
+									</div>
+									<span class="badge bg-danger"><h6>{{stats_vendeurs.vendeurs_supprimes|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-sm-6 col-xl-4 col-lg-6">
+					<div class="card">
+						<div class="card-header d-inline-flex justify-content-between">
+							<h3 class="card-title"><i class="bx bx-wallet"></i> Paiements ({{ configuration.monnaie|default:'FCFA' }})</h3>
+						</div>
+						<div class="card-body">
+							<ul class="list-group list-item-spacing1">
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-warning-transparent"><i class="bx bx-hourglass text-warning"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">En attente</h6>
+									</div>
+									<span class="badge bg-warning"><h6>{{stats_articles.montant_total_frais_attente|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-success-transparent"><i class="bx bx-check-circle text-success"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Payé</h6>
+									</div>
+									<span class="badge bg-success"><h6>{{stats_articles.montant_total_frais_regles|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-primary-transparent"><i class="bx bx-wallet text-primary"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Total</h6>
+									</div>
+									<span class="badge bg-primary"><h6>{{stats_articles.montant_frais_total|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-sm-6 col-xl-4 col-lg-6">
+					<div class="card">
+						<div class="card-header d-inline-flex justify-content-between">
+							<h3 class="card-title"><i class="bx bx-money"></i> Reversements ({{ configuration.monnaie|default:'FCFA' }})</h3>
+						</div>
+						<div class="card-body">
+							<ul class="list-group list-item-spacing1">
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-warning-transparent"><i class="bx bx-hourglass text-warning"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">En attente</h6>
+									</div>
+									<span class="badge bg-warning"><h6>{{stats_articles.montant_a_reverser_attente|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-success-transparent"><i class="bx bx-check-circle text-success"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Reversé</h6>
+									</div>
+									<span class="badge bg-success"><h6>{{stats_articles.montant_reverse_effectue|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-primary-transparent"><i class="bx bx-money text-primary"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Total</h6>
+									</div>
+									<span class="badge bg-primary"><h6>{{stats_articles.montant_reversement_total|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-sm-6 col-xl-4 col-lg-6">
+					<div class="card">
+						<div class="card-header d-inline-flex justify-content-between">
+							<h3 class="card-title"><i class="bx bx-box side-menu__icon"></i> Colis</h3>
+						</div>
+						<div class="card-body">
+							<ul class="list-group list-item-spacing1">
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-warning-transparent"><i class="bx bx-hourglass text-warning"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">En attente ramassage</h6>
+									</div>
+									<span class="badge bg-warning"><h6>{{stats_articles.nombre_articles_en_attente_ramassage|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-info-transparent"><i class="bx bx-hourglass text-info"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">En attente dépôt</h6>
+									</div>
+									<span class="badge bg-info"><h6>{{stats_articles.nombre_articles_en_attente_depot|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-danger-transparent"><i class="bx bx-pulse text-danger"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">En cours</h6>
+									</div>
+									<span class="badge bg-danger"><h6>{{stats_articles.nombre_articles_en_cours|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-success-transparent"><i class="bx bx-check-circle text-success"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Livrés</h6>
+									</div>
+									<span class="badge bg-success"><h6>{{stats_articles.nombre_articles_livres|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-dark-transparent"><i class="bx bx-undo text-dark"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Retournés</h6>
+									</div>
+									<span class="badge bg-dark"><h6>{{stats_articles.nombre_articles_retournes|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+								<li class="list-group-item d-flex align-items-center border-0">
+									<span class="avatar rounded-5 bg-primary-transparent"><i class="bx bx-box text-primary"></i></span>
+									<div class="ms-3 flex-grow-1">
+										<h6 class="fw-bold mb-0 mt-1">Total</h6>
+									</div>
+									<span class="badge bg-primary"><h6>{{stats_articles.nombre_articles_total|default:0|floatformat:-2|intcomma}}</h6></span>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-sm-12 col-xl-8 col-lg-12">
+					<div class="card">
+						<div class="card-header d-inline-flex justify-content-between">
+							<h3 class="card-title"><i class="bx bx-store"></i> Top 5 vendeurs</h3>
+						</div>
+						<div class="card-body">
+							<div class="table-responsive">
+								<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+									<thead>
+										<tr>
+											<th class="fw-bold">ID Vendeur</th>
+											<th class="fw-bold">Vendeur</th>
+											<th class="fw-bold">Colis livrés</th>
+											<th class="fw-bold">Valeur ({{ configuration.monnaie|default:'FCFA' }})</th>
+											<th class="fw-bold">Frais ({{ configuration.monnaie|default:'FCFA' }})</th>
+										</tr>
+									</thead>
+									<tbody>
+									{% for vendeur in top_vendeurs %}
+										<tr>
+											<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a></td>
+											<td>{{vendeur.nom_store}}</td>
+											<td data-order="{{ vendeur.articles_livres }}" data-sort="{{ vendeur.articles_livres }}">{{ vendeur.articles_livres|floatformat:-2|intcomma }}</td>
+											<td data-order="{{ vendeur.valeur_totale }}" data-sort="{{ vendeur.valeur_totale }}">{{ vendeur.valeur_totale|floatformat:-2|intcomma }}</td>
+											<td data-order="{{ vendeur.montant_total_frais }}" data-sort="{{ vendeur.montant_total_frais }}">{{ vendeur.montant_total_frais|floatformat:-2|intcomma }}</td>
+										</tr>
+									{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</div>
+
 		{% endif %}
 
 				<!--row-->

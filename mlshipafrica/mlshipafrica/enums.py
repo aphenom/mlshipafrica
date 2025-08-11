@@ -47,8 +47,8 @@ STATUT_TRAITEMENT_ICONES = {
     'livre': 'check-circle',
     'livre_paye': 'check-circle',
     'reverse': 'money',
-    'en_retour': 'light',
-    'retourne': 'dark',
+    'en_retour': 'undo',
+    'retourne': 'ban',
 }
 
 
@@ -157,3 +157,24 @@ STATUT_VENDEUR_COULEURS = {
     'supprime': 'danger',
 }
 
+
+array_statut_traitement_en_cours = [
+    StatutTraitement.RAMASSE,
+    StatutTraitement.DEPOT,
+    StatutTraitement.EN_TRANSIT,
+    StatutTraitement.EN_COURS_LIVRAISON,
+    StatutTraitement.ARRIVE,
+    StatutTraitement.EN_RETOUR
+]
+
+
+array_statut_traitement_livre = [
+    StatutTraitement.LIVRE,
+    StatutTraitement.LIVRE_PAYE,
+    StatutTraitement.REVERSE
+]
+
+array_statut_traitement_retour = [
+    StatutTraitement.EN_RETOUR,
+    StatutTraitement.RETOURNE
+]

@@ -1,0 +1,126 @@
+{% extends "base_main.html" %}
+
+<!-- titre -->
+{% block title %}ML SHIP AFRICA - Activités sur les paiements{% endblock %}
+
+<!-- load static -->
+{% load static %}
+<!---->
+{% load humanize %}
+<!-- MainContent -->
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Activités</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Paiements</li>
+	{% endblock %}
+
+    {% block content %}
+
+				<!-- row -->
+				<div class="row">
+					<!--row-->
+					<div class="col-xl-12 col-lg-12">
+						<div class="card">
+							<div class="card-header">
+								<div class="card-title">Activités sur les paiements</div>
+								<div class="ms-auto d-none">
+									<div class="btn-list">
+										<a class="btn btn-primary btn-sm text-white" href="{% url 'management:management_vendeur_edit_colis' %}">
+											<span>
+												<i class="fe fe-plus-square"></i> Nouveau colis
+											</span>
+											<!-- <i class="fa fa-caret-down"></i> -->
+										</a>
+										<button class="btn ripple btn-sm btn-outline-light d-none"><i class="fe fe-download me-1"></i>Exporter Excel</button>
+									</div>
+								</div>
+							</div>
+							<div class="card-body mt-2">
+               					<form>
+								<div class="form-group">
+									<div class="row row-sm">
+										<div class="col-sm-5">
+											<label
+												class="main-content-label tx-11 tx-medium tx-gray-600">Vendeur</label>
+											<select class="form-control select2-no-search" name="vendeur_selected">
+												<option value="">Sélectionnez un vendeur</option>
+												{% for vendeur in vendeurs %}
+													<option value="{{ vendeur.code }}" {% if vendeur.code == vendeur_selected %} selected {% endif %}>{{vendeur.code}} - {{vendeur.nom_store}}</option>
+												{% endfor %}
+											</select>
+										</div>
+										<div class="col-sm-2 mg-t-20 mg-sm-t-0">
+											<label
+												class="main-content-label tx-11 tx-medium tx-gray-600">Début période</label>
+											<input class="form-control" name="debut_selected" type="date" max="{% now 'Y-m-d' %}" value="{{ debut_selected }}">
+										</div>
+										
+										<div class="col-sm-2 mg-t-20 mg-sm-t-0">
+											<label
+												class="main-content-label tx-11 tx-medium tx-gray-600">Fin période</label>
+											<input class="form-control" name="fin_selected" type="date" max="{% now 'Y-m-d' %}" value="{{ fin_selected }}">
+										</div>
+										
+										<div class="col-sm-2 mg-t-20 mg-sm-t-0">
+										<label
+												class="main-content-label tx-11 tx-medium tx-gray-600">&nbsp;</label>
+											<button class="btn btn-main-primary btn-block">Filtrer</button>
+										</div>
+									</div>
+								</div>
+               					<form>
+
+								<div class="table-responsive">
+									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
+										<thead>
+											<tr>
+												<th class="fw-bold">Date</th>
+												<th class="fw-bold">ID Paiement</th>
+												<th class="fw-bold">ID Colis</th>
+												<th class="fw-bold">Vendeur</th>
+												<th class="fw-bold">Montant ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th class="fw-bold">Réduction ({{ configuration.monnaie|default:'FCFA' }})</th>
+												<th class="fw-bold">Référence</th>
+												<th class="fw-bold">Auteur</th>
+											</tr>
+										</thead>
+										<tbody>
+										{% for reglement in reglements %}
+											<tr>
+												<td data-order="{{ reglement.date_creation|date:'Y-m-d H:i:s' }}">{{ reglement.date_creation|date:'d-m-Y H:i:s' }}</td>
+												<td>{{reglement.code}}</td>
+												<td><a href="{% url 'management:management_admin_detail_colis' reglement.article.code %}">{{reglement.article.code}}</a></td>
+												<td><a href="{% url 'management:management_admin_vendeur_profil' reglement.vendeur.code %}">{{reglement.vendeur.code}} - {{reglement.vendeur.nom_store}}</a></td>
+												<td data-order="{{ reglement.montant_reglement }}" data-sort="{{ reglement.montant_reglement }}">{{ reglement.montant_reglement|floatformat:-2|intcomma }}</td>
+												<td data-order="{{ reglement.montant_reduction }}" data-sort="{{ reglement.montant_reduction }}">{{ reglement.montant_reduction|floatformat:-2|intcomma|default:"-" }}</td>
+												<td>{{reglement.reference|default:"-"}}</td>
+												<td>{{reglement.creation_par.account_profil_staff.code}}</td>
+											</tr>
+										{% endfor %}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!--row-->
+
+				</div>			
+				<!-- row closed -->
+
+    {% endblock %}
+
+	<!--  -->
+
+    <!-- javascript -->
+    {% block scripts %}
+    <!-- parent -->
+        {{ block.super }}
+
+		<script>
+		$(document).ready(function () {
+			
+		});
+		</script>
+
+    {% endblock %}
