@@ -507,7 +507,7 @@ def _edit(request, code):
                                 utilisateur.user.save()
 
                             is_email_exist = EmailAddress.objects.filter(email=utilisateur.email, user=utilisateur.user).exists()
-                            if is_group_exist == False:
+                            if is_email_exist == False:
                                 email = EmailAddress.objects.create(
                                     email=utilisateur.email,
                                     verified=True,
