@@ -31,7 +31,7 @@ def vendeur_edit_profil(request):
     user = request.user
     form = VendeurForm(instance=None)
     current_license = request.GET.get('current_license', None)
-    license = License.objects.get(code=current_license, etat_validation=False, etat_suppression=False) if current_license and current_license.pk else License.objects.all().first()
+    license = License.objects.get(code=current_license, etat_validation=False, etat_suppression=False) if current_license and current_license != 'None' else License.objects.all().first()
 
     if user.is_authenticated and not user.is_staff:
         try:
