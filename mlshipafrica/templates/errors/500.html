@@ -1,7 +1,5 @@
 {% extends "errors/_base_error.html" %}
-{% load static %}
 {% block title %}Erreur du serveur{% endblock %}
-{% block illustration %}<img class="illu" src="{% static 'assets/img/media/500.png' %}" alt="" onerror="this.style.display='none'">{% endblock %}
 {% block heading %}Un problème est survenu de notre côté{% endblock %}
 {% block message %}Votre demande n'a pas pu aboutir. L'incident a été enregistré et notre équipe va l'examiner.{% endblock %}
 {% block tips %}
