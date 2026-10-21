@@ -1,0 +1,12 @@
+{% extends "errors/_base_error.html" %}
+{% load static %}
+{% block title %}Page introuvable{% endblock %}
+{% block accent %}#3f51b5{% endblock %}
+{% block illustration %}<img class="illu" src="{% static 'assets/img/media/404.png' %}" alt="" onerror="this.style.display='none'">{% endblock %}
+{% block heading %}Cette page est introuvable{% endblock %}
+{% block message %}L'adresse demandée n'existe pas ou a été déplacée.{% endblock %}
+{% block tips %}
+	<li>Vérifiez l'adresse saisie dans la barre du navigateur.</li>
+	<li>Si vous avez suivi un lien, il est peut-être expiré.</li>
+	<li>Revenez à l'accueil et passez par le menu.</li>
+{% endblock %}

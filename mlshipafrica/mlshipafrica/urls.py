@@ -41,3 +41,9 @@ urlpatterns = [
     # path('cron/cron_transfert_cinetpay/', cron_transfert_cinetpay, name='cron_transfert_cinetpay'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Pages d'erreur personnalisées (actives quand DEBUG = False)
+handler400 = 'mlshipafrica.error_views.bad_request'
+handler403 = 'mlshipafrica.error_views.permission_denied'
+handler404 = 'mlshipafrica.error_views.page_not_found'
+handler500 = 'mlshipafrica.error_views.server_error'

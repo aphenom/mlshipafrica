@@ -1,0 +1,9 @@
+{% extends "errors/_base_error.html" %}
+{% block title %}Requête invalide{% endblock %}
+{% block accent %}#f39c12{% endblock %}
+{% block heading %}La requête n'a pas pu être traitée{% endblock %}
+{% block message %}Les informations envoyées sont incomplètes ou invalides.{% endblock %}
+{% block tips %}
+	<li>Rechargez la page et recommencez l'opération.</li>
+	<li>Videz le cache du navigateur si le problème persiste.</li>
+{% endblock %}

@@ -27,12 +27,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = [
+    'mlcodinterieur.com',  # Domaine principal
+    'app.mlcodinterieur.com',  # Domaine principal
     'mlshipcod.com',  # Domaine principal
     'app.mlshipcod.com',  # Optionnel pour www
     'localhost',  # Pour les tests locaux
@@ -62,6 +61,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'mlshipafrica.logging_utils.ErrorRefMiddleware',  # Référence d'erreur affichée et loggée
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -234,10 +234,91 @@ X_FRAME_OPTIONS = 'ALLOWALL'
 
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.office365.com"
-EMAIL_PORT = 587
-EMAIL_HOST_USER = "support@mlshipcod.com"
-EMAIL_HOST_PASSWORD = "MLSHIPCOD123"
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-EMAIL_USE_TLS = True
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.hostinger.com')
+EMAIL_PORT = config('EMAIL_PORT', default=465, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=True, cast=bool)
+
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+EMAIL_TIMEOUT = 20
+
 EMAIL_HOST_NAME = "Support ML SHIP COD"
+
+
+# Page affichée en cas d'échec CSRF (session expirée, formulaire trop ancien...)
+CSRF_FAILURE_VIEW = 'mlshipafrica.error_views.csrf_failure'
+
+
+# Journalisation
+# - logs/app.log    : activité générale (INFO et plus)
+# - logs/errors.log : erreurs avec traceback complète, retrouvables via la référence affichée à l'utilisateur
+LOG_DIR = Path(config('LOG_DIR', default=str(BASE_DIR / 'logs')))
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'request_context': {
+            '()': 'mlshipafrica.logging_utils.RequestContextFilter',
+        },
+    },
+    'formatters': {
+        'detailed': {
+            'format': '[{asctime}] {levelname} ref={ref} {name} | {method} {path} | user={user} ip={ip}\n{message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '[{asctime}] {levelname} ref={ref} {name}: {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'filters': ['request_context'],
+            'formatter': 'simple',
+        },
+        'app_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'app.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'level': 'INFO',
+            'filters': ['request_context'],
+            'formatter': 'simple',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'errors.log',
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 10,
+            'encoding': 'utf-8',
+            'level': 'ERROR',
+            'filters': ['request_context'],
+            'formatter': 'detailed',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'app_file', 'error_file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'app_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

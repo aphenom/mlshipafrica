@@ -10,7 +10,7 @@ from mlshipafrica.utils import CodeGenerator
 
 from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
-from django.db.models.signals import post_save, m2m_changed
+from django.db.models.signals import pre_save, post_save, m2m_changed
 from django.dispatch import receiver
 from phonenumber_field.modelfields import PhoneNumberField
 from django.db.models import Q
@@ -191,11 +191,12 @@ class Vendeur(MyModelAbstract):
         return super(Vendeur, self).save(*args, **kwargs)        
 
     
-@receiver(post_save, sender=User)
+@receiver(pre_save, sender=User)
 def save_user_username(sender, instance, **kwargs):
+    # pre_save : le username doit être renseigné AVANT l'INSERT, sinon allauth
+    # (ACCOUNT_USER_MODEL_USERNAME_FIELD = None) insère '' et viole l'unicité
     if not instance.username:
         instance.username = instance.email
-        instance.save()
 
 
 """ Parametrage des tarifs selon les critères souhaités """

@@ -1,0 +1,10 @@
+{% extends "errors/_base_error.html" %}
+{% block title %}Accès refusé{% endblock %}
+{% block accent %}#f39c12{% endblock %}
+{% block heading %}Vous n'avez pas accès à cette page{% endblock %}
+{% block message %}Votre compte ne dispose pas des droits nécessaires, ou votre session a expiré.{% endblock %}
+{% block tips %}
+	<li>Vérifiez que vous êtes connecté avec le bon compte.</li>
+	<li>Rechargez la page puis réessayez (une session expirée peut bloquer l'envoi d'un formulaire).</li>
+	<li>Si vous pensez devoir y accéder, contactez un administrateur.</li>
+{% endblock %}

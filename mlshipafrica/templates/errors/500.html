@@ -1,0 +1,11 @@
+{% extends "errors/_base_error.html" %}
+{% load static %}
+{% block title %}Erreur du serveur{% endblock %}
+{% block illustration %}<img class="illu" src="{% static 'assets/img/media/500.png' %}" alt="" onerror="this.style.display='none'">{% endblock %}
+{% block heading %}Un problème est survenu de notre côté{% endblock %}
+{% block message %}Votre demande n'a pas pu aboutir. L'incident a été enregistré et notre équipe va l'examiner.{% endblock %}
+{% block tips %}
+	<li>Patientez quelques instants puis réessayez.</li>
+	<li>Si vous remplissiez un formulaire, vérifiez avant de le renvoyer que l'opération n'a pas déjà été prise en compte.</li>
+	<li>Si l'erreur se répète, transmettez la référence ci-dessous au support.</li>
+{% endblock %}
