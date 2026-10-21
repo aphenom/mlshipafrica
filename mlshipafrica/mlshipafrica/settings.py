@@ -239,8 +239,8 @@ EMAIL_PORT = config('EMAIL_PORT', default=465, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
 EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=True, cast=bool)
 
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 EMAIL_TIMEOUT = 20
@@ -256,7 +256,17 @@ CSRF_FAILURE_VIEW = 'mlshipafrica.error_views.csrf_failure'
 # - logs/app.log    : activité générale (INFO et plus)
 # - logs/errors.log : erreurs avec traceback complète, retrouvables via la référence affichée à l'utilisateur
 LOG_DIR = Path(config('LOG_DIR', default=str(BASE_DIR / 'logs')))
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Si le dossier n'est pas accessible en écriture, on se rabat sur la console
+# (log Passenger) plutôt que d'empêcher l'application de démarrer
+try:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    for _log_file in ('app.log', 'errors.log'):
+        with open(LOG_DIR / _log_file, 'a', encoding='utf-8'):
+            pass
+    LOG_HANDLERS = ['console', 'app_file', 'error_file']
+except OSError:
+    LOG_HANDLERS = ['console']
 
 LOGGING = {
     'version': 1,
@@ -293,6 +303,7 @@ LOGGING = {
             'level': 'INFO',
             'filters': ['request_context'],
             'formatter': 'simple',
+            'delay': True,
         },
         'error_file': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -303,15 +314,16 @@ LOGGING = {
             'level': 'ERROR',
             'filters': ['request_context'],
             'formatter': 'detailed',
+            'delay': True,
         },
     },
     'root': {
-        'handlers': ['console', 'app_file', 'error_file'],
+        'handlers': LOG_HANDLERS,
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'app_file', 'error_file'],
+            'handlers': LOG_HANDLERS,
             'level': 'INFO',
             'propagate': False,
         },
