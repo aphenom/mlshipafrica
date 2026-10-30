@@ -36,6 +36,10 @@ urlpatterns = [
    
     path('core/', include('core.urls')),
 
+    path('sms/', include('sms.urls')),
+
+    path(settings.ADMIN_URL, admin.site.urls),
+
     # path('player/', include('player.urls')),
 
     # path('cron/cron_transfert_cinetpay/', cron_transfert_cinetpay, name='cron_transfert_cinetpay'),

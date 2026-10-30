@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'import_export',
     'core',
     'management',
+    'sms',
 ]
 
 MIDDLEWARE = [
@@ -108,6 +109,8 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT'),
+        # Garde la connexion ouverte entre deux requêtes (évite une reconnexion MySQL à chaque page)
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),
         'OPTIONS': {  
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8',  
@@ -334,3 +337,26 @@ LOGGING = {
         },
     },
 }
+
+
+# ---------------------------------------------------------------------------
+# SMS (HSMS) : identifiants dans le .env, jamais dans le code ni en base
+#   HSMS_EMAIL, HSMS_PASSWORD, HSMS_CLIENT_ID, HSMS_CLIENT_SECRET, HSMS_WEBHOOK_SECRET
+# L'envoi s'active dans l'administration : Paramètres SMS › « Envoi des SMS activé ».
+# ---------------------------------------------------------------------------
+LOGGING['loggers']['sms'] = {'handlers': LOG_HANDLERS, 'level': 'INFO', 'propagate': False}
+
+# Tâches planifiées (django-crontab) : après chaque déploiement, lancer
+#   python manage.py crontab add
+# Heures du serveur = UTC = heure d'Abidjan.
+CRONTAB_LOCK_JOBS = True  # une tâche ne démarre pas si la précédente tourne encore
+CRONTAB_COMMAND_SUFFIX = '2>&1'
+CRONJOBS = [
+    ('* * * * *', 'django.core.management.call_command', ['sms_envoyer'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
+    ('*/10 * * * *', 'django.core.management.call_command', ['sms_accuses'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
+    ('0 19 * * *', 'django.core.management.call_command', ['sms_resume_soir'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
+]
+
+# Administration Django (paramètres et modèles de SMS), réservée aux super-utilisateurs.
+# Adresse volontairement non standard : la changer dans le .env (ADMIN_URL).
+ADMIN_URL = config('ADMIN_URL', default='direction-mlcod/')
