@@ -11,11 +11,13 @@ class StatutTraitement(models.TextChoices):
     EN_TRANSIT = 'en_transit', 'En transit'
     EN_COURS_LIVRAISON = 'en_cours_livraison', 'En cours de livraison'
     ARRIVE = 'arrive', 'Arrivé à destination'
+    ECHEC_LIVRAISON = 'echec_livraison', 'Échec de livraison'
     LIVRE = 'livre', 'Livré'
     LIVRE_PAYE = 'livre_paye', 'Livré et payé'
     REVERSE = 'reverse', 'Reversé'
     EN_RETOUR = 'en_retour', 'En retour'
     RETOURNE = 'retourne', 'Retourné'
+    ANNULE = 'annule', 'Annulé avant expédition'
 
 
 STATUT_TRAITEMENT_COULEURS = {
@@ -27,11 +29,13 @@ STATUT_TRAITEMENT_COULEURS = {
     'en_transit': 'info',
     'en_cours_livraison': 'primary',
     'arrive': 'info',
+    'echec_livraison': 'danger',
     'livre': 'success',
     'livre_paye': 'success',
     'reverse': 'dark',
     'en_retour': 'light',
     'retourne': 'dark',
+    'annule': 'secondary',
 }
 
 
@@ -44,11 +48,13 @@ STATUT_TRAITEMENT_ICONES = {
     'en_transit': 'square',
     'en_cours_livraison': 'truck',
     'arrive': 'map-pin',
+    'echec_livraison': 'exclamation-triangle',
     'livre': 'check-circle',
     'livre_paye': 'check-circle',
     'reverse': 'money',
     'en_retour': 'undo',
     'retourne': 'ban',
+    'annule': 'times-circle',
 }
 
 
@@ -61,11 +67,13 @@ STATUT_TRAITEMENT_COMMENTAIRES = {
     'en_transit': 'Le colis est actuellement en cours d’acheminement vers la ville ou la zone de livraison finale.',
     'en_cours_livraison': 'Le colis est en cours de livraison chez le client. Notre livreur est en route.',
     'arrive': 'Le colis est arrivé dans la zone de livraison. Il est en attente de retrait par le client.',
+    'echec_livraison': 'Le client n\'a pas pu être livré. Une nouvelle tentative est organisée, sinon le colis repart vers le vendeur.',
     'livre': 'Le client a reçu son colis.',
     'livre_paye': 'Le client a reçu son colis et a réglé le montant à la livraison. La transaction est confirmée.',
     'reverse': 'Le montant collecté a été reversé au vendeur selon le mode de paiement convenu.',
     'en_retour': 'Le colis est en cours de retour vers le vendeur suite à un échec de livraison ou une demande du client.',
     'retourne': 'Le colis est retourné au vendeur avec succès.',
+    'annule': 'La commande a été annulée avant son expédition. Le colis reste disponible pour le vendeur.',
 }
 
 
@@ -164,6 +172,7 @@ array_statut_traitement_en_cours = [
     StatutTraitement.EN_TRANSIT,
     StatutTraitement.EN_COURS_LIVRAISON,
     StatutTraitement.ARRIVE,
+    StatutTraitement.ECHEC_LIVRAISON,
     StatutTraitement.EN_RETOUR
 ]
 

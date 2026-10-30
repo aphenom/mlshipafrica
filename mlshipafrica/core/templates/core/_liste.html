@@ -172,7 +172,7 @@
 											<tr>
 												<td data-order="{{ zone.date_creation|date:'Y-m-d H:i:s' }}">{{ zone.date_creation|date:'d-m-Y H:i:s' }}</td>
 												<td><a href="{% url 'core:core_edit' zone.code %}?param=zones">{{zone.code}}</a></td>
-												<td>{{zone.nom}}</td>
+												<td>{{zone.nom}}{% if zone.get_delai_display %} <span class="badge bg-light text-dark">{{ zone.get_delai_display }}</span>{% endif %}</td>
 												<td>
 												{% if zone.is_depart is True %}
 													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Oui</span>

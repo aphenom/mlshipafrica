@@ -132,15 +132,25 @@ class ZoneForm(forms.ModelForm):
         required=True,
     )
 
+    def clean(self):
+        donnees = super().clean()
+        mini, maxi = donnees.get('delai_min_jours'), donnees.get('delai_max_jours')
+        if mini is not None and maxi is not None and mini > maxi:
+            self.add_error('delai_max_jours', "Le délai maximum doit être supérieur ou égal au délai minimum.")
+        return donnees
+
     class Meta:
         model = Zone
         exclude = ['date_creation', 'date_modification']
         
-        fields = ['nom', 'is_depart', 'is_arrivee', 'license']
+        fields = ['nom', 'numero', 'delai_min_jours', 'delai_max_jours', 'is_depart', 'is_arrivee', 'license']
         
         #phone2 = PhoneNumberField()
         widgets = {
             'nom': TextInput(attrs={'placeholder':'Le nom de la zone', 'class':'form-control'}),
+            'numero': NumberInput(attrs={'placeholder':'Numéro de zone (2 à 6)', 'class':'form-control'}),
+            'delai_min_jours': NumberInput(attrs={'placeholder':'Délai minimum, en jours (ex. 2 pour J+2)', 'class':'form-control'}),
+            'delai_max_jours': NumberInput(attrs={'placeholder':'Délai maximum, en jours (ex. 4 pour J+4)', 'class':'form-control'}),
             'license': Select(attrs={'class':'form-control form-control-lg js-example-basic-single', 'style':'width:100%', 'data-dropdown-parent': "#MyFormSpace"}),
         }
 

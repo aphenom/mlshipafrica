@@ -4,10 +4,30 @@ from management.models import Article, ProfilStaff, Tarification, Vendeur
 from phonenumber_field.formfields import PhoneNumberField
 from phonenumber_field.widgets import PhoneNumberPrefixWidget
 
-from core.models import Localite, Zone
-from mlshipafrica.enums import BOOLEAN_CHOICES, NatureChoice, PlateformeChoice, ProduitsChoice
+from core.models import FormatArticle, Localite, PartenaireLogistique, Zone
+from mlshipafrica.enums import BOOLEAN_CHOICES, NatureChoice, PlateformeChoice, ProduitsChoice, TypeProfilStaffChoice
 from django_currentuser.middleware import (
     get_current_user, get_current_authenticated_user)
+
+
+def libelle_localite_avec_delai(localite):
+    """« Bouaké · Zone 3 · J+3 à J+4 » (le délai n'apparaît que s'il est renseigné sur la zone)."""
+    morceaux = [localite.nom]
+    if localite.zone_id:
+        morceaux.append(localite.zone.nom)
+        delai = localite.zone.get_delai_display()
+        if delai:
+            morceaux.append(delai)
+    return ' · '.join(morceaux)
+
+
+# Rôles autorisés à voir et saisir le coût d'achat chez le partenaire logistique (donnée interne)
+ROLES_COUT_PARTENAIRE = (TypeProfilStaffChoice.SUPER, TypeProfilStaffChoice.COMPTABLE)
+
+
+def peut_voir_cout_partenaire(user):
+    profil = getattr(user, 'account_profil_staff', None) if user else None
+    return bool(profil and profil.role_profil in ROLES_COUT_PARTENAIRE)
 
 '''formulaire pour remplir informations avant et servant pour la validation du vendeur'''
 class VendeurForm(forms.ModelForm):
@@ -146,13 +166,29 @@ class VendeurColisForm(forms.ModelForm):
         super(VendeurColisForm, self).__init__(*args, **kwargs)
         # Filter authors related to the logged-in user
         user = get_current_user()
+        license = None
         if user and hasattr(user, 'account_vendeur'):
-            self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True, license=user.account_vendeur.license, etat_validation=True, etat_suppression=False)
-        elif user and hasattr(user, 'profil_staff'):
-            self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True, license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
-        else:
-            self.fields['localite_arrivee'].queryset = Localite.objects.filter(is_arrivee=True)
-            
+            license = user.account_vendeur.license
+        elif user and hasattr(user, 'account_profil_staff'):
+            license = user.account_profil_staff.license
+        localites = Localite.objects.filter(is_arrivee=True, etat_validation=True, etat_suppression=False).select_related('zone')
+        if license is not None:
+            localites = localites.filter(license=license)
+        self.fields['localite_arrivee'].queryset = localites
+        # Le vendeur voit la zone et le délai estimé : « Bouaké · Zone 3 · J+3 à J+4 »
+        self.fields['localite_arrivee'].label_from_instance = libelle_localite_avec_delai
+
+        # Seuls les formats qui ont un tarif actif sont proposés (ex. « Grand » tant qu'il n'est pas ouvert)
+        formats = FormatArticle.objects.filter(
+            etat_validation=True, etat_suppression=False,
+            format_articletarification__etat_validation=True,
+            format_articletarification__etat_suppression=False,
+            format_articletarification__vendeur__isnull=True,
+        ).distinct()
+        if license is not None:
+            formats = formats.filter(license=license)
+        self.fields['format_article'].queryset = formats
+
     class Meta:
         model = Article
         # exclude = ['code', 'user', 'creation_par', 'modification_par', 'etat_validation', 'etat_suppression', 'date_suppression', 'date_validation', 'date_modification', 'date_creation', 'etat_approbation', 'approbation_par', 'license']
@@ -185,25 +221,32 @@ class TarificationForm(forms.ModelForm):
         super(TarificationForm, self).__init__(*args, **kwargs)
         # Filter authors related to the logged-in user
         user = get_current_user()
-        if user and hasattr(user, 'profil_staff'):
-            self.fields['localite_depart'].queryset = Localite.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
-            self.fields['localite_arrivee'].queryset = Localite.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
-            self.fields['zone_depart'].queryset = Zone.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
-            self.fields['zone_arrivee'].queryset = Zone.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
-            self.fields['vendeur'].queryset = Vendeur.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
-            self.fields['partenaire_logistique'].queryset = Localite.objects.filter(license=user.profil_staff.license, etat_validation=True, etat_suppression=False)
+        profil = getattr(user, 'account_profil_staff', None) if user else None
+        if profil is not None and profil.license_id:
+            license = profil.license
+            self.fields['localite_depart'].queryset = Localite.objects.filter(license=license, etat_validation=True, etat_suppression=False)
+            self.fields['localite_arrivee'].queryset = Localite.objects.filter(license=license, etat_validation=True, etat_suppression=False)
+            self.fields['zone_depart'].queryset = Zone.objects.filter(license=license, etat_validation=True, etat_suppression=False)
+            self.fields['zone_arrivee'].queryset = Zone.objects.filter(license=license, etat_validation=True, etat_suppression=False)
+            self.fields['vendeur'].queryset = Vendeur.objects.filter(license=license, etat_validation=True, etat_suppression=False)
+            self.fields['partenaire_logistique'].queryset = PartenaireLogistique.objects.filter(license=license, etat_validation=True, etat_suppression=False)
+        # Coût d'achat chez le partenaire : seuls le CEO (super administrateur) et la comptable le voient.
+        # Pour les autres rôles le champ est retiré du formulaire, donc jamais affiché ni écrasé à l'enregistrement.
+        if not peut_voir_cout_partenaire(user):
+            self.fields.pop('cout_partenaire', None)
 
     class Meta:
         model = Tarification
         exclude = ['date_creation', 'date_modification']
         
-        fields = ['montant_frais', 'cout_option_recuperation', 'taux_option_recuperation', 'cout_option_encaissement', 'taux_option_encaissement',
+        fields = ['montant_frais', 'cout_partenaire', 'cout_option_recuperation', 'taux_option_recuperation', 'cout_option_encaissement', 'taux_option_encaissement',
                   'format_article', 'localite_depart', 'localite_arrivee',
                   'zone_depart', 'zone_arrivee', 'vendeur', 'partenaire_logistique', 'license']
         
         #phone2 = PhoneNumberField()
         widgets = {
             'montant_frais': NumberInput(attrs={'placeholder':'Le coût du service', 'class':'form-control'}),
+            'cout_partenaire': NumberInput(attrs={'placeholder':'Coût d\'achat par colis (interne)', 'class':'form-control'}),
             'cout_option_recuperation': NumberInput(attrs={'data-cible':"id_taux_option_recuperation", 'placeholder':'Le coût fixe option recuperation colis', 'class':'cible_connected form-control'}),
             'taux_option_recuperation': NumberInput(attrs={'data-cible':"id_cout_option_recuperation", 'placeholder':'Le taux option récupération colis', 'class':'cible_connected form-control'}),
             'cout_option_encaissement': NumberInput(attrs={'data-cible':"id_taux_option_encaissement", 'placeholder':'Le coût fixe option encaissement client', 'class':'cible_connected form-control'}),

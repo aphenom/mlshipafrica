@@ -14,6 +14,7 @@ from django.db.models.signals import pre_save, post_save, m2m_changed
 from django.dispatch import receiver
 from phonenumber_field.modelfields import PhoneNumberField
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 
 # Create your models here.
 class MyModelAbstract(models.Model):
@@ -207,6 +208,8 @@ class Tarification(MyModelAbstract):
     taux_option_recuperation = models.DecimalField('taux option recuperation colis', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option de récupération")
     cout_option_encaissement = models.DecimalField('cout fixe option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Cout fixe de l'option d'encaissement au cas où il serait uniforme pour chaque colis")
     taux_option_encaissement = models.DecimalField('taux option encaissement client', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Taux appliqué sur chaque colis pour l'option d'encaissement")
+    # Lot 1 : coût d'achat chez le partenaire logistique (interne : jamais affiché aux vendeurs ni aux clients)
+    cout_partenaire = models.DecimalField('coût partenaire (interne)', max_digits=10, decimal_places=2, null=True, blank=True, db_comment="Coût d'achat de la livraison chez le partenaire logistique. Donnée interne, réservée à la direction.")
 
     partenaire_logistique = models.ForeignKey(PartenaireLogistique, models.SET_NULL, null=True, blank=True, related_name='partenaire_logistiquetarifications', related_query_name="partenaire_logistiquetarification", verbose_name = "partenaire logistique")
     zone_depart = models.ForeignKey(Zone, models.SET_NULL, null=True, blank=True, related_name='zone_departtarifications', related_query_name="zone_departtarification", verbose_name = "zone départ")
@@ -347,13 +350,21 @@ class Article(MyModelAbstract):
         verbose_name_plural = 'Articles'      
         db_table_comment = "Les articles répresentant les colis à livrer"
         ordering = ['-date_creation']
+        # Lot 1 : index pour tenir 1 000+ colis par jour (listes par statut et par vendeur)
+        indexes = [
+            models.Index(fields=['statut_traitement'], name='art_statut_idx'),
+            models.Index(fields=['vendeur', 'statut_traitement'], name='art_vendeur_statut_idx'),
+            models.Index(fields=['date_creation'], name='art_date_creation_idx'),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.id or not self.tarification:
+            zone_depart = self.localite_depart.zone if self.localite_depart_id else None
+            zone_arrivee = self.localite_arrivee.zone if self.localite_arrivee_id else None
             query = Q(localite_depart=self.localite_depart) | Q(localite_depart=None)
             query &= Q(localite_arrivee=self.localite_arrivee) | Q(localite_arrivee=None)
-            query &= Q(zone_depart=self.localite_depart.zone) | Q(zone_depart=None)
-            query &= Q(zone_arrivee=self.localite_arrivee.zone) | Q(zone_arrivee=None)
+            query &= Q(zone_depart=zone_depart) | Q(zone_depart=None)
+            query &= Q(zone_arrivee=zone_arrivee) | Q(zone_arrivee=None)
             query &= Q(format_article=self.format_article) | Q(format_article=None)
             query &= Q(vendeur=self.vendeur) | Q(vendeur=None)
             query &= Q(etat_validation=True)
@@ -364,6 +375,10 @@ class Article(MyModelAbstract):
 
             # Exécutez la requête pour récupérer les paramètres de tarification
             tarification = Tarification.objects.filter(query).order_by("-vendeur", "-format_article", "-localite_arrivee", "-localite_arrivee", "-zone_depart", "-zone_arrivee").first()
+            if tarification is None:
+                # Avant : AttributeError et page d'erreur. Maintenant : message clair au vendeur.
+                raise ValidationError("Aucun tarif n'est disponible pour cette destination et ce format de colis. "
+                                      "Choisissez une autre localité ou un autre format, ou contactez le support.")
             tarification_taux_option_recuperation = tarification.get_final_taux_option_recuperation() or 0
             tarification_taux_option_encaissement = tarification.get_final_taux_option_encaissement() or 0
             tarification_cout_option_recuperation = tarification.get_final_cout_option_recuperation()
@@ -393,7 +408,12 @@ class Article(MyModelAbstract):
             if self.is_option_encaissement is True:
                 self.montant_a_reverser = self.valeur_totale - self.montant_total_frais
         
-        if self.statut_traitement != self._init_statut_traitement and get_current_user().is_staff is False: #, StatutTraitement.EN_ATTENTE_DEPOT, StatutTraitement.EN_ATTENTE_RAMASSAGE):
+        utilisateur = get_current_user()
+        # Historique automatique pour les changements faits par le vendeur ou par une tâche (cron, import, API).
+        # Les changements faits par l'équipe passent par la vue d'admin, qui crée elle-même l'historique.
+        # (Avant : get_current_user() valait None hors requête web et faisait planter la sauvegarde.)
+        par_equipe = bool(utilisateur is not None and getattr(utilisateur, 'is_staff', False))
+        if self.statut_traitement != self._init_statut_traitement and not par_equipe:
             histo_article = HistoriqueArticle()
             histo_article.article = self
             histo_article.date = timezone.now()
@@ -431,6 +451,10 @@ class HistoriqueArticle(MyModelAbstract):
         verbose_name = 'Historique Article'
         verbose_name_plural = 'Historiques Articles'      
         db_table_comment = "Historisations des mouvements des articles répresentant les colis pendant le traitement"
+        # Lot 1 : get_last_historique() est appelé sur chaque colis affiché
+        indexes = [
+            models.Index(fields=['article', 'date_creation'], name='histo_article_date_idx'),
+        ]
 
 
 """ Les reglements des frais de livraison du vendeur """

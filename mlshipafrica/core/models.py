@@ -174,6 +174,10 @@ class Zone(MyModelAbstract):
     is_depart = models.BooleanField('est départ', default=True, db_comment="Possibilité ou non de faire partir un colis de cette zone")
     is_arrivee = models.BooleanField('est arrivée', default=True, db_comment="Possibilité ou non d'envoyer un colis vers cette zone")
     nom = models.CharField('nom', max_length=100)
+    # Lot 1 : numéro de zone (même numérotation que le partenaire logistique) et délai estimé en jours ouvrés après expédition
+    numero = models.PositiveSmallIntegerField('numéro de zone', null=True, blank=True, db_comment="Numéro de la zone (2 à 6), aligné sur le partenaire logistique")
+    delai_min_jours = models.PositiveSmallIntegerField('délai minimum (jours)', null=True, blank=True, db_comment="Délai de livraison minimum, en jours ouvrés après expédition (J+)")
+    delai_max_jours = models.PositiveSmallIntegerField('délai maximum (jours)', null=True, blank=True, db_comment="Délai de livraison maximum, en jours ouvrés après expédition (J+)")
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_zones', related_query_name="license_zone", verbose_name = "license")
     
     objects = MyModeleManager()
@@ -181,6 +185,14 @@ class Zone(MyModelAbstract):
     def __str__(self):
         # return '{} - {}'.format(self.code, self.nom)
         return '{}'.format(self.nom)
+
+    def get_delai_display(self):
+        """« J+2 à J+3 » ; vide si le délai n'est pas renseigné."""
+        if not self.delai_max_jours:
+            return ''
+        if not self.delai_min_jours or self.delai_min_jours == self.delai_max_jours:
+            return 'J+{}'.format(self.delai_max_jours)
+        return 'J+{} à J+{}'.format(self.delai_min_jours, self.delai_max_jours)
 
     class Meta:
         verbose_name = 'Zone'

@@ -365,6 +365,33 @@
 										</div>
 										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
 											<div class="main-form-group ">
+												<label class="form-label">{{form.numero.label}}</label>
+												{{ form.numero }}
+												<div class="text-danger">
+													{{ form.numero.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.delai_min_jours.label}}</label>
+												{{ form.delai_min_jours }}
+												<div class="text-danger">
+													{{ form.delai_min_jours.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.delai_max_jours.label}}</label>
+												{{ form.delai_max_jours }}
+												<div class="text-danger">
+													{{ form.delai_max_jours.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
 												<label class="form-label">{{form.is_depart.label}} <span class="text-danger">*</span></label> 
 												{{ form.is_depart }}
 												<div class="text-danger">
@@ -698,6 +725,17 @@
 												</div>
 											</div><!-- main-form-group -->
 										</div>
+										{% if form.cout_partenaire %}
+										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
+											<div class="main-form-group ">
+												<label class="form-label">{{form.cout_partenaire.label}} <span class="badge bg-dark">interne</span></label>
+												{{ form.cout_partenaire }}
+												<div class="text-danger">
+													{{ form.cout_partenaire.errors }}
+												</div>
+											</div><!-- main-form-group -->
+										</div>
+										{% endif %}
 										<div class="col-md-3 mg-t-20 mg-md-t-0 mb-2">
 											<div class="main-form-group ">
 												<label class="form-label">Statut <span class="text-danger">*</span></label> 
