@@ -1,10 +1,12 @@
 # Intégration : zones 2 à 6, SMS HSMS, tenue à 1 000 colis par jour
 
-Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 3 commits :
+Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 5 commits :
 
 1. **Zones 2 à 6, grille ML COD, circuit des statuts, robustesse** (`core`, `management`)
 2. **Module SMS HSMS** (nouvelle app `sms`, `settings.py`, `urls.py`)
 3. **Ce guide** et `.env.example`
+4. **Rôles, droits et journal d'audit** (voir section 9)
+5. Mise à jour de ce guide
 
 Aucune nouvelle dépendance Python : tout tourne avec le `requirements.txt` actuel.
 
@@ -21,8 +23,8 @@ git am ml-cod-interieur-*.patch        # ou : git pull du dépôt fourni
 
 ```bash
 cd mlshipafrica
-python manage.py migrate                               # core 0007, management 0022, sms 0001-0002
-python manage.py test management sms                   # 35 tests, tous doivent passer
+python manage.py migrate                               # core 0007-0008, management 0022-0023, sms 0001-0002
+python manage.py test management sms                   # 44 tests, tous doivent passer
 python manage.py appliquer_grille_ml_cod --dry-run     # LIRE le rapport : rien n'est écrit
 ```
 
@@ -115,11 +117,42 @@ Les SMS partent entre 7 h et 21 h (heure d'Abidjan). Un SMS créé la nuit part 
 1. **Pagination côté serveur** des listes. Aujourd'hui toute la liste est envoyée au navigateur. C'est tenable pour les colis « en cours », mais pas sur plusieurs mois.
 2. **Dépôt public.** Le code est visible de tous sur GitHub. Le passer en privé (Settings › Danger Zone › Change visibility).
 3. **Encodage `utf8` (3 octets) de MySQL.** Un emoji dans un nom de boutique ou une adresse fait échouer l'enregistrement. Il faut passer en `utf8mb4` : conversion de la base, à planifier hors des heures de travail.
-4. **Contrôle des rôles** sur `admin_detail_colis`. Tout compte `is_staff` peut ouvrir n'importe quel colis, toutes licences confondues. Il faut filtrer par licence et par rôle.
-5. **Sauvegarde quotidienne de la base**, avec un test de restauration mensuel.
-6. **Codes uniques** (`CodeGenerator`) : en cas de collision simultanée, l'enregistrement échoue au lieu de retenter. C'est très rare au volume visé, mais à couvrir par une nouvelle tentative sur `IntegrityError`.
+4. **Sauvegarde quotidienne de la base**, avec un test de restauration mensuel.
+5. **Codes uniques** (`CodeGenerator`) : en cas de collision simultanée, l'enregistrement échoue au lieu de retenter. C'est très rare au volume visé, mais à couvrir par une nouvelle tentative sur `IntegrityError`.
 
 ## 8. Retour arrière
 
 - Couper les SMS : décocher « Envoi des SMS activé », ou `python manage.py crontab remove`.
 - Code : `git revert` des commits. Les migrations ne font qu'ajouter des colonnes, des tables et des index (aucune suppression). `appliquer_grille_ml_cod` ne supprime rien : les anciennes zones et les anciens tarifs sont seulement désactivés, et peuvent être réactivés dans Paramètres.
+
+## 9. Rôles, droits et journal d'audit (commit 4)
+
+**Les 6 rôles de l'équipe** (le 7e est le vendeur) :
+
+| Rôle (valeur en base) | Voit l'argent de la société | Peut faire |
+|---|---|---|
+| CEO (`super`) | Oui | Tout, y compris tarifs, coût partenaire, nom du prestataire, configuration, journal d'audit |
+| Comptable (`comptable`) | Oui | Paiements des frais, reversements, journaux d'argent, liste des colis et des vendeurs |
+| Manager (`manager`) | Non | Colis : voir, faire avancer, annuler le dernier mouvement ; journal des mouvements ; vendeurs (lecture) |
+| Agent COD (`agent`) | Non | Colis : voir et faire avancer |
+| Commercial (`commercial`) | Non | Ses vendeurs : approuver, activer, désactiver, affecter un agent COD |
+| Administrateur technique (`administrateur`) | Non | Zones, localités, formats, comptes de l'équipe, import des vendeurs |
+
+- **Une seule table de droits** : `mlshipafrica/droits.py`. Chaque vue est protégée par `@droit_requis(...)` côté serveur. Une URL d'un autre rôle renvoie 403, et chaque action POST (mouvement, annulation, paiement, reversement, suppression de vendeur) est revérifiée.
+- **Montants masqués** : les gabarits affichent les montants seulement avec `{% if 'argent' in droits %}`. C'est le cas du tableau de bord, de la liste des colis, du détail colis (y compris le JavaScript du paiement) et du classement des vendeurs. Le menu suit les mêmes droits.
+- **Détail colis limité à la licence** de l'utilisateur.
+- **Commercial** : il ne voit que ses vendeurs et ceux qui attendent une approbation. Celui qui approuve un vendeur en devient le commercial.
+- **Vendeur** : nouveaux champs `commercial` et `agent_cod`, avec un bloc d'affectation sur la fiche vendeur.
+- **Rôles réservés** : seul le CEO peut attribuer les rôles CEO ou comptable.
+- **Journal d'audit** (`core/audit.py`, modèle `JournalAudit`) : création et modification des tarifs, zones, localités, vendeurs, comptes, colis, mouvements, paiements, reversements et paramètres SMS, avec l'auteur, son rôle, l'avant et l'après. Il se consulte en lecture seule dans `/<ADMIN_URL>`.
+
+**Avant la mise en ligne, obligatoire** : avant ce lot, « administrateur » faisait presque tout. Après le déploiement, un administrateur ne voit plus ni les colis ni l'argent. Il faut donc attribuer à chaque compte son vrai rôle :
+
+```bash
+python manage.py roles_equipe                                   # liste les comptes, leur rôle et leurs droits
+python manage.py roles_equipe --attribuer agent1@exemple.ci agent
+```
+
+Le compte du CEO doit être en `super`, et `is_superuser` pour l'administration Django.
+
+Correction au passage : le détail d'un colis plantait (erreur 500) quand un mouvement avait été créé sans utilisateur (tâche, import).
