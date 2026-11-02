@@ -1,12 +1,14 @@
 # Intégration : zones 2 à 6, SMS HSMS, tenue à 1 000 colis par jour
 
-Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 5 commits :
+Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 7 commits :
 
 1. **Zones 2 à 6, grille ML COD, circuit des statuts, robustesse** (`core`, `management`)
 2. **Module SMS HSMS** (nouvelle app `sms`, `settings.py`, `urls.py`)
 3. **Ce guide** et `.env.example`
 4. **Rôles, droits et journal d'audit** (voir section 9)
 5. Mise à jour de ce guide
+6. **Confirmation des commandes et acomptes** (voir section 10)
+7. Mise à jour de ce guide
 
 Aucune nouvelle dépendance Python : tout tourne avec le `requirements.txt` actuel.
 
@@ -23,8 +25,8 @@ git am ml-cod-interieur-*.patch        # ou : git pull du dépôt fourni
 
 ```bash
 cd mlshipafrica
-python manage.py migrate                               # core 0007-0008, management 0022-0023, sms 0001-0002
-python manage.py test management sms                   # 44 tests, tous doivent passer
+python manage.py migrate                               # core 0007-0009, management 0022-0025, sms 0001-0002
+python manage.py test management sms                   # 51 tests, tous doivent passer
 python manage.py appliquer_grille_ml_cod --dry-run     # LIRE le rapport : rien n'est écrit
 ```
 
@@ -156,3 +158,37 @@ python manage.py roles_equipe --attribuer agent1@exemple.ci agent
 Le compte du CEO doit être en `super`, et `is_superuser` pour l'administration Django.
 
 Correction au passage : le détail d'un colis plantait (erreur 500) quand un mouvement avait été créé sans utilisateur (tâche, import).
+
+## 10. Confirmation des commandes et acomptes (commit 6)
+
+**Parcours**
+
+1. Quand le vendeur valide sa commande, elle entre dans la **file de confirmation** (menu « Confirmations »), affectée à l'agent COD du vendeur.
+2. L'agent appelle le client et enregistre le résultat. Chaque appel est gardé dans l'historique du colis.
+   - **Confirmé** : avec acompte (réseau Orange, MTN, Moov ou Wave, référence et numéro du dépôt) ou sans.
+   - **Injoignable** : le colis reste dans la file, dans « À rappeler ».
+   - **Annulé** : le motif est obligatoire. Le colis passe « Annulé avant expédition » et le vendeur reçoit le SMS.
+3. **Annulation avant le départ** (par la file ou par le détail du colis) : l'acompte reçu passe « à rembourser ».
+4. **Annulation après le départ** (en transit ou plus loin) : aucun remboursement. Le circuit des statuts l'interdit de toute façon.
+5. **Relance** : le colis revient à son statut d'avant l'annulation et doit être reconfirmé. L'acompte reste à rembourser, la comptable décide.
+6. La comptable voit les acomptes dans le menu « Acomptes clients » (à rembourser, reçus, remboursés). Elle marque un remboursement avec sa référence.
+
+**Règles côté serveur**
+
+- Un colis non confirmé ne passe en transit qu'avec un motif écrit dans le commentaire.
+- Une annulation demande toujours un motif.
+- Une même référence de dépôt ne peut pas servir à deux commandes (contrainte en base).
+
+**Qui voit quoi**
+
+- La file de confirmation est ouverte au CEO, au manager et aux agents. Un agent voit ses colis et ceux sans agent. Le manager filtre par agent.
+- La page des acomptes est réservée au CEO et à la comptable.
+- Sur la page d'un colis, le manager voit l'état de l'acompte mais ni la référence ni le montant.
+- **Le vendeur ne voit jamais l'acompte.** Un test vérifie que le mot n'apparaît sur aucune de ses pages.
+- Le montant de l'acompte se règle dans la configuration (`montant_acompte`, 2 000 F par défaut).
+
+**Reprise de l'existant**
+
+- La migration 0025 marque « confirmés » les colis déjà partis, pour qu'ils n'encombrent pas la file des agents.
+- Les colis encore chez le vendeur ou au hub entrent dans la file.
+- L'agent COD affecté au vendeur est reporté sur ses colis.
