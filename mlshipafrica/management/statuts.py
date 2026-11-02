@@ -26,7 +26,7 @@ TRANSITIONS = {
     S.ECHEC_LIVRAISON: (S.RECONDUIT, S.LIVRE, S.LIVRE_PAYE, S.EN_RETOUR),
     S.RECONDUIT: (S.LIVRE, S.LIVRE_PAYE, S.ECHEC_LIVRAISON, S.EN_RETOUR),
     S.EN_RETOUR: (S.REVENU_ABIDJAN,),
-    S.REVENU_ABIDJAN: (S.SUBSTITUE, S.RETOURNE, S.REMIS_EN_STOCK, S.ABANDONNE),
+    S.REVENU_ABIDJAN: (S.SUBSTITUE, S.RETOURNE, S.REMIS_EN_STOCK, S.MIS_DE_COTE, S.ABANDONNE),
     S.SUBSTITUE: (S.DEPOT,),                     # tout colis repasse par la préparation avant de repartir
     S.ANNULE: (),                                # relance : voir statuts_suivants
 }
@@ -35,7 +35,7 @@ TRANSITIONS = {
 STATUTS_AVANT_EXPEDITION = (S.EN_ATTENTE_RAMASSAGE, S.EN_ATTENTE_DEPOT, S.RAMASSE, S.DEPOT)
 
 # Décisions réservées au manager (et à la direction) : retour validé à Abidjan, sortie définitive du colis
-STATUTS_RESERVES_RETOURS = (S.REVENU_ABIDJAN, S.RETOURNE, S.REMIS_EN_STOCK, S.ABANDONNE)
+STATUTS_RESERVES_RETOURS = (S.REVENU_ABIDJAN, S.RETOURNE, S.REMIS_EN_STOCK, S.MIS_DE_COTE, S.ABANDONNE)
 
 # Alerte si un colis reste 48 h sans mouvement dans ces statuts (onglet « À sauver »)
 STATUTS_SURVEILLES_48H = (S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE, S.ECHEC_LIVRAISON, S.RECONDUIT)
@@ -72,7 +72,7 @@ def statuts_suivants(article, dernier_historique, user=None):
         possibles = [s for s in possibles if s != (S.DEPOT if article.is_option_recuperation else S.RAMASSE)]
     # Remise en stock : seulement pour un vendeur en stockage
     if not getattr(article.vendeur, 'option_stockage', False):
-        possibles = [s for s in possibles if s != S.REMIS_EN_STOCK]
+        possibles = [s for s in possibles if s not in (S.REMIS_EN_STOCK, S.MIS_DE_COTE)]
     # Abandon : seulement après 30 jours à Abidjan
     if S.ABANDONNE in possibles:
         revenu = date_revenu_abidjan(article)

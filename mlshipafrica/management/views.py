@@ -148,10 +148,17 @@ def vendeur_facture_colis(request, code):
         # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
         # statut_traitement = StatutTraitement
         if request.method == 'POST':
-            if "submit_validation" in request.POST and request.POST["submit_validation"]:
-                # rediriger vers details colis
-                article.statut_traitement =  StatutTraitement.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation is True else StatutTraitement.EN_ATTENTE_DEPOT
-                article.save()
+            if "submit_validation" in request.POST and request.POST["submit_validation"] and article.statut_traitement == StatutTraitement.BROUILLON:
+                # Vendeur en stockage : le produit sort du stock à la validation (refusé si stock insuffisant)
+                from management.stock import reserver_pour_commande
+                try:
+                    with transaction.atomic():
+                        reserver_pour_commande(article, user)
+                        article.statut_traitement =  StatutTraitement.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation is True else StatutTraitement.EN_ATTENTE_DEPOT
+                        article.save()
+                except ValidationError as erreur:
+                    django_messages.error(request, ' '.join(erreur.messages))
+                    return redirect('management:management_vendeur_facture_colis', article.code)
                 return redirect('management:management_vendeur_detail_colis', article.code)
             if "submit_modification" in request.POST and request.POST["submit_modification"]:
                 return HttpResponseRedirect(reverse('management:management_vendeur_edit_colis') + '?current_article=' + code) 
@@ -288,6 +295,7 @@ def admin_vendeur_edit_profil(request, code):
                     vendeur.save()
                 if "submit_affectation" in request.POST and request.POST["submit_affectation"]:
                     vendeur.agent_cod = agents_cod.filter(code=request.POST.get("agent_cod")).first()
+                    vendeur.option_stockage = bool(request.POST.get("option_stockage"))
                     if profil_staff.role_profil != TypeProfilStaffChoice.COMMERCIAL:
                         vendeur.commercial = commerciaux.filter(code=request.POST.get("commercial")).first()
                     vendeur.save()
@@ -960,3 +968,69 @@ def vendeur_substituer_colis(request, code):
         except (ValidationError, ArithmeticError) as erreur:
             django_messages.error(request, ' '.join(getattr(erreur, 'messages', [str(erreur)])))
     return redirect('management:management_vendeur_detail_colis', article.code)
+
+
+# ---------------------------------------------------------------------------
+# Stock (vendeurs en stockage)
+# ---------------------------------------------------------------------------
+
+@login_required
+def vendeur_stock(request):
+    """Le vendeur voit son stock, ses mouvements, son coût de stockage, et annonce un envoi."""
+    from management.models import EntreeStock, FacturationStockage, MouvementStock
+    from management.stock import annoncer_entree
+    try:
+        vendeur = Vendeur.objects.get(user=request.user)
+    except Vendeur.DoesNotExist:
+        raise Http404
+    if not vendeur.option_stockage:
+        raise Http404
+    if request.method == 'POST':
+        lignes = list(zip(request.POST.getlist('reference'), request.POST.getlist('designation'), request.POST.getlist('quantite')))
+        try:
+            lignes = [(r, d, int(q or 0)) for r, d, q in lignes]
+            entree = annoncer_entree(vendeur, lignes, request.POST.get('commentaire', ''))
+            django_messages.success(request, "Envoi %s annoncé : il sera contrôlé à la réception." % entree.code)
+        except (ValidationError, ValueError) as erreur:
+            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Quantité invalide."])))
+        return redirect('management:management_vendeur_stock')
+    produits = vendeur.produits_stock.filter(actif=True)
+    entrees = EntreeStock.objects.filter(vendeur=vendeur).prefetch_related('lignes')[:20]
+    mouvements = MouvementStock.objects.filter(produit__vendeur=vendeur).select_related('produit', 'article')[:50]
+    debut_mois = timezone.localdate().replace(day=1)
+    stockage_mois = FacturationStockage.objects.filter(vendeur=vendeur, jour__gte=debut_mois).aggregate(t=Sum('montant'))['t'] or 0
+    return render(request, 'management/vendeur_stock.html', locals())
+
+
+@login_required
+@droit_requis('stock')
+def admin_stock(request):
+    """Manager : réceptions de stock à contrôler, inventaire par vendeur, ajustements."""
+    from management.models import EntreeStock, ProduitStock
+    from management.stock import ajuster, valider_reception
+    from mlshipafrica.enums import StatutEntreeStock
+    user = request.user
+    profil_staff = user.account_profil_staff
+    if request.method == 'POST':
+        try:
+            if request.POST.get('valider_entree'):
+                entree = EntreeStock.objects.get(pk=request.POST['valider_entree'], vendeur__license=profil_staff.license)
+                quantites = {int(k.split('_')[1]): int(v or 0) for k, v in request.POST.items() if k.startswith('recu_')}
+                valider_reception(entree, user, quantites)
+                django_messages.success(request, "Bordereau %s validé, le vendeur est prévenu par SMS." % entree.code)
+            elif request.POST.get('ajuster_produit'):
+                produit = ProduitStock.objects.get(pk=request.POST['ajuster_produit'], vendeur__license=profil_staff.license)
+                ajuster(produit, user, int(request.POST.get('delta') or 0), request.POST.get('motif', ''))
+                django_messages.success(request, "Stock de %s ajusté." % produit.designation)
+        except (ValidationError, ValueError, EntreeStock.DoesNotExist, ProduitStock.DoesNotExist) as erreur:
+            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Saisie invalide."])))
+        return redirect(reverse('management:management_admin_stock') + '?' + request.GET.urlencode())
+    entrees_a_recevoir = (EntreeStock.objects.filter(vendeur__license=profil_staff.license, statut=StatutEntreeStock.ANNONCEE)
+                          .select_related('vendeur').prefetch_related('lignes'))
+    vendeurs_stockage = Vendeur.objects.filter(license=profil_staff.license, option_stockage=True, etat_suppression=False)
+    vendeur_selected = request.GET.get('vendeur')
+    produits = ProduitStock.objects.filter(vendeur__license=profil_staff.license).select_related('vendeur')
+    if vendeur_selected:
+        produits = produits.filter(vendeur__code=vendeur_selected)
+    suite_breadcrumb = "Stock"
+    return render(request, 'management/admin_stock.html', locals())

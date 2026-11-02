@@ -486,6 +486,10 @@
 											</select>
 										</div>
 										{% endif %}
+										<div class="col-md-4 mb-2">
+											<label class="form-label d-block">Stock chez nous</label>
+											<label><input type="checkbox" name="option_stockage" value="1" {% if vendeur.option_stockage %}checked{% endif %}> Vendeur en stockage</label>
+										</div>
 										<div class="col-md-4 mb-2 d-flex align-items-end">
 											<button type="submit" name="submit_affectation" value="submit_affectation" class="btn btn-primary">Enregistrer l'affectation</button>
 										</div>

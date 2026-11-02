@@ -27,7 +27,7 @@ SUIVIS = {
     ('management', 'Tarification'): None,
     ('management', 'ProfilStaff'): None,
     ('management', 'Vendeur'): ('etat_approbation', 'etat_validation', 'etat_suppression', 'commercial', 'agent_cod',
-                                'collecte_par_mlship', 'cod_actif', 'numero_sms', 'nom_store', 'license'),
+                                'collecte_par_mlship', 'cod_actif', 'numero_sms', 'nom_store', 'license', 'option_stockage'),
     ('management', 'Article'): ('statut_traitement', 'montant_frais', 'montant_total_frais', 'montant_a_reverser',
                                 'valeur', 'valeur_totale', 'format_article', 'localite_arrivee', 'tarification',
                                 'is_option_encaissement', 'is_option_recuperation', 'etat_reglement',
@@ -38,6 +38,8 @@ SUIVIS = {
     ('management', 'Encaissement'): None,
     ('management', 'Reversement'): None,
     ('management', 'Acompte'): None,
+    ('management', 'EntreeStock'): ('statut', 'date_reception', 'recu_par'),
+    ('management', 'MouvementStock'): None,
     ('sms', 'SmsParametres'): ('actif', 'tel_service', 'heure_debut_silence', 'heure_fin_silence', 'resume_soir_actif'),
     ('sms', 'SmsModele'): ('texte', 'actif', 'priorite'),
 }

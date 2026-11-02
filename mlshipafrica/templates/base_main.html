@@ -696,6 +696,11 @@
 										class="bx bx-money side-menu__icon"></i><span
 										class="side-menu__label">Reversements</span></a>
 							</li>
+							{% if user.account_vendeur.option_stockage %}
+							<li class="slide">
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_stock' %} active {% endif %}" href="{% url 'management:management_vendeur_stock' %}"><i class="bx bx-package side-menu__icon"></i><span class="side-menu__label">Mon stock</span></a>
+							</li>
+							{% endif %}
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_profil' %} active {% endif %}" href="{% url 'management:management_vendeur_profil' %}"><i
 										class="bx bx-user side-menu__icon"></i><span
@@ -747,6 +752,11 @@
 							{% if 'confirmations' in droits %}
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_confirmations' %} active {% endif %}" href="{% url 'management:management_admin_confirmations' %}"><i class="bx bx-phone-call side-menu__icon"></i><span class="side-menu__label">Confirmations</span></a>
+							</li>
+							{% endif %}
+							{% if 'stock' in droits %}
+							<li class="slide">
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_stock' %} active {% endif %}" href="{% url 'management:management_admin_stock' %}"><i class="bx bx-package side-menu__icon"></i><span class="side-menu__label">Stock</span></a>
 							</li>
 							{% endif %}
 							{% if 'acomptes' in droits %}

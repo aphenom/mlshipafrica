@@ -1,6 +1,6 @@
 from django.forms import BooleanField, CheckboxSelectMultiple, EmailInput, FileInput, ModelForm, TextInput, DateInput, Select, NumberInput, ClearableFileInput, Textarea, CheckboxInput
 from django import forms
-from management.models import Article, ProfilStaff, Tarification, Vendeur
+from management.models import Article, ProduitStock, ProfilStaff, Tarification, Vendeur
 from phonenumber_field.formfields import PhoneNumberField
 from phonenumber_field.widgets import PhoneNumberPrefixWidget
 
@@ -189,6 +189,16 @@ class VendeurColisForm(forms.ModelForm):
             formats = formats.filter(license=license)
         self.fields['format_article'].queryset = formats
 
+        # Vendeur en stockage : il choisit le produit à sortir de son stock
+        vendeur = getattr(user, 'account_vendeur', None) if user else None
+        if vendeur is not None and vendeur.option_stockage:
+            self.fields['produit_stock'].queryset = ProduitStock.objects.filter(vendeur=vendeur, actif=True, quantite_disponible__gt=0)
+            self.fields['produit_stock'].label = "Produit de mon stock"
+            self.fields['produit_stock'].required = False
+            self.fields['produit_stock'].widget.attrs.update({'class': 'form-control'})
+        else:
+            self.fields.pop('produit_stock', None)
+
     class Meta:
         model = Article
         # exclude = ['code', 'user', 'creation_par', 'modification_par', 'etat_validation', 'etat_suppression', 'date_suppression', 'date_validation', 'date_modification', 'date_creation', 'etat_approbation', 'approbation_par', 'license']
@@ -196,7 +206,7 @@ class VendeurColisForm(forms.ModelForm):
         fields = ['valeur', 'quantite', 'designation', 'produits', 'produits_autre',
                   'nom_destinataire', 'prenom_destinataire', 'prenom_destinataire', 
                   'numero_principal_destinataire', 'numero_secondaire_destinataire', 'adresse_destinataire', 
-                  'localite_arrivee', 'format_article', 'is_option_recuperation', 'is_option_encaissement']
+                  'localite_arrivee', 'format_article', 'is_option_recuperation', 'is_option_encaissement', 'produit_stock']
 
         widgets = {
             'valeur': TextInput(attrs={'placeholder':'La valeur unitaire de votre produit', 'class':'form-control', 'required':'required'}),

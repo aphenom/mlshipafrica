@@ -172,6 +172,16 @@
 									</div>
 									<div class="form-group ">
 										<div class="row">
+											{% if form.produit_stock %}
+											<div class="col-md-6 mg-t-20 mg-md-t-0 mb-2">
+												<div class="main-form-group">
+													<label class="form-label">{{ form.produit_stock.label }}</label>
+													{{ form.produit_stock }}
+													<small class="text-muted">La quantité est sortie de votre stock quand vous validez la commande.</small>
+													<div class="text-danger">{{ form.produit_stock.errors }}</div>
+												</div>
+											</div>
+											{% endif %}
 											<div class="col-md-3">
 												<label class="form-label">{{form.localite_arrivee.label}} <span class="text-danger">*</span></label>
 											</div>

@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
+from mlshipafrica.enums import StatutEntreeStock, TypeMouvementStock, EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
 from django.db.models.signals import pre_save, post_save, m2m_changed
 from django.dispatch import receiver
@@ -302,6 +302,8 @@ class Article(MyModelAbstract):
     frais_retour = models.DecimalField('Frais de retour', max_digits=10, decimal_places=2, default=0, db_comment="50 % des frais ML, facturés au passage « En retour vers Abidjan » (cumulés si plusieurs retours)")
     frais_garde = models.DecimalField('Frais de garde', max_digits=10, decimal_places=2, default=0, db_comment="500 F par jour à partir de J11 après le retour à Abidjan, plafonnés à 10 000 F")
     date_revenu_abidjan = models.DateTimeField('Revenu à Abidjan le', null=True, blank=True, db_index=True)
+    # Vendeur en stockage : produit sorti du stock pour ce colis (quantité = Article.quantite)
+    produit_stock = models.ForeignKey('ProduitStock', models.SET_NULL, null=True, blank=True, related_name='articles', verbose_name="produit en stock")
     generation = models.PositiveSmallIntegerField('Nombre de substitutions', default=0, db_comment="Incrémenté à chaque substitution (nouveau client) : relance le parcours SMS")
     etat_encaissement = models.BooleanField('état encaissement client', default=False)
     etat_reglement = models.BooleanField('état reglement vendeur', default=False)
@@ -631,3 +633,85 @@ class AppelConfirmation(models.Model):
         verbose_name = "Appel de confirmation"
         verbose_name_plural = "Appels de confirmation"
         ordering = ['-date']
+
+
+""" Stock des vendeurs en stockage """
+class ProduitStock(models.Model):
+
+    vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='produits_stock', verbose_name="vendeur")
+    reference = models.CharField("Référence", max_length=60)
+    designation = models.CharField("Désignation", max_length=150)
+    quantite_disponible = models.IntegerField("Disponible", default=0)
+    quantite_de_cote = models.IntegerField("Mis de côté (abîmés)", default=0)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Produit en stock'
+        verbose_name_plural = 'Produits en stock'
+        ordering = ['designation']
+        constraints = [models.UniqueConstraint(fields=['vendeur', 'reference'], name='produit_stock_reference_unique')]
+
+    def __str__(self):
+        return '%s · %s (%d)' % (self.reference, self.designation, self.quantite_disponible)
+
+
+class EntreeStock(models.Model):
+    """Bordereau d'entrée : annoncé par le vendeur, contrôlé et validé par le manager à la réception."""
+
+    code = models.CharField("Bordereau", max_length=25, unique=True)
+    vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='entrees_stock', verbose_name="vendeur")
+    statut = models.CharField(max_length=10, choices=StatutEntreeStock.choices, default=StatutEntreeStock.ANNONCEE, db_index=True)
+    date_annonce = models.DateTimeField("Annoncé le", default=timezone.now)
+    date_reception = models.DateTimeField("Reçu le", null=True, blank=True)
+    recu_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='entrees_stock_recues')
+    commentaire = models.TextField(blank=True, default='')
+
+    class Meta:
+        verbose_name = "Bordereau d'entrée de stock"
+        verbose_name_plural = "Bordereaux d'entrée de stock"
+        ordering = ['-date_annonce']
+
+    def __str__(self):
+        return self.code
+
+
+class LigneEntreeStock(models.Model):
+    entree = models.ForeignKey(EntreeStock, on_delete=models.CASCADE, related_name='lignes')
+    reference = models.CharField("Référence", max_length=60)
+    designation = models.CharField("Désignation", max_length=150)
+    quantite_annoncee = models.PositiveIntegerField("Annoncé")
+    quantite_recue = models.PositiveIntegerField("Reçu", null=True, blank=True)
+    produit = models.ForeignKey(ProduitStock, models.SET_NULL, null=True, blank=True, related_name='lignes_entree')
+
+
+class MouvementStock(models.Model):
+    """Chaque variation de stock, jamais modifiée : le stock disponible en est la somme."""
+
+    produit = models.ForeignKey(ProduitStock, on_delete=models.CASCADE, related_name='mouvements')
+    type = models.CharField(max_length=20, choices=TypeMouvementStock.choices)
+    quantite = models.IntegerField("Quantité (+ entrée, − sortie)")
+    article = models.ForeignKey(Article, models.SET_NULL, null=True, blank=True, related_name='mouvements_stock')
+    entree = models.ForeignKey(EntreeStock, models.SET_NULL, null=True, blank=True, related_name='mouvements')
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+    par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='mouvements_stock')
+    commentaire = models.CharField(max_length=255, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'Mouvement de stock'
+        verbose_name_plural = 'Mouvements de stock'
+        ordering = ['-date']
+
+
+class FacturationStockage(models.Model):
+    """Coût de stockage d'une journée pour un vendeur (pièces en stock × tarif du jour). Une ligne par jour."""
+
+    vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='facturations_stockage')
+    jour = models.DateField(db_index=True)
+    pieces = models.PositiveIntegerField()
+    montant = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        verbose_name = 'Stockage facturé (jour)'
+        verbose_name_plural = 'Stockage facturé (jours)'
+        constraints = [models.UniqueConstraint(fields=['vendeur', 'jour'], name='stockage_vendeur_jour_unique')]

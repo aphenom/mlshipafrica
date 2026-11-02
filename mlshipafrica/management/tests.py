@@ -591,3 +591,103 @@ class RetoursTests(TestCase):
         Article.objects.filter(pk=self.article.pk).update(statut_traitement=S.ECHEC_LIVRAISON)
         self.client.force_login(self.manager)
         self.assertContains(self.client.get('/management/admin_liste_colis/?type_colis=a_sauver'), self.article.code)
+
+
+class StockTests(TestCase):
+    """Test de fin de lot : une commande d'un vendeur en stockage décrémente le stock,
+    et un retour en bon état le réincrémente."""
+
+    def setUp(self):
+        from management.models import ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        license, config, abidjan, petit, *_ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        self.license, self.config, self.abidjan, self.petit = license, config, abidjan, petit
+        self.manager = User.objects.create(username='mgr2', email='mgr2@test.ci', is_staff=True)
+        ProfilStaff.objects.create(user=self.manager, license=license, role_profil=R.MANAGER)
+        self.vendeur = vendeur_pour(license)
+        self.vendeur.option_stockage = True
+        self.vendeur.save()
+
+    def recevoir(self, quantite_annoncee=10, quantite_recue=8):
+        from management.stock import annoncer_entree, valider_reception
+        entree = annoncer_entree(self.vendeur, [('CREME-01', 'Crème éclaircissante', quantite_annoncee)])
+        ligne = entree.lignes.get()
+        with self.captureOnCommitCallbacks(execute=True):
+            valider_reception(entree, self.manager, {ligne.pk: quantite_recue})
+        return ligne.produit if ligne.produit_id else entree.lignes.get().produit
+
+    def commande(self, produit, quantite=1):
+        a = Article(vendeur=self.vendeur, license=self.license, config=self.config, localite_depart=self.abidjan,
+                    localite_arrivee=Localite.objects.get(nom='Bouaké'), format_article=self.petit, valeur=9900,
+                    quantite=quantite, produit_stock=produit, numero_principal_destinataire='+2250708091011')
+        a.save()
+        return a
+
+    def valider(self, article):
+        self.client.force_login(self.vendeur.user)
+        return self.client.post('/management/vendeur_facture_colis/%s/' % article.code, {'submit_validation': '1'})
+
+    def test_reception_avec_ecart_et_sms(self):
+        from sms.models import SmsMessage
+        produit = self.recevoir(10, 8)
+        produit.refresh_from_db()
+        self.assertEqual(produit.quantite_disponible, 8)
+        sms = SmsMessage.objects.get(modele_cle='v_stock')
+        self.assertIn('8 pieces', sms.texte)
+
+    def test_commande_decremente_annulation_et_retour_reincrementent(self):
+        produit = self.recevoir(5, 5)
+        article = self.commande(produit, quantite=2)
+        self.valider(article)
+        produit.refresh_from_db()
+        article.refresh_from_db()
+        self.assertEqual(article.statut_traitement, S.EN_ATTENTE_DEPOT)
+        self.assertEqual(produit.quantite_disponible, 3)
+        # Annulation avant expédition : le stock revient
+        dernier = article.get_last_historique()
+        HistoriqueArticle.objects.create(article=article, statut_traitement=S.ANNULE, dernier_historique_article=dernier)
+        produit.refresh_from_db()
+        self.assertEqual(produit.quantite_disponible, 5)
+
+    def test_stock_insuffisant_refuse(self):
+        produit = self.recevoir(1, 1)
+        article = self.commande(produit, quantite=3)
+        self.valider(article)
+        article.refresh_from_db()
+        produit.refresh_from_db()
+        self.assertEqual(article.statut_traitement, S.BROUILLON)
+        self.assertEqual(produit.quantite_disponible, 1)
+
+    def test_retour_bon_etat_et_abime(self):
+        produit = self.recevoir(4, 4)
+        a1, a2 = self.commande(produit), self.commande(produit)
+        for a in (a1, a2):
+            self.valider(a)
+        produit.refresh_from_db()
+        self.assertEqual(produit.quantite_disponible, 2)
+        for a, final in ((a1, S.REMIS_EN_STOCK), (a2, S.MIS_DE_COTE)):
+            dernier = a.get_last_historique()
+            for statut in (S.DEPOT, S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE, S.EN_RETOUR, S.REVENU_ABIDJAN):
+                dernier = HistoriqueArticle.objects.create(article=a, statut_traitement=statut, dernier_historique_article=dernier)
+            Article.objects.filter(pk=a.pk).update(statut_traitement=S.REVENU_ABIDJAN)
+            a.refresh_from_db()
+            self.assertTrue(transition_autorisee(a, dernier, final, self.manager))
+            HistoriqueArticle.objects.create(article=a, statut_traitement=final, dernier_historique_article=dernier)
+        produit.refresh_from_db()
+        self.assertEqual((produit.quantite_disponible, produit.quantite_de_cote), (3, 1))
+
+    def test_facturation_stockage_quotidienne(self):
+        from management.models import FacturationStockage
+        from management.stock import facturer_stockage
+        self.recevoir(30, 30)
+        self.assertEqual(facturer_stockage(), 1)
+        self.assertEqual(facturer_stockage(), 0)                       # rejouable : pas de doublon
+        f = FacturationStockage.objects.get()
+        self.assertEqual((f.pieces, int(f.montant)), (30, 300))         # 30 pièces × 10 F
+
+    def test_pages(self):
+        self.client.force_login(self.vendeur.user)
+        self.assertEqual(self.client.get('/management/vendeur_stock/').status_code, 200)
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get('/management/admin_stock/').status_code, 200)

@@ -28,4 +28,6 @@ urlpatterns = [
     path('admin_import_vendeur/', views.admin_import_vendeur, name='management_admin_import_vendeur'),
     path('admin_confirmations/', views.admin_confirmations, name='management_admin_confirmations'),
     path('admin_acomptes/', views.admin_acomptes, name='management_admin_acomptes'),
+    path('admin_stock/', views.admin_stock, name='management_admin_stock'),
+    path('vendeur_stock/', views.vendeur_stock, name='management_vendeur_stock'),
 ]

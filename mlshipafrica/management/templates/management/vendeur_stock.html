@@ -1,0 +1,64 @@
+{% extends "base_main.html" %}
+{% block title %}ML COD Intérieur - Mon stock{% endblock %}
+{% load humanize %}
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item active" aria-current="page">Mon stock</li>
+	{% endblock %}
+    {% block content %}
+				{% for message in messages %}
+					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+				{% endfor %}
+				<div class="row">
+					<div class="col-lg-7">
+						<div class="card">
+							<div class="card-header"><div class="card-title">Mon stock chez ML COD Intérieur</div></div>
+							<div class="card-body">
+								<p class="text-muted">Stockage ce mois : {{ stockage_mois|floatformat:0|intcomma }} F (déduit de vos versements).</p>
+								<table class="table table-bordered mb-0">
+									<thead><tr><th>Référence</th><th>Produit</th><th>Disponible</th><th>Mis de côté (abîmés)</th></tr></thead>
+									<tbody>
+									{% for p in produits %}
+										<tr><td>{{ p.reference }}</td><td>{{ p.designation }}</td><td class="{% if p.quantite_disponible <= 0 %}text-danger fw-bold{% endif %}">{{ p.quantite_disponible }}</td><td>{{ p.quantite_de_cote }}</td></tr>
+									{% empty %}<tr><td colspan="4" class="text-center text-muted">Aucun produit en stock.</td></tr>{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						</div>
+						<div class="card">
+							<div class="card-header"><div class="card-title">Derniers mouvements</div></div>
+							<div class="card-body table-responsive">
+								<table class="table table-sm mb-0">
+									<thead><tr><th>Date</th><th>Produit</th><th>Mouvement</th><th>Qté</th><th>Colis</th></tr></thead>
+									<tbody>{% for m in mouvements %}<tr><td>{{ m.date|date:"d/m H:i" }}</td><td>{{ m.produit.reference }}</td><td>{{ m.get_type_display }}</td><td>{{ m.quantite }}</td><td>{{ m.article.code|default:"" }}</td></tr>{% endfor %}</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-5">
+						<div class="card">
+							<div class="card-header"><div class="card-title">Annoncer un envoi de stock</div></div>
+							<div class="card-body">
+								<form method="post">
+									{% csrf_token %}
+									{% for i in "12345" %}
+									<div class="row g-1 mb-1">
+										<div class="col-4"><input name="reference" class="form-control form-control-sm" placeholder="Référence"></div>
+										<div class="col-5"><input name="designation" class="form-control form-control-sm" placeholder="Produit"></div>
+										<div class="col-3"><input name="quantite" type="number" min="0" class="form-control form-control-sm" placeholder="Qté"></div>
+									</div>
+									{% endfor %}
+									<input name="commentaire" class="form-control form-control-sm mb-2" placeholder="Commentaire (facultatif)">
+									<button class="btn btn-primary btn-sm">Annoncer l'envoi</button>
+								</form>
+								<hr>
+								<div class="fw-bold mb-1">Mes bordereaux</div>
+								{% for e in entrees %}
+									<div class="small">{{ e.code }} · {{ e.get_statut_display }}{% if e.date_reception %} le {{ e.date_reception|date:"d/m" }}{% endif %}
+										<ul class="mb-1">{% for l in e.lignes.all %}<li>{{ l.reference }} : annoncé {{ l.quantite_annoncee }}{% if l.quantite_recue is not None %}, reçu {{ l.quantite_recue }}{% if l.quantite_recue != l.quantite_annoncee %} <span class="text-danger">(écart {{ l.quantite_recue|add:0 }} / {{ l.quantite_annoncee }})</span>{% endif %}{% endif %}</li>{% endfor %}</ul>
+									</div>
+								{% empty %}<div class="small text-muted">Aucun envoi annoncé.</div>{% endfor %}
+							</div>
+						</div>
+					</div>
+				</div>
+    {% endblock %}

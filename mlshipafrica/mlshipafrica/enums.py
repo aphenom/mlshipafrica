@@ -21,6 +21,7 @@ class StatutTraitement(models.TextChoices):
     SUBSTITUE = 'substitue', 'Substitué (nouveau client)'
     RETOURNE = 'retourne', 'Retourné au vendeur'
     REMIS_EN_STOCK = 'remis_en_stock', 'Remis en stock'
+    MIS_DE_COTE = 'mis_de_cote', 'Mis de côté (abîmé)'
     ABANDONNE = 'abandonne', 'Abandonné'
     ANNULE = 'annule', 'Annulé avant expédition'
 
@@ -45,6 +46,7 @@ STATUT_TRAITEMENT_COULEURS = {
     'revenu_abidjan': 'info',
     'substitue': 'primary',
     'remis_en_stock': 'success',
+    'mis_de_cote': 'dark',
     'abandonne': 'danger',
 }
 
@@ -69,6 +71,7 @@ STATUT_TRAITEMENT_ICONES = {
     'revenu_abidjan': 'home',
     'substitue': 'exchange',
     'remis_en_stock': 'archive',
+    'mis_de_cote': 'archive',
     'abandonne': 'trash',
 }
 
@@ -94,6 +97,7 @@ STATUT_TRAITEMENT_COMMENTAIRES = {
     'substitue': 'Le vendeur a donné un nouveau client pour ce colis : il repart en préparation.',
     'remis_en_stock': 'Le colis est revenu en bon état et a été remis dans le stock du vendeur.',
     'abandonne': 'Le colis n’a pas été récupéré dans les 30 jours : il est déclaré abandonné.',
+    'mis_de_cote': 'Le colis est revenu abîmé : il est mis de côté, hors du stock disponible.',
 }
 
 
@@ -213,6 +217,7 @@ array_statut_traitement_retour = [
     StatutTraitement.REVENU_ABIDJAN,
     StatutTraitement.RETOURNE,
     StatutTraitement.REMIS_EN_STOCK,
+    StatutTraitement.MIS_DE_COTE,
     StatutTraitement.ABANDONNE,
 ]
 
@@ -240,3 +245,17 @@ class ResultatAppel(models.TextChoices):
     CONFIRME = 'confirme', 'Confirmé'
     INJOIGNABLE = 'injoignable', 'Injoignable'
     ANNULE = 'annule', 'Annulé par le client'
+
+
+class TypeMouvementStock(models.TextChoices):
+    ENTREE = 'entree', 'Entrée (réception)'
+    SORTIE = 'sortie', 'Sortie (commande)'
+    RETOUR_ANNULATION = 'retour_annulation', 'Retour en stock (commande annulée)'
+    REMISE_STOCK = 'remise_stock', 'Remise en stock (colis revenu)'
+    MISE_DE_COTE = 'mise_de_cote', 'Mis de côté (abîmé)'
+    AJUSTEMENT = 'ajustement', 'Ajustement d\'inventaire'
+
+
+class StatutEntreeStock(models.TextChoices):
+    ANNONCEE = 'annoncee', 'Annoncée par le vendeur'
+    RECUE = 'recue', 'Reçue et contrôlée'
