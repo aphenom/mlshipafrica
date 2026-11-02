@@ -173,6 +173,33 @@
 					</div>
 				</div>
 
+				{% for message in messages %}
+					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+				{% endfor %}
+				<div class="row">
+					<div class="col-lg-12 col-md-12">
+						<div class="card">
+							<div class="card-header"><h3 class="card-title">Confirmation client</h3></div>
+							<div class="card-body">
+								<p class="mb-2"><strong>État :</strong> <span class="badge {% if article.etat_confirmation == 'confirme' %}bg-success{% elif article.etat_confirmation == 'annule' %}bg-danger{% else %}bg-warning{% endif %}">{{ article.get_etat_confirmation_display }}</span>
+								{% if article.date_confirmation %} le {{ article.date_confirmation|date:"d/m/Y H:i" }}{% if article.confirme_par %} par {{ article.confirme_par.get_full_name|default:article.confirme_par.email }}{% endif %}{% endif %}
+								· {{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }}
+								{% if 'confirmations' in droits and article.etat_confirmation != 'confirme' %} · <a href="{% url 'management:management_admin_confirmations' %}">File de confirmation</a>{% endif %}</p>
+								{% for acompte in acomptes_article %}
+									<p class="mb-1"><strong>Acompte :</strong> {{ acompte.get_statut_display }} · {{ acompte.get_reseau_display }}{% if profil_staff.role_profil != type_profil_staff.MANAGER %} · réf. {{ acompte.reference_depot }} · {{ acompte.montant|floatformat:0 }} F{% endif %} · {{ acompte.date_reception|date:"d/m/Y H:i" }}</p>
+								{% empty %}
+									<p class="mb-1 text-muted">Pas d'acompte.</p>
+								{% endfor %}
+								{% if appels_article %}
+								<ul class="small text-muted mb-0 mt-2">
+									{% for appel in appels_article %}<li>{{ appel.date|date:"d/m H:i" }} · {{ appel.get_resultat_display }}{% if appel.agent %} · {{ appel.agent.get_full_name|default:appel.agent.email }}{% endif %}{% if appel.commentaire %} · {{ appel.commentaire }}{% endif %}</li>{% endfor %}
+								</ul>
+								{% endif %}
+							</div>
+						</div>
+					</div>
+				</div>
+
 				<div class="row">
 					<div class="col-lg-12 col-md-12">
 						<div class="card">

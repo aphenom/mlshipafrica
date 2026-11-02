@@ -106,6 +106,8 @@ class Configuration(MyModelAbstract):
     key_api_sms = models.CharField("SMS API KEY", max_length=100, null=True, blank=True)
     id_api_sms = models.CharField("SMS API ID", max_length=100, null=True, blank=True)
     json_api_sms  = models.TextField('JSON API SMS', null=True, blank=True)
+    # Acompte demandé au client final lors de l'appel de confirmation (méthode interne : jamais affiché aux vendeurs)
+    montant_acompte = models.DecimalField("montant de l'acompte client (interne)", max_digits=10, decimal_places=2, default=2000)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_configurations', related_query_name="license_configuration", verbose_name = "license")
     
     app_nom = models.CharField('nom plateforme', max_length=50)

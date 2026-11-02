@@ -1,0 +1,75 @@
+{% extends "base_main.html" %}
+{% block title %}ML COD Intérieur - Confirmations{% endblock %}
+{% load static %}
+{% load humanize %}
+
+	{% block breadcrumb-li %}
+		<li class="breadcrumb-item"><a href="#">Colis</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Confirmations</li>
+	{% endblock %}
+
+    {% block content %}
+				<div class="row">
+					<div class="col-xl-12 col-lg-12">
+						{% for message in messages %}
+							<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+						{% endfor %}
+						<div class="card">
+							<div class="card-header d-flex flex-wrap align-items-center gap-2">
+								<div class="card-title mb-0">Commandes à confirmer ({{ articles|length }})</div>
+								<div class="ms-auto d-flex flex-wrap gap-2">
+									<a class="btn btn-sm {% if filtre == 'tous' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?filtre=tous{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">Toutes</a>
+									<a class="btn btn-sm {% if filtre == 'a_confirmer' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?filtre=a_confirmer{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">Jamais appelées</a>
+									<a class="btn btn-sm {% if filtre == 'injoignable' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?filtre=injoignable{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">À rappeler</a>
+									{% if profil_staff.role_profil != type_profil_staff.AGENT %}
+									<form method="get" class="d-flex gap-1">
+										<input type="hidden" name="filtre" value="{{ filtre }}">
+										<select name="agent" class="form-select form-select-sm" onchange="this.form.submit()">
+											<option value="">Tous les agents</option>
+											<option value="aucun" {% if agent_selected == 'aucun' %}selected{% endif %}>Sans agent</option>
+											{% for agent in agents %}<option value="{{ agent.code }}" {% if agent_selected == agent.code %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.email|default:agent.code }}</option>{% endfor %}
+										</select>
+									</form>
+									{% endif %}
+								</div>
+							</div>
+							<div class="card-body">
+								<p class="text-muted mb-3">Appelez le client, vérifiez la commande et l'adresse. Acompte de {{ montant_acompte|floatformat:0|intcomma }} F : notez le réseau et la référence du dépôt. Un client qui annule : indiquez le motif, la commande passe « Annulée avant expédition » et le vendeur est prévenu.</p>
+								{% for article in articles %}
+								<div class="border rounded p-3 mb-3">
+									<div class="d-flex flex-wrap justify-content-between gap-2">
+										<div>
+											<div class="fw-bold"><a href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a> · {{ article.vendeur.nom_store }}</div>
+											<div>{{ article.prenom_destinataire|default:"" }} {{ article.nom_destinataire|default:"" }} · <a href="tel:{{ article.numero_principal_destinataire }}">{{ article.numero_principal_destinataire }}</a>{% if article.numero_secondaire_destinataire %} · {{ article.numero_secondaire_destinataire }}{% endif %}</div>
+											<div class="text-muted">{{ article.localite_arrivee }}{% if article.localite_arrivee.zone %} · {{ article.localite_arrivee.zone.nom }} {{ article.localite_arrivee.zone.get_delai_display }}{% endif %} · {{ article.adresse_destinataire|default:"" }}</div>
+											<div>{{ article.designation|default:"" }} × {{ article.quantite }} · à encaisser : <b>{% if article.is_option_encaissement %}{{ article.valeur_totale|floatformat:0|intcomma }} F{% else %}rien (déjà payé){% endif %}</b></div>
+										</div>
+										<div class="text-end">
+											<span class="badge {% if article.etat_confirmation == 'injoignable' %}bg-warning{% else %}bg-info{% endif %}">{{ article.get_etat_confirmation_display }}</span>
+											<div class="small text-muted mt-1">{{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }} · créé {{ article.date_creation|naturaltime }}</div>
+											<div class="small text-muted">Agent : {{ article.agent_cod.user.get_full_name|default:article.agent_cod.code|default:"aucun" }}</div>
+										</div>
+									</div>
+									<form method="post" class="row g-2 mt-2 align-items-end">
+										{% csrf_token %}
+										<input type="hidden" name="article" value="{{ article.code }}">
+										<div class="col-md-2"><label class="form-label small mb-0">Réseau acompte</label>
+											<select name="acompte_reseau" class="form-select form-select-sm"><option value="">Pas d'acompte</option>{% for v, l in reseaux %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+										<div class="col-md-2"><label class="form-label small mb-0">Référence du dépôt</label><input name="acompte_reference" class="form-control form-control-sm" maxlength="100"></div>
+										<div class="col-md-2"><label class="form-label small mb-0">Numéro qui a payé</label><input name="acompte_numero" class="form-control form-control-sm" maxlength="30"></div>
+										<div class="col-md-3"><label class="form-label small mb-0">Commentaire / motif d'annulation</label><input name="commentaire" class="form-control form-control-sm" maxlength="500"></div>
+										<div class="col-md-3 d-flex flex-wrap gap-1">
+											<button name="resultat" value="{{ resultat_appel.CONFIRME }}" class="btn btn-sm btn-success">Confirmé</button>
+											<button name="resultat" value="{{ resultat_appel.INJOIGNABLE }}" class="btn btn-sm btn-warning">Injoignable</button>
+											<button name="resultat" value="{{ resultat_appel.ANNULE }}" class="btn btn-sm btn-danger" onclick="return confirm('Annuler cette commande avant expédition ?')">Annulé</button>
+										</div>
+									</form>
+								</div>
+								{% empty %}
+								<p class="text-center text-muted my-4">Aucune commande à confirmer.</p>
+								{% endfor %}
+							</div>
+						</div>
+					</div>
+				</div>
+    {% endblock %}

@@ -7,10 +7,11 @@ from management.forms import VendeurColisForm, VendeurForm
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.contrib import messages as django_messages
 
 from core.models import Configuration, License, Localite
 
-from mlshipafrica.enums import StatutTraitement, StatutVendeur, TypeProfilStaffChoice, TypeVendeurChoice, array_statut_traitement_retour, array_statut_traitement_en_cours, array_statut_traitement_livre
+from mlshipafrica.enums import EtatConfirmation, StatutTraitement, StatutVendeur, TypeProfilStaffChoice, TypeVendeurChoice, array_statut_traitement_retour, array_statut_traitement_en_cours, array_statut_traitement_livre
 
 from mlshipafrica.shared import get_articles_stats_by_vendeur, get_global_article_stats, get_global_vendeurs_stats, get_top_n_vendeurs
 
@@ -445,6 +446,8 @@ def admin_detail_colis(request, code):
             peut_bouger = a_le_droit(user, 'colis_mouvements')
             peut_annuler_mouvement = a_le_droit(user, 'colis_annuler_mouvement')
             peut_payer = a_le_droit(user, 'paiements')
+            acomptes_article = article.acomptes.all().order_by('-date_reception')
+            appels_article = article.appels.select_related('agent').order_by('-date')[:20]
             # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
             # statut_traitement = StatutTraitement
             # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
@@ -493,7 +496,18 @@ def admin_detail_colis(request, code):
                         article.save()
                         
                 if "submit_new_mouvement" in request.POST and request.POST["submit_new_mouvement"]:
-                    if str(article.get_last_historique().id) == request.POST["last_mouvement"] and any(value == request.POST["mouvement_statut"] for value, _ in statut_traitement_applicables):
+                    nouveau_statut = request.POST.get("mouvement_statut")
+                    commentaire_mouvement = (request.POST.get("mouvement_commentaire") or "").strip()
+                    # Règles du cahier des charges : motif écrit obligatoire pour annuler, et pour expédier un colis non confirmé
+                    if nouveau_statut == StatutTraitement.ANNULE and not commentaire_mouvement:
+                        erreur_mouvement = "Indiquez le motif de l'annulation dans le commentaire."
+                    elif nouveau_statut == StatutTraitement.EN_TRANSIT and article.etat_confirmation != EtatConfirmation.CONFIRME and not commentaire_mouvement:
+                        erreur_mouvement = "Ce colis n'est pas confirmé par le client : indiquez le motif de l'expédition dans le commentaire."
+                    else:
+                        erreur_mouvement = None
+                    if erreur_mouvement:
+                        django_messages.error(request, erreur_mouvement)
+                    elif str(article.get_last_historique().id) == request.POST["last_mouvement"] and any(value == request.POST["mouvement_statut"] for value, _ in statut_traitement_applicables):
                         if (article.code_tracking is None or article.code_tracking == "") and request.POST["mouvement_code_tracking"]:
                             article.code_tracking = request.POST["mouvement_code_tracking"]
                         article.statut_traitement = request.POST["mouvement_statut"]
@@ -814,3 +828,86 @@ def admin_activites_reversements(request):
     return render(request, 'management/admin_activites_reversements.html', locals())
 
 
+
+
+# ---------------------------------------------------------------------------
+# Confirmation des commandes (agents COD) et acomptes (comptable)
+# ---------------------------------------------------------------------------
+
+@login_required
+@droit_requis('confirmations')
+def admin_confirmations(request):
+    """File d'appels de l'agent COD : confirmer, noter injoignable, ou annuler avec motif."""
+    from management.confirmation import enregistrer_appel, file_de_confirmation
+    from mlshipafrica.enums import ReseauPaiement, ResultatAppel
+    user = request.user
+    profil_staff = user.account_profil_staff
+    configuration = Configuration.objects.filter(license=profil_staff.license, etat_validation=True,
+                                                 etat_suppression=False).order_by("-pk").first()
+    montant_acompte = configuration.montant_acompte if configuration else 2000
+
+    if request.method == 'POST':
+        article = file_de_confirmation(profil_staff).filter(code=request.POST.get('article')).first()
+        if article is None:
+            django_messages.error(request, "Ce colis n'est plus dans votre file.")
+        else:
+            resultat = request.POST.get('resultat')
+            acompte = None
+            if resultat == ResultatAppel.CONFIRME and request.POST.get('acompte_reference'):
+                acompte = {'montant': montant_acompte, 'reseau': request.POST.get('acompte_reseau'),
+                           'reference_depot': request.POST.get('acompte_reference'),
+                           'numero_depot': request.POST.get('acompte_numero', '')}
+            try:
+                if resultat not in ResultatAppel.values:
+                    raise ValidationError("Résultat d'appel inconnu.")
+                enregistrer_appel(article, user, resultat, request.POST.get('commentaire', ''), acompte)
+                django_messages.success(request, "Colis %s : %s." % (article.code, ResultatAppel(resultat).label.lower()))
+            except ValidationError as erreur:
+                django_messages.error(request, "Colis %s : %s" % (article.code, ' '.join(erreur.messages)))
+        return redirect(reverse('management:management_admin_confirmations') + '?' + request.GET.urlencode())
+
+    articles = file_de_confirmation(profil_staff)
+    filtre = request.GET.get('filtre', 'tous')
+    if filtre in ('a_confirmer', 'injoignable'):
+        articles = articles.filter(etat_confirmation=filtre)
+    agent_selected = request.GET.get('agent')
+    if agent_selected and profil_staff.role_profil != TypeProfilStaffChoice.AGENT:
+        articles = articles.filter(agent_cod__code=agent_selected) if agent_selected != 'aucun' else articles.filter(agent_cod__isnull=True)
+    agents = ProfilStaff.objects.filter(license=profil_staff.license, role_profil=TypeProfilStaffChoice.AGENT,
+                                        etat_suppression=False).select_related('user')
+    reseaux = ReseauPaiement.choices
+    resultat_appel = ResultatAppel
+    suite_breadcrumb = "Confirmations"
+    return render(request, 'management/admin_confirmations.html', locals())
+
+
+@login_required
+@droit_requis('acomptes')
+def admin_acomptes(request):
+    """Acomptes des clients : à rembourser (annulés avant expédition), reçus, remboursés."""
+    from management.confirmation import marquer_rembourse
+    from management.models import Acompte
+    from mlshipafrica.enums import StatutAcompte
+    user = request.user
+    profil_staff = user.account_profil_staff
+    acomptes = Acompte.objects.filter(license=profil_staff.license).select_related(
+        'article', 'article__vendeur', 'recu_par', 'rembourse_par')
+
+    if request.method == 'POST':
+        acompte = acomptes.filter(pk=request.POST.get('acompte')).first()
+        try:
+            if acompte is None:
+                raise ValidationError("Acompte introuvable.")
+            marquer_rembourse(acompte, user, request.POST.get('reference', ''))
+            django_messages.success(request, "Acompte du colis %s marqué remboursé." % acompte.article.code)
+        except ValidationError as erreur:
+            django_messages.error(request, ' '.join(erreur.messages))
+        return redirect(reverse('management:management_admin_acomptes') + '?' + request.GET.urlencode())
+
+    statut_selected = request.GET.get('statut', StatutAcompte.A_REMBOURSER)
+    if statut_selected in StatutAcompte.values:
+        acomptes = acomptes.filter(statut=statut_selected)
+    compteurs = {s: Acompte.objects.filter(license=profil_staff.license, statut=s).count() for s in StatutAcompte.values}
+    statuts_acompte = StatutAcompte
+    suite_breadcrumb = "Acomptes"
+    return render(request, 'management/admin_acomptes.html', locals())

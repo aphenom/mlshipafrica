@@ -189,3 +189,28 @@ array_statut_traitement_retour = [
     StatutTraitement.EN_RETOUR,
     StatutTraitement.RETOURNE
 ]
+
+class EtatConfirmation(models.TextChoices):
+    A_CONFIRMER = 'a_confirmer', 'À confirmer'
+    INJOIGNABLE = 'injoignable', 'Injoignable, à rappeler'
+    CONFIRME = 'confirme', 'Confirmé par le client'
+    ANNULE = 'annule', 'Annulé par le client'
+
+
+class StatutAcompte(models.TextChoices):
+    RECU = 'recu', 'Reçu'
+    A_REMBOURSER = 'a_rembourser', 'À rembourser'
+    REMBOURSE = 'rembourse', 'Remboursé'
+
+
+class ReseauPaiement(models.TextChoices):
+    ORANGE = 'orange', 'Orange Money'
+    MTN = 'mtn', 'MTN MoMo'
+    MOOV = 'moov', 'Moov Money'
+    WAVE = 'wave', 'Wave'
+
+
+class ResultatAppel(models.TextChoices):
+    CONFIRME = 'confirme', 'Confirmé'
+    INJOIGNABLE = 'injoignable', 'Injoignable'
+    ANNULE = 'annule', 'Annulé par le client'

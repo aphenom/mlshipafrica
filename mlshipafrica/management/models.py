@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
+from mlshipafrica.enums import EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
 from django.db.models.signals import pre_save, post_save, m2m_changed
 from django.dispatch import receiver
@@ -288,6 +288,13 @@ class Article(MyModelAbstract):
     date_approbation = models.DateTimeField('Date importation', null=True, blank=True)
 
     statut_traitement = models.CharField(max_length=25, choices=StatutTraitement.choices,default=StatutTraitement.BROUILLON, null=True, blank=True)
+
+    # Confirmation par l'agent COD (appel du client final avant l'expédition)
+    etat_confirmation = models.CharField("Confirmation", max_length=15, choices=EtatConfirmation.choices, default=EtatConfirmation.A_CONFIRMER, db_index=True)
+    date_confirmation = models.DateTimeField("Date de confirmation", null=True, blank=True)
+    confirme_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='articles_confirmes', verbose_name="confirmé par")
+    nombre_appels = models.PositiveSmallIntegerField("Nombre d'appels", default=0)
+    agent_cod = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='articles_a_confirmer', verbose_name="agent COD")
     etat_encaissement = models.BooleanField('état encaissement client', default=False)
     etat_reglement = models.BooleanField('état reglement vendeur', default=False)
     etat_reversement = models.BooleanField('état reversement encaissement', default=False)
@@ -414,6 +421,12 @@ class Article(MyModelAbstract):
             if self.is_option_encaissement is True:
                 self.montant_a_reverser = self.valeur_totale - self.montant_total_frais
         
+        if self._init_statut_traitement == StatutTraitement.BROUILLON and self.statut_traitement in (
+                StatutTraitement.EN_ATTENTE_DEPOT, StatutTraitement.EN_ATTENTE_RAMASSAGE):
+            self.etat_confirmation = EtatConfirmation.A_CONFIRMER
+            if self.agent_cod_id is None and self.vendeur_id and self.vendeur.agent_cod_id:
+                self.agent_cod_id = self.vendeur.agent_cod_id
+
         utilisateur = get_current_user()
         # Historique automatique pour les changements faits par le vendeur ou par une tâche (cron, import, API).
         # Les changements faits par l'équipe passent par la vue d'admin, qui crée elle-même l'historique.
@@ -565,3 +578,48 @@ class Reversement(MyModelAbstract):
                 self.article.etat_reversement = True
                 self.article.save()
         return super().save(*args, **kwargs)        
+
+""" Acompte versé par le client final pour confirmer sa commande (méthode interne : jamais présenté aux vendeurs) """
+class Acompte(models.Model):
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='acomptes', verbose_name="colis")
+    montant = models.DecimalField("Montant", max_digits=10, decimal_places=2)
+    reseau = models.CharField("Réseau", max_length=15, choices=ReseauPaiement.choices)
+    reference_depot = models.CharField("Référence du dépôt", max_length=100)
+    numero_depot = models.CharField("Numéro qui a payé", max_length=30, blank=True, default='')
+    statut = models.CharField("Statut", max_length=15, choices=StatutAcompte.choices, default=StatutAcompte.RECU, db_index=True)
+    date_reception = models.DateTimeField("Reçu le", default=timezone.now)
+    recu_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='acomptes_valides', verbose_name="validé par")
+    date_demande_remboursement = models.DateTimeField("À rembourser depuis", null=True, blank=True)
+    date_remboursement = models.DateTimeField("Remboursé le", null=True, blank=True)
+    rembourse_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='acomptes_rembourses', verbose_name="remboursé par")
+    reference_remboursement = models.CharField("Référence du remboursement", max_length=100, blank=True, default='')
+    commentaire = models.TextField("Commentaire", blank=True, default='')
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_acomptes')
+
+    class Meta:
+        verbose_name = 'Acompte'
+        verbose_name_plural = 'Acomptes'
+        ordering = ['-date_reception']
+        constraints = [
+            # Un même dépôt mobile money ne peut pas servir à deux commandes
+            models.UniqueConstraint(fields=['reseau', 'reference_depot'], name='acompte_depot_unique'),
+        ]
+
+    def __str__(self):
+        return '%s · %s · %s' % (self.article.code, self.get_reseau_display(), self.get_statut_display())
+
+
+""" Chaque appel de l'agent COD au client final """
+class AppelConfirmation(models.Model):
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='appels', verbose_name="colis")
+    agent = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='appels_confirmation', verbose_name="agent")
+    date = models.DateTimeField("Date", default=timezone.now, db_index=True)
+    resultat = models.CharField("Résultat", max_length=15, choices=ResultatAppel.choices)
+    commentaire = models.TextField("Commentaire", blank=True, default='')
+
+    class Meta:
+        verbose_name = "Appel de confirmation"
+        verbose_name_plural = "Appels de confirmation"
+        ordering = ['-date']

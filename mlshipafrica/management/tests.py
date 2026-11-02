@@ -336,3 +336,139 @@ class RolesEtDroitsTests(TestCase):
             else:
                 self.assertNotIn('Paiements (', page, role)
                 self.assertNotIn('Reversements (', page, role)
+
+
+class ConfirmationAcompteTests(TestCase):
+    """Test de fin de lot : une commande est confirmée, annulée puis relancée, et l'acompte à rembourser
+    apparaît chez la comptable ; après le départ, aucun remboursement."""
+
+    def setUp(self):
+        from management.models import ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        license, config, abidjan, petit, *_ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        self.comptes = {}
+        for role in (R.AGENT, R.COMPTABLE, R.MANAGER, R.SUPER):
+            u = User.objects.create(username='c-' + role, email='c' + role + '@test.ci', is_staff=True)
+            ProfilStaff.objects.create(user=u, license=license, role_profil=role)
+            self.comptes[role] = u
+        self.vendeur = vendeur_pour(license)
+        self.vendeur.agent_cod = self.comptes['agent'].account_profil_staff
+        self.vendeur.save()
+        self.article = Article(vendeur=self.vendeur, license=license, config=config, localite_depart=abidjan,
+                               localite_arrivee=Localite.objects.get(nom='Bouaké'), format_article=petit,
+                               valeur=15000, quantite=1, is_option_encaissement=True,
+                               numero_principal_destinataire='+2250708091011')
+        self.article.save()
+        self.article.statut_traitement = S.EN_ATTENTE_DEPOT     # le vendeur valide sa commande
+        self.article.save()
+
+    def poster(self, role, url, donnees):
+        self.client.force_login(self.comptes[role])
+        return self.client.post(url, donnees)
+
+    def test_validation_vendeur_met_en_file_de_l_agent(self):
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.etat_confirmation, 'a_confirmer')
+        self.assertEqual(self.article.agent_cod, self.comptes['agent'].account_profil_staff)
+        self.client.force_login(self.comptes['agent'])
+        self.assertContains(self.client.get('/management/admin_confirmations/'), self.article.code)
+
+    def test_confirme_annule_relance_rembourse(self):
+        from management.models import Acompte
+        url = '/management/admin_confirmations/'
+        self.poster('agent', url, {'article': self.article.code, 'resultat': 'confirme', 'acompte_reseau': 'orange',
+                                   'acompte_reference': 'OM-123', 'acompte_numero': '0707070707'})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.etat_confirmation, 'confirme')
+        acompte = Acompte.objects.get(article=self.article)
+        self.assertEqual((acompte.statut, int(acompte.montant)), ('recu', 2000))
+        # Le même dépôt ne peut pas servir deux fois
+        self.assertTrue(Acompte.objects.filter(reference_depot='OM-123').count() == 1)
+
+        # Le client annule : sans motif → refusé ; avec motif → annulé avant expédition
+        detail = '/management/admin_detail_colis/%s/' % self.article.code
+        dernier = self.article.get_last_historique()
+        self.poster('agent', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk),
+                                      'mouvement_statut': S.ANNULE, 'mouvement_date': '2026-11-02 10:00',
+                                      'mouvement_commentaire': '', 'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.EN_ATTENTE_DEPOT)
+        self.poster('agent', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk),
+                                      'mouvement_statut': S.ANNULE, 'mouvement_date': '2026-11-02 10:00',
+                                      'mouvement_commentaire': 'Client a changé d\'avis', 'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.ANNULE)
+        acompte.refresh_from_db()
+        self.assertEqual(acompte.statut, 'a_rembourser')
+
+        # Relance : le colis revient en attente et doit être reconfirmé ; l'acompte reste à rembourser
+        dernier = self.article.get_last_historique()
+        self.poster('manager', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk),
+                                        'mouvement_statut': S.EN_ATTENTE_DEPOT, 'mouvement_date': '2026-11-02 11:00',
+                                        'mouvement_commentaire': 'Relance', 'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual((self.article.statut_traitement, self.article.etat_confirmation), (S.EN_ATTENTE_DEPOT, 'a_confirmer'))
+
+        # La comptable voit l'acompte à rembourser et le rembourse
+        self.client.force_login(self.comptes['comptable'])
+        self.assertContains(self.client.get('/management/admin_acomptes/'), self.article.code)
+        self.poster('comptable', '/management/admin_acomptes/', {'acompte': acompte.pk, 'reference': 'REMB-1'})
+        acompte.refresh_from_db()
+        self.assertEqual((acompte.statut, acompte.reference_remboursement), ('rembourse', 'REMB-1'))
+
+    def test_annulation_par_l_agent_depuis_la_file(self):
+        from sms.models import SmsMessage
+        with self.captureOnCommitCallbacks(execute=True):
+            self.poster('agent', '/management/admin_confirmations/', {'article': self.article.code, 'resultat': 'annule',
+                                                                      'commentaire': 'Ne veut plus'})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.ANNULE)
+        self.assertTrue(SmsMessage.objects.filter(modele_cle='v_annule_av').exists())   # le vendeur est prévenu
+
+    def test_pas_de_remboursement_apres_le_depart(self):
+        from management.models import Acompte
+        from management.confirmation import enregistrer_appel
+        enregistrer_appel(self.article, self.comptes['agent'], 'confirme', '', {'montant': 2000, 'reseau': 'wave', 'reference_depot': 'W1'})
+        detail = '/management/admin_detail_colis/%s/' % self.article.code
+        for statut in (S.DEPOT, S.EN_TRANSIT):
+            dernier = self.article.get_last_historique()
+            self.poster('manager', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk), 'mouvement_statut': statut,
+                                            'mouvement_date': '2026-11-02 10:00', 'mouvement_commentaire': '', 'mouvement_code_tracking': ''})
+            self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.EN_TRANSIT)
+        self.assertFalse(transition_autorisee(self.article, self.article.get_last_historique(), S.ANNULE))
+        self.assertEqual(Acompte.objects.get(article=self.article).statut, 'recu')
+
+    def test_non_confirme_ne_part_pas_sans_motif(self):
+        detail = '/management/admin_detail_colis/%s/' % self.article.code
+        dernier = self.article.get_last_historique()
+        self.poster('manager', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk), 'mouvement_statut': S.DEPOT,
+                                        'mouvement_date': '2026-11-02 10:00', 'mouvement_commentaire': '', 'mouvement_code_tracking': ''})
+        dernier = self.article.get_last_historique()
+        self.poster('manager', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk), 'mouvement_statut': S.EN_TRANSIT,
+                                        'mouvement_date': '2026-11-02 10:00', 'mouvement_commentaire': '', 'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.DEPOT)
+        self.poster('manager', detail, {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk), 'mouvement_statut': S.EN_TRANSIT,
+                                        'mouvement_date': '2026-11-02 10:00', 'mouvement_commentaire': 'Client injoignable, vendeur insiste',
+                                        'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.EN_TRANSIT)
+
+    def test_acompte_jamais_chez_le_vendeur(self):
+        from management.confirmation import enregistrer_appel
+        enregistrer_appel(self.article, self.comptes['agent'], 'confirme', '', {'montant': 2000, 'reseau': 'orange', 'reference_depot': 'OM-9'})
+        self.client.force_login(self.vendeur.user)
+        for url in ('/', '/management/vendeur_liste_colis/', '/management/vendeur_detail_colis/%s/' % self.article.code):
+            page = self.client.get(url).content.decode().lower()
+            self.assertNotIn('acompte', page, url)
+            self.assertNotIn('om-9', page, url)
+
+    def test_droits_des_pages(self):
+        for role, attendu in (('agent', 200), ('manager', 200), ('comptable', 403)):
+            self.client.force_login(self.comptes[role])
+            self.assertEqual(self.client.get('/management/admin_confirmations/').status_code, attendu, role)
+        for role, attendu in (('comptable', 200), ('agent', 403), ('manager', 403)):
+            self.client.force_login(self.comptes[role])
+            self.assertEqual(self.client.get('/management/admin_acomptes/').status_code, attendu, role)

@@ -744,6 +744,16 @@
 							</li>
 							{% endif %}
 
+							{% if 'confirmations' in droits %}
+							<li class="slide">
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_confirmations' %} active {% endif %}" href="{% url 'management:management_admin_confirmations' %}"><i class="bx bx-phone-call side-menu__icon"></i><span class="side-menu__label">Confirmations</span></a>
+							</li>
+							{% endif %}
+							{% if 'acomptes' in droits %}
+							<li class="slide">
+								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_acomptes' %} active {% endif %}" href="{% url 'management:management_admin_acomptes' %}"><i class="bx bx-coin-stack side-menu__icon"></i><span class="side-menu__label">Acomptes clients</span></a>
+							</li>
+							{% endif %}
 							{% if 'colis_voir' in droits %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_colis' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>

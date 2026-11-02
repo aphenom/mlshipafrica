@@ -25,4 +25,6 @@ urlpatterns = [
     path('admin_activites_paiements/', views.admin_activites_paiements, name='management_admin_activites_paiements'),
     path('admin_activites_reversements/', views.admin_activites_reversements, name='management_admin_activites_reversements'),
     path('admin_import_vendeur/', views.admin_import_vendeur, name='management_admin_import_vendeur'),
+    path('admin_confirmations/', views.admin_confirmations, name='management_admin_confirmations'),
+    path('admin_acomptes/', views.admin_acomptes, name='management_admin_acomptes'),
 ]
