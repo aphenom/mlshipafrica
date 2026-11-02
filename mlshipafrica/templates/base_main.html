@@ -696,6 +696,9 @@
 										class="bx bx-money side-menu__icon"></i><span
 										class="side-menu__label">Reversements</span></a>
 							</li>
+							{% if user.account_vendeur.etat_approbation %}
+							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_releves' %} active {% endif %}" href="{% url 'management:management_vendeur_releves' %}"><i class="bx bx-receipt side-menu__icon"></i><span class="side-menu__label">Mes relevés</span></a></li>
+							{% endif %}
 							{% if user.account_vendeur.option_stockage %}
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_stock' %} active {% endif %}" href="{% url 'management:management_vendeur_stock' %}"><i class="bx bx-package side-menu__icon"></i><span class="side-menu__label">Mon stock</span></a>
@@ -758,6 +761,12 @@
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_stock' %} active {% endif %}" href="{% url 'management:management_admin_stock' %}"><i class="bx bx-package side-menu__icon"></i><span class="side-menu__label">Stock</span></a>
 							</li>
+							{% endif %}
+							{% if 'releves' in droits %}
+							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_releves' %} active {% endif %}" href="{% url 'management:management_admin_releves' %}"><i class="bx bx-receipt side-menu__icon"></i><span class="side-menu__label">Relevés vendeurs</span></a></li>
+							{% endif %}
+							{% if 'benefice' in droits %}
+							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_benefice' %} active {% endif %}" href="{% url 'management:management_admin_benefice' %}"><i class="bx bx-line-chart side-menu__icon"></i><span class="side-menu__label">Journal et bénéfice</span></a></li>
 							{% endif %}
 							{% if 'acomptes' in droits %}
 							<li class="slide">

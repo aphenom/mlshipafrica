@@ -29,5 +29,8 @@ urlpatterns = [
     path('admin_confirmations/', views.admin_confirmations, name='management_admin_confirmations'),
     path('admin_acomptes/', views.admin_acomptes, name='management_admin_acomptes'),
     path('admin_stock/', views.admin_stock, name='management_admin_stock'),
+    path('admin_releves/', views.admin_releves, name='management_admin_releves'),
+    path('admin_benefice/', views.admin_benefice, name='management_admin_benefice'),
+    path('vendeur_releves/', views.vendeur_releves, name='management_vendeur_releves'),
     path('vendeur_stock/', views.vendeur_stock, name='management_vendeur_stock'),
 ]

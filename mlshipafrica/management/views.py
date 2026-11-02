@@ -603,7 +603,10 @@ def admin_detail_colis(request, code):
 
                             # article = delete_reglement(article)
                         
-                if "submit_new_reversement" in request.POST and request.POST["submit_new_reversement"]:             
+                if request.POST.get("submit_new_reversement") and article.ecritures.exclude(type='cout_prestataire').exists():
+                    # Colis suivi par les relevés du lundi et du jeudi : pas de reversement à l'unité (double paiement)
+                    django_messages.error(request, "Ce colis est versé par les relevés vendeurs (menu Relevés vendeurs), pas à l'unité.")
+                elif "submit_new_reversement" in request.POST and request.POST["submit_new_reversement"]:             
                     if str(article.get_last_encaissement().pk) == request.POST["last_encaissement"] and article.is_option_encaissement is True and  article.statut_traitement == article.get_last_historique().statut_traitement and article.statut_traitement == StatutTraitement.LIVRE_PAYE:
                         new_reversement = Reversement()
                         new_reversement.article = article
@@ -1034,3 +1037,123 @@ def admin_stock(request):
         produits = produits.filter(vendeur__code=vendeur_selected)
     suite_breadcrumb = "Stock"
     return render(request, 'management/admin_stock.html', locals())
+
+
+# ---------------------------------------------------------------------------
+# Argent : relevés, bénéfice, fichier prestataire
+# ---------------------------------------------------------------------------
+
+def _periode(request):
+    """jour (défaut), semaine, mois ou dates libres ?du=AAAA-MM-JJ&au=AAAA-MM-JJ → (début, fin, libellé)."""
+    from datetime import datetime, time as dtime
+    aujourd_hui = timezone.localdate()
+    periode = request.GET.get('periode', 'jour')
+    if periode == 'semaine':
+        debut = aujourd_hui - timedelta(days=aujourd_hui.weekday())
+        fin = aujourd_hui + timedelta(days=1)
+    elif periode == 'mois':
+        debut, fin = aujourd_hui.replace(day=1), aujourd_hui + timedelta(days=1)
+    elif periode == 'dates':
+        try:
+            debut = datetime.strptime(request.GET.get('du', ''), '%Y-%m-%d').date()
+            fin = datetime.strptime(request.GET.get('au', ''), '%Y-%m-%d').date() + timedelta(days=1)
+        except ValueError:
+            periode, debut, fin = 'jour', aujourd_hui, aujourd_hui + timedelta(days=1)
+    else:
+        periode, debut, fin = 'jour', aujourd_hui, aujourd_hui + timedelta(days=1)
+    tz = timezone.get_current_timezone()
+    return (timezone.make_aware(datetime.combine(debut, dtime.min), tz), timezone.make_aware(datetime.combine(fin, dtime.min), tz),
+            periode, debut, fin - timedelta(days=1))
+
+
+@login_required
+@droit_requis('releves')
+def admin_releves(request):
+    from management.finance import generer_releves, marquer_verse
+    from management.models import Releve
+    from mlshipafrica.enums import MoyenVersement, StatutReleve
+    user = request.user
+    profil_staff = user.account_profil_staff
+    releves = Releve.objects.filter(vendeur__license=profil_staff.license).select_related('vendeur', 'verse_par')
+    if request.method == 'POST':
+        try:
+            if request.POST.get('generer'):
+                n = len(generer_releves())
+                django_messages.success(request, "%d relevé(s) généré(s)." % n)
+            else:
+                releve = releves.get(pk=request.POST.get('releve'))
+                marquer_verse(releve, user, request.POST.get('reference', ''), request.POST.get('moyen', ''))
+                django_messages.success(request, "Relevé %s marqué versé." % releve.code)
+        except (ValidationError, Releve.DoesNotExist) as erreur:
+            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Relevé introuvable."])))
+        return redirect(reverse('management:management_admin_releves') + '?' + request.GET.urlencode())
+    statut_selected = request.GET.get('statut', StatutReleve.A_VERSER)
+    if statut_selected in StatutReleve.values:
+        releves = releves.filter(statut=statut_selected)
+    releve_detail = None
+    if request.GET.get('releve'):
+        releve_detail = Releve.objects.filter(vendeur__license=profil_staff.license, code=request.GET['releve']).first()
+        lignes_detail = releve_detail.ecritures.select_related('article').order_by('date') if releve_detail else []
+    total_a_verser = releves.filter(statut=StatutReleve.A_VERSER, net__gt=0).aggregate(t=Sum('net'))['t'] or 0
+    statuts_releve = StatutReleve
+    moyens = MoyenVersement.choices
+    return render(request, 'management/admin_releves.html', locals())
+
+
+@login_required
+def vendeur_releves(request):
+    """Le vendeur voit ses relevés (ses montants) et renseigne ses coordonnées de versement."""
+    from management.finance import totaux
+    from management.models import Ecriture
+    from mlshipafrica.enums import MoyenVersement
+    try:
+        vendeur = Vendeur.objects.get(user=request.user)
+    except Vendeur.DoesNotExist:
+        raise Http404
+    if request.method == 'POST':
+        moyen = request.POST.get('moyen_versement')
+        compte = (request.POST.get('compte_versement') or '').strip()
+        if moyen in MoyenVersement.values and compte:
+            changement = (moyen, compte) != (vendeur.moyen_versement, vendeur.compte_versement)
+            vendeur.moyen_versement, vendeur.compte_versement = moyen, compte[:60]
+            vendeur.titulaire_versement = (request.POST.get('titulaire_versement') or '')[:100]
+            vendeur.save()
+            if changement:
+                # Sécurité : le vendeur est prévenu de tout changement de ses coordonnées de versement
+                from sms.service import mettre_en_file
+                transaction.on_commit(lambda: mettre_en_file(
+                    'moyen', vendeur.numero_sms or vendeur.numero_contact, {'moyen': MoyenVersement(moyen).label},
+                    cle_dedoublonnage='moyen:%s:%s' % (vendeur.code, timezone.now().strftime('%Y%m%d%H%M%S')), vendeur=vendeur))
+            django_messages.success(request, "Coordonnées de versement enregistrées.")
+        else:
+            django_messages.error(request, "Choisissez un moyen de versement et indiquez le numéro ou le RIB.")
+        return redirect('management:management_vendeur_releves')
+    releves = vendeur.releves.all()
+    releve_detail = releves.filter(code=request.GET.get('releve')).first() if request.GET.get('releve') else None
+    if releve_detail:
+        lignes_detail = releve_detail.ecritures.select_related('article').order_by('date')
+    en_cours = totaux(Ecriture.objects.filter(vendeur=vendeur, releve__isnull=True).exclude(type='cout_prestataire'))
+    moyens = MoyenVersement.choices
+    return render(request, 'management/vendeur_releves.html', locals())
+
+
+@login_required
+@droit_requis('benefice')
+def admin_benefice(request):
+    from management.finance import importer_fichier_prestataire, journal
+    user = request.user
+    profil_staff = user.account_profil_staff
+    if request.method == 'POST' and request.FILES.get('fichier'):
+        try:
+            bilan_import = importer_fichier_prestataire(profil_staff.license, request.FILES['fichier'])
+            django_messages.success(request, "Fichier importé : %d ligne(s), %d rapprochée(s), %d inconnue(s), %d écart(s)." % (
+                bilan_import['lignes'], bilan_import['rapprochees'], len(bilan_import['inconnues']), len(bilan_import['ecarts'])))
+            request.session['dernier_import'] = {'inconnues': bilan_import['inconnues'][:200],
+                                                 'ecarts': [(c, str(p), str(f)) for c, p, f in bilan_import['ecarts'][:200]]}
+        except ValidationError as erreur:
+            django_messages.error(request, ' '.join(erreur.messages))
+        return redirect(reverse('management:management_admin_benefice') + '?' + request.GET.urlencode())
+    debut, fin, periode, jour_debut, jour_fin = _periode(request)
+    resultat = journal(profil_staff.license, debut, fin)
+    dernier_import = request.session.pop('dernier_import', None)
+    return render(request, 'management/admin_benefice.html', locals())

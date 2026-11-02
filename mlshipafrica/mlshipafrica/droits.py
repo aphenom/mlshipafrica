@@ -27,6 +27,9 @@ DROITS = {
     'argent': {CEO, COMPTABLE},
     'paiements': {CEO, COMPTABLE},                     # régler les frais, reverser aux vendeurs
     'activites_argent': {CEO, COMPTABLE},              # journaux des paiements et reversements
+    'releves': {CEO, COMPTABLE},                       # relevés vendeurs, versements
+    'benefice': {CEO, COMPTABLE},                      # journal en temps réel, bénéfice, fichier prestataire
+    'commissions_regler': {CEO},                       # paramétrer les commissions
 
     # Colis
     'colis_voir': {CEO, COMPTABLE, MANAGER, AGENT},

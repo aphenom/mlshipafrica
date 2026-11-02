@@ -102,6 +102,8 @@ def traiter_retours(maintenant=None):
         garde = garde_due(article, jours, config)
         if garde != article.frais_garde:
             Article.objects.filter(pk=article.pk).update(frais_garde=garde)
+            from management.finance import comptabiliser
+            comptabiliser(article)
             bilan['garde_maj'] += 1
         if jours >= 30:
             bilan['a_abandonner'].append(article.code)

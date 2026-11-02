@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import StatutEntreeStock, TypeMouvementStock, EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
+from mlshipafrica.enums import MoyenVersement, SourceCommande, StatutReleve, TypeEcriture, StatutEntreeStock, TypeMouvementStock, EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
 from django.db.models.signals import pre_save, post_save, m2m_changed
 from django.dispatch import receiver
@@ -150,6 +150,10 @@ class Vendeur(MyModelAbstract):
     collecte_par_mlship = models.BooleanField("ML SHIP collecte et reverse l’argent ?", default=False)
     # Vendeur dont le stock est chez nous : sorties de stock liées aux colis, pas de frais de garde sur les retours
     option_stockage = models.BooleanField("Stock chez ML COD Intérieur", default=False)
+    # Coordonnées de versement (relevés du lundi et du jeudi)
+    moyen_versement = models.CharField("Moyen de versement", max_length=10, choices=MoyenVersement.choices, null=True, blank=True)
+    compte_versement = models.CharField("Numéro ou RIB de versement", max_length=60, null=True, blank=True)
+    titulaire_versement = models.CharField("Titulaire du compte", max_length=100, null=True, blank=True)
 
     # Suivi par l'équipe : le commercial qui a activé le vendeur, l'agent COD qui confirme ses commandes
     commercial = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='vendeurs_suivis',
@@ -302,6 +306,9 @@ class Article(MyModelAbstract):
     frais_retour = models.DecimalField('Frais de retour', max_digits=10, decimal_places=2, default=0, db_comment="50 % des frais ML, facturés au passage « En retour vers Abidjan » (cumulés si plusieurs retours)")
     frais_garde = models.DecimalField('Frais de garde', max_digits=10, decimal_places=2, default=0, db_comment="500 F par jour à partir de J11 après le retour à Abidjan, plafonnés à 10 000 F")
     date_revenu_abidjan = models.DateTimeField('Revenu à Abidjan le', null=True, blank=True, db_index=True)
+    # Origine de la commande (une référence externe unique par source, ex. identifiant Woura)
+    source = models.CharField("Source", max_length=10, choices=SourceCommande.choices, default=SourceCommande.DIRECTE)
+    reference_externe = models.CharField("Référence externe", max_length=80, null=True, blank=True)
     # Vendeur en stockage : produit sorti du stock pour ce colis (quantité = Article.quantite)
     produit_stock = models.ForeignKey('ProduitStock', models.SET_NULL, null=True, blank=True, related_name='articles', verbose_name="produit en stock")
     generation = models.PositiveSmallIntegerField('Nombre de substitutions', default=0, db_comment="Incrémenté à chaque substitution (nouveau client) : relance le parcours SMS")
@@ -374,6 +381,10 @@ class Article(MyModelAbstract):
         db_table_comment = "Les articles répresentant les colis à livrer"
         ordering = ['-date_creation']
         # Lot 1 : index pour tenir 1 000+ colis par jour (listes par statut et par vendeur)
+        constraints = [
+            models.UniqueConstraint(fields=['source', 'reference_externe'], name='article_reference_externe_unique',
+                                    condition=models.Q(reference_externe__isnull=False)),
+        ]
         indexes = [
             models.Index(fields=['statut_traitement'], name='art_statut_idx'),
             models.Index(fields=['vendeur', 'statut_traitement'], name='art_vendeur_statut_idx'),
@@ -715,3 +726,61 @@ class FacturationStockage(models.Model):
         verbose_name = 'Stockage facturé (jour)'
         verbose_name_plural = 'Stockage facturé (jours)'
         constraints = [models.UniqueConstraint(fields=['vendeur', 'jour'], name='stockage_vendeur_jour_unique')]
+
+
+""" Argent : départs, écritures, relevés """
+class Depart(models.Model):
+    """Un départ = un passage en transit = un coût prestataire (figé au départ, confirmé par l'import du fichier)."""
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='departs')
+    historique = models.OneToOneField(HistoriqueArticle, on_delete=models.CASCADE, related_name='depart')
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+    cout_prevu = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cout_facture = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    reference_import = models.CharField(max_length=100, blank=True, default='')
+
+    class Meta:
+        ordering = ['-date']
+
+
+class Releve(models.Model):
+    """Relevé d'un vendeur (lundi et jeudi) : encaissements moins frais, retours, garde et stockage."""
+
+    code = models.CharField(max_length=40, unique=True)
+    vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='releves')
+    date_creation = models.DateTimeField(default=timezone.now, db_index=True)
+    date_arrete = models.DateTimeField("Arrêté au")
+    total_collecte = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_frais = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_retours = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_garde = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_stockage = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    net = models.DecimalField("Net à verser", max_digits=12, decimal_places=2, default=0)
+    statut = models.CharField(max_length=10, choices=StatutReleve.choices, default=StatutReleve.A_VERSER, db_index=True)
+    date_versement = models.DateTimeField(null=True, blank=True)
+    moyen_versement = models.CharField(max_length=10, choices=MoyenVersement.choices, blank=True, default='')
+    reference_versement = models.CharField(max_length=100, blank=True, default='')
+    verse_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='releves_verses')
+
+    class Meta:
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return self.code
+
+
+class Ecriture(models.Model):
+    """Chaque mouvement d'argent, lié au colis. Rien ne s'efface : une correction est une nouvelle écriture."""
+
+    vendeur = models.ForeignKey(Vendeur, models.SET_NULL, null=True, blank=True, related_name='ecritures')
+    article = models.ForeignKey(Article, models.SET_NULL, null=True, blank=True, related_name='ecritures')
+    type = models.CharField(max_length=20, choices=TypeEcriture.choices, db_index=True)
+    montant = models.DecimalField(max_digits=12, decimal_places=2)
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+    cle = models.CharField(max_length=120, unique=True)
+    releve = models.ForeignKey(Releve, models.SET_NULL, null=True, blank=True, related_name='ecritures')
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='ecritures')
+
+    class Meta:
+        ordering = ['-date']
+        indexes = [models.Index(fields=['vendeur', 'releve'], name='ecriture_vendeur_releve_idx')]

@@ -1,0 +1,45 @@
+{% extends "base_main.html" %}
+{% block title %}ML COD Intérieur - Mes relevés{% endblock %}
+{% load humanize %}
+	{% block breadcrumb-li %}<li class="breadcrumb-item active">Mes relevés</li>{% endblock %}
+    {% block content %}
+				{% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>{% endfor %}
+				<div class="row">
+					<div class="col-lg-8">
+						<div class="card">
+							<div class="card-header"><div class="card-title">Mes relevés (lundi et jeudi)</div></div>
+							<div class="card-body table-responsive">
+								<p>En cours, prochain relevé : encaissé {{ en_cours.collecte|floatformat:0|intcomma }} F, frais et retenues {{ en_cours.frais|add:en_cours.retours|add:en_cours.garde|add:en_cours.stockage|floatformat:0|intcomma }} F, <b>net {{ en_cours.net|floatformat:0|intcomma }} F</b>.</p>
+								<table class="table table-bordered table-sm mb-0">
+									<thead><tr><th>Relevé</th><th class="text-end">Encaissé</th><th class="text-end">Retenues</th><th class="text-end">Net</th><th>Statut</th></tr></thead>
+									<tbody>
+									{% for r in releves %}
+										<tr><td><a href="?releve={{ r.code }}">{{ r.code }}</a><div class="small text-muted">{{ r.date_creation|date:"d/m/Y" }}</div></td>
+										<td class="text-end">{{ r.total_collecte|floatformat:0|intcomma }} F</td>
+										<td class="text-end">{{ r.total_frais|add:r.total_retours|add:r.total_garde|add:r.total_stockage|floatformat:0|intcomma }} F</td>
+										<td class="text-end fw-bold">{{ r.net|floatformat:0|intcomma }} F</td>
+										<td>{{ r.get_statut_display }}{% if r.date_versement %} le {{ r.date_versement|date:"d/m/Y" }} · réf. {{ r.reference_versement }}{% endif %}</td></tr>
+									{% empty %}<tr><td colspan="5" class="text-center text-muted">Pas encore de relevé.</td></tr>{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						</div>
+						{% if releve_detail %}{% include "management/_releve_detail.html" %}{% endif %}
+					</div>
+					<div class="col-lg-4">
+						<div class="card">
+							<div class="card-header"><div class="card-title">Où recevoir mon argent</div></div>
+							<div class="card-body">
+								<form method="post">{% csrf_token %}
+									<label class="form-label">Moyen</label>
+									<select name="moyen_versement" class="form-select mb-2" required><option value="">Choisir</option>{% for v, l in moyens %}<option value="{{ v }}" {% if vendeur.moyen_versement == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+									<label class="form-label">Numéro ou RIB</label><input name="compte_versement" class="form-control mb-2" value="{{ vendeur.compte_versement|default:'' }}" required maxlength="60">
+									<label class="form-label">Titulaire</label><input name="titulaire_versement" class="form-control mb-2" value="{{ vendeur.titulaire_versement|default:'' }}" maxlength="100">
+									<button class="btn btn-primary btn-sm">Enregistrer</button>
+									<p class="small text-muted mt-2 mb-0">Par sécurité, chaque changement vous est confirmé par SMS.</p>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+    {% endblock %}

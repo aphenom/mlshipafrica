@@ -10,7 +10,7 @@ from django.test import TestCase
 
 from core.models import Configuration, FormatArticle, License, Localite, Zone
 from management.grille_ml_cod import LOCALITES, TARIFS_ML
-from management.models import Article, HistoriqueArticle, Tarification, Vendeur
+from management.models import Article, Depart, HistoriqueArticle, Tarification, Vendeur
 from management.statuts import statuts_suivants, transition_autorisee
 from mlshipafrica.enums import StatutTraitement as S
 
@@ -691,3 +691,125 @@ class StockTests(TestCase):
         self.assertEqual(self.client.get('/management/vendeur_stock/').status_code, 200)
         self.client.force_login(self.manager)
         self.assertEqual(self.client.get('/management/admin_stock/').status_code, 200)
+
+
+class ArgentTests(TestCase):
+    """Test de fin de lot « Argent » : sur 50 colis de recette couvrant les cas (livré avec ou sans encaissement,
+    retour, garde, annulé, stockage), le relevé, le journal et le fichier prestataire tombent juste au franc près."""
+
+    def setUp(self):
+        from management.models import ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        license, config, abidjan, petit, moyen, _ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        from management.models import Tarification
+        for t in Tarification.objects.filter(etat_validation=True, zone_arrivee__numero=3):
+            t.cout_partenaire = 2714 if t.format_article.nom == 'Petit' else 4012
+            t.save()
+        self.license, self.config, self.abidjan, self.petit, self.moyen = license, config, abidjan, petit, moyen
+        self.comptable = User.objects.create(username='cpt', email='cpt@test.ci', is_staff=True)
+        ProfilStaff.objects.create(user=self.comptable, license=license, role_profil=R.COMPTABLE)
+        self.vendeur = vendeur_pour(license)
+        self.bouake = Localite.objects.get(nom='Bouaké')
+
+    def colis(self, valeur, fmt, encaissement=True):
+        a = Article(vendeur=self.vendeur, license=self.license, config=self.config, localite_depart=self.abidjan,
+                    localite_arrivee=self.bouake, format_article=fmt, valeur=valeur, quantite=1,
+                    is_option_encaissement=encaissement, code_tracking=None)
+        a.save()
+        return a
+
+    def parcours(self, article, statuts):
+        dernier = article.get_last_historique()
+        for statut in statuts:
+            with self.captureOnCommitCallbacks(execute=True):
+                Article.objects.filter(pk=article.pk).update(statut_traitement=statut)
+                dernier = HistoriqueArticle.objects.create(article=article, statut_traitement=statut, license=self.license,
+                                                           dernier_historique_article=dernier)
+        article.refresh_from_db()
+        return article
+
+    def test_50_colis_au_franc_pres(self):
+        from management.finance import generer_releves, importer_fichier_prestataire, journal, marquer_verse
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from datetime import timedelta
+        from django.utils import timezone
+        aller = (S.EN_ATTENTE_DEPOT, S.DEPOT, S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE)
+        attendu = {'collecte': 0, 'frais': 0, 'retours': 0, 'cout': 0, 'livres': 0, 'departs': 0}
+        livres_codes = []
+        for i in range(50):
+            fmt = self.petit if i % 3 else self.moyen
+            prix, cout = (3481, 2714) if fmt == self.petit else (4998, 4012)
+            valeur = 9900 + (i * 211) % 10100
+            cas = i % 5
+            if cas in (0, 1, 2):                                   # livré avec encaissement
+                a = self.parcours(self.colis(valeur, fmt), aller + (S.LIVRE_PAYE,))
+                attendu['collecte'] += valeur; attendu['frais'] += prix; attendu['livres'] += 1
+                livres_codes.append(a.code)
+            elif cas == 3:                                         # livré sans encaissement (déjà payé)
+                a = self.parcours(self.colis(valeur, fmt, encaissement=False), aller + (S.LIVRE,))
+                attendu['frais'] += prix; attendu['livres'] += 1
+            else:                                                  # échec, retour, revenu à Abidjan
+                a = self.parcours(self.colis(valeur, fmt), aller + (S.ECHEC_LIVRAISON, S.EN_RETOUR, S.REVENU_ABIDJAN))
+                attendu['retours'] += round(prix / 2)
+            attendu['cout'] += cout; attendu['departs'] += 1
+        # Un colis annulé avant expédition : aucun argent
+        self.parcours(self.colis(15000, self.petit), (S.EN_ATTENTE_DEPOT, S.ANNULE))
+
+        releves = generer_releves()
+        self.assertEqual(len(releves), 1)
+        r = releves[0]
+        self.assertEqual(int(r.total_collecte), attendu['collecte'])
+        self.assertEqual(int(r.total_frais), attendu['frais'])
+        self.assertEqual(int(r.total_retours), attendu['retours'])
+        self.assertEqual(int(r.net), attendu['collecte'] - attendu['frais'] - attendu['retours'])
+        self.assertEqual(generer_releves(), [])                   # rien n'est relevé deux fois
+
+        debut, fin = timezone.now() - timedelta(days=1), timezone.now() + timedelta(days=1)
+        j = journal(self.license, debut, fin)
+        self.assertEqual(int(j['revenus']), attendu['frais'] + attendu['retours'])
+        self.assertEqual(int(j['cout_prestataire']), attendu['cout'])
+        self.assertEqual(int(j['benefice']), attendu['frais'] + attendu['retours'] - attendu['cout'])
+        self.assertEqual((j['livres'], j['departs']), (attendu['livres'], attendu['departs']))
+
+        # Fichier prestataire : tous les départs facturés au prix prévu, sauf un facturé 100 F de plus
+        lignes = ['reference;montant']
+        for i, depart in enumerate(Depart.objects.select_related('article').order_by('pk')):
+            lignes.append('%s;%d' % (depart.article.code, int(depart.cout_prevu) + (100 if i == 0 else 0)))
+        bilan = importer_fichier_prestataire(self.license, SimpleUploadedFile('f.csv', '\n'.join(lignes).encode()))
+        self.assertEqual((bilan['rapprochees'], len(bilan['ecarts']), bilan['inconnues']), (50, 1, []))
+        j = journal(self.license, debut, fin)
+        self.assertEqual(int(j['cout_facture']), attendu['cout'] + 100)
+        self.assertEqual(int(j['ecart_prestataire']), 100)
+
+        # Versement : les colis encaissés passent « Reversé »
+        marquer_verse(r, self.comptable, 'WAVE-123', 'wave')
+        self.assertTrue(all(Article.objects.get(code=c).statut_traitement == S.REVERSE for c in livres_codes))
+
+    def test_correction_si_on_revient_sur_une_livraison(self):
+        from management.models import Ecriture
+        a = self.parcours(self.colis(10000, self.petit), (S.EN_ATTENTE_DEPOT, S.DEPOT, S.EN_TRANSIT, S.EN_COURS_LIVRAISON,
+                                                          S.ARRIVE, S.LIVRE_PAYE))
+        self.assertEqual(int(sum(e.montant for e in a.ecritures.filter(type='collecte'))), 10000)
+        # Le manager annule le mouvement « Livré » : une écriture de correction, rien n'est effacé
+        h = a.get_last_historique()
+        with self.captureOnCommitCallbacks(execute=True):
+            Article.objects.filter(pk=a.pk).update(statut_traitement=S.ARRIVE)
+            h.etat_suppression = True
+            h.save()
+        self.assertEqual(int(sum(e.montant for e in a.ecritures.filter(type='collecte'))), 0)
+        self.assertEqual(a.ecritures.filter(type='collecte').count(), 2)
+
+    def test_pages_et_droits(self):
+        from management.models import ProfilStaff
+        self.client.force_login(self.comptable)
+        for url in ('/management/admin_releves/', '/management/admin_benefice/?periode=mois'):
+            self.assertEqual(self.client.get(url).status_code, 200)
+        agent = User.objects.create(username='ag9', email='ag9@test.ci', is_staff=True)
+        ProfilStaff.objects.create(user=agent, license=self.license, role_profil='agent')
+        self.client.force_login(agent)
+        self.assertEqual(self.client.get('/management/admin_benefice/').status_code, 403)
+        self.client.force_login(self.vendeur.user)
+        page = self.client.get('/management/vendeur_releves/')
+        self.assertEqual(page.status_code, 200)
+        self.assertNotIn('prestataire', page.content.decode().lower())

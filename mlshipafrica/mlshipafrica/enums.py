@@ -259,3 +259,32 @@ class TypeMouvementStock(models.TextChoices):
 class StatutEntreeStock(models.TextChoices):
     ANNONCEE = 'annoncee', 'Annoncée par le vendeur'
     RECUE = 'recue', 'Reçue et contrôlée'
+
+
+class TypeEcriture(models.TextChoices):
+    COLLECTE = 'collecte', 'Encaissé chez le client (dû au vendeur)'
+    FRAIS = 'frais', 'Frais de livraison'
+    FRAIS_COLLECTE = 'frais_collecte', 'Frais de collecte'
+    FRAIS_RETOUR = 'frais_retour', 'Frais de retour'
+    GARDE = 'garde', 'Garde'
+    STOCKAGE = 'stockage', 'Stockage'
+    COUT_PRESTATAIRE = 'cout_prestataire', 'Coût prestataire (interne)'
+
+
+class StatutReleve(models.TextChoices):
+    A_VERSER = 'a_verser', 'À verser'
+    VERSE = 'verse', 'Versé'
+
+
+class MoyenVersement(models.TextChoices):
+    ORANGE = 'orange', 'Orange Money'
+    MTN = 'mtn', 'MTN MoMo'
+    MOOV = 'moov', 'Moov Money'
+    WAVE = 'wave', 'Wave'
+    VIREMENT = 'virement', 'Virement bancaire'
+
+
+class SourceCommande(models.TextChoices):
+    DIRECTE = 'directe', 'Espace vendeur'
+    WOURA = 'woura', 'Woura'
+    API = 'api', 'API vendeur'

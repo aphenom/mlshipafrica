@@ -134,7 +134,9 @@ def facturer_stockage(jour=None):
             continue
         config = Configuration.objects.filter(license=vendeur.license, etat_suppression=False).order_by('-pk').first()
         tarif = Decimal(str(getattr(config, 'tarif_stockage_jour', 10) or 0))
-        _, cree = FacturationStockage.objects.get_or_create(vendeur=vendeur, jour=jour,
-                                                            defaults={'pieces': pieces, 'montant': pieces * tarif})
+        facturation, cree = FacturationStockage.objects.get_or_create(vendeur=vendeur, jour=jour,
+                                                                      defaults={'pieces': pieces, 'montant': pieces * tarif})
+        from management.finance import ecrire_stockage
+        ecrire_stockage(facturation)
         n += cree
     return n
