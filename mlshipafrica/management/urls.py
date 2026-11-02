@@ -11,6 +11,7 @@ urlpatterns = [
     path('vendeur_liste_colis_reversement/', views.vendeur_liste_colis_reversement, name='management_vendeur_liste_colis_reversement'),
     path('vendeur_facture_colis/<str:code>/', views.vendeur_facture_colis, name='management_vendeur_facture_colis'),
     path('vendeur_detail_colis/<str:code>/', views.vendeur_detail_colis, name='management_vendeur_detail_colis'),
+    path('vendeur_substituer_colis/<str:code>/', views.vendeur_substituer_colis, name='management_vendeur_substituer_colis'),
     path('admin_liste_vendeurs/', views.admin_liste_vendeurs, name='management_admin_liste_vendeurs'),
     path('admin_vendeur_edit_profil/<str:code>/', views.admin_vendeur_edit_profil, name='management_admin_vendeur_edit_profil'),
     path('admin_vendeur_profil/<str:code>/', views.admin_vendeur_profil, name='management_admin_vendeur_profil'),

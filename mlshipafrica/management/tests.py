@@ -156,7 +156,7 @@ class StatutsTests(TestCase):
         self.assertIn(S.ECHEC_LIVRAISON, self.suivants())
         self.assertNotIn(S.LIVRE, self.suivants())                    # encaissement → « Livré et payé »
         self.mouvement(S.ECHEC_LIVRAISON)
-        self.assertEqual(self.suivants(), [S.LIVRE_PAYE, S.EN_RETOUR])
+        self.assertEqual(self.suivants(), [S.RECONDUIT, S.LIVRE_PAYE, S.EN_RETOUR])
 
     def test_annulation_impossible_apres_expedition(self):
         self.mouvement(S.EN_ATTENTE_DEPOT)
@@ -472,3 +472,122 @@ class ConfirmationAcompteTests(TestCase):
         for role, attendu in (('comptable', 200), ('agent', 403), ('manager', 403)):
             self.client.force_login(self.comptes[role])
             self.assertEqual(self.client.get('/management/admin_acomptes/').status_code, attendu, role)
+
+
+class RetoursTests(TestCase):
+    """Calendrier des retours : frais 50 %, SMS J0/J5/J7/J8/J10, garde dès J11 plafonnée, abandon après J30, substitution."""
+
+    def setUp(self):
+        from management.models import ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        license, config, abidjan, petit, *_ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        self.config = config
+        self.manager = User.objects.create(username='mgr', email='mgr@test.ci', is_staff=True)
+        ProfilStaff.objects.create(user=self.manager, license=license, role_profil=R.MANAGER)
+        self.agent = User.objects.create(username='agt', email='agt@test.ci', is_staff=True)
+        ProfilStaff.objects.create(user=self.agent, license=license, role_profil=R.AGENT)
+        self.vendeur = vendeur_pour(license)
+        self.article = Article(vendeur=self.vendeur, license=license, config=config, localite_depart=abidjan,
+                               localite_arrivee=Localite.objects.get(nom='Bouaké'), format_article=petit,
+                               valeur=15000, quantite=1, is_option_encaissement=True,
+                               numero_principal_destinataire='+2250708091011')
+        self.article.save()
+        self.dernier = None
+        for statut in (S.EN_ATTENTE_DEPOT, S.DEPOT, S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE, S.ECHEC_LIVRAISON, S.EN_RETOUR):
+            self.mouvement(statut)
+
+    def mouvement(self, statut, quand=None):
+        with self.captureOnCommitCallbacks(execute=True):
+            self.dernier = HistoriqueArticle.objects.create(article=self.article, statut_traitement=statut,
+                                                            dernier_historique_article=self.dernier)
+            if quand:
+                HistoriqueArticle.objects.filter(pk=self.dernier.pk).update(date_creation=quand)
+                self.dernier.refresh_from_db()
+        Article.objects.filter(pk=self.article.pk).update(statut_traitement=statut)
+        self.article.refresh_from_db()
+
+    def test_frais_de_retour_50_pourcent(self):
+        self.assertEqual(int(self.article.frais_retour), round(3481 / 2))
+
+    def test_revenu_abidjan_reserve_au_manager(self):
+        self.assertFalse(transition_autorisee(self.article, self.dernier, S.REVENU_ABIDJAN, self.agent))
+        self.assertTrue(transition_autorisee(self.article, self.dernier, S.REVENU_ABIDJAN, self.manager))
+
+    def test_calendrier_et_garde(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from management.retours import traiter_retours
+        from sms.models import SmsMessage
+        depart = timezone.now() - timedelta(days=40)
+        self.mouvement(S.REVENU_ABIDJAN)
+        Article.objects.filter(pk=self.article.pk).update(date_revenu_abidjan=depart)
+        self.assertTrue(SmsMessage.objects.filter(modele_cle='retour').exists())               # J0
+        cles = {}
+        for jour in (5, 7, 8, 10, 11, 12, 30, 31):
+            with self.captureOnCommitCallbacks(execute=True):
+                traiter_retours(maintenant=depart + timedelta(days=jour, hours=2))
+            self.article.refresh_from_db()
+            cles[jour] = int(self.article.frais_garde)
+        self.assertEqual(cles[10], 0)
+        self.assertEqual(cles[11], 500)
+        self.assertEqual(cles[12], 1000)
+        self.assertEqual(cles[30], 10000)
+        self.assertEqual(cles[31], 10000)                                                       # plafond
+        modeles = list(SmsMessage.objects.values_list('modele_cle', flat=True))
+        for cle in ('rappel_subst', 'ret_alerte', 'ret_abandon'):
+            self.assertIn(cle, modeles)
+        self.assertEqual(modeles.count('ret_alerte'), 2)                                        # J7 et J8
+        # Rejouer la même journée ne double rien
+        with self.captureOnCommitCallbacks(execute=True):
+            traiter_retours(maintenant=depart + timedelta(days=31, hours=3))
+        self.assertEqual(SmsMessage.objects.count(), len(modeles))
+        # Abandon possible seulement après 30 jours, par le manager
+        Article.objects.filter(pk=self.article.pk).update(date_revenu_abidjan=depart)
+        HistoriqueArticle.objects.filter(pk=self.dernier.pk).update(date_creation=depart)
+        self.assertTrue(transition_autorisee(self.article, self.dernier, S.ABANDONNE, self.manager))
+
+    def test_pas_d_abandon_avant_30_jours(self):
+        self.mouvement(S.REVENU_ABIDJAN)
+        self.assertFalse(transition_autorisee(self.article, self.dernier, S.ABANDONNE, self.manager))
+
+    def test_vendeur_en_stockage_sans_garde(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from management.retours import traiter_retours
+        self.vendeur.option_stockage = True
+        self.vendeur.save()
+        self.mouvement(S.REVENU_ABIDJAN)
+        Article.objects.filter(pk=self.article.pk).update(date_revenu_abidjan=timezone.now() - timedelta(days=20))
+        traiter_retours()
+        self.article.refresh_from_db()
+        self.assertEqual(int(self.article.frais_garde), 0)
+        self.assertTrue(transition_autorisee(self.article, self.dernier, S.REMIS_EN_STOCK, self.manager))
+
+    def test_substitution_par_le_vendeur(self):
+        self.mouvement(S.REVENU_ABIDJAN)
+        self.client.force_login(self.vendeur.user)
+        korhogo = Localite.objects.get(nom='Korhogo')
+        page = self.client.get('/management/vendeur_detail_colis/%s/' % self.article.code).content.decode()
+        self.assertIn('Nouveau client', page)
+        self.client.post('/management/vendeur_substituer_colis/%s/' % self.article.code,
+                         {'nom': 'Koné', 'numero_principal': '0505050505', 'localite': korhogo.pk, 'valeur': '12000'})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.SUBSTITUE)
+        self.assertEqual(self.article.localite_arrivee, korhogo)
+        self.assertEqual(self.article.generation, 1)
+        self.assertEqual(self.article.etat_confirmation, 'a_confirmer')
+        self.assertEqual(int(self.article.montant_frais), 3481)                                 # Korhogo = zone 3
+        self.assertEqual(int(self.article.frais_retour), round(3481 / 2))                       # le retour reste dû
+        dernier = self.article.get_last_historique()
+        self.assertEqual(dernier.statut_traitement, S.SUBSTITUE)
+        self.assertEqual([s for s, _ in statuts_suivants(self.article, dernier)], [S.DEPOT])
+
+    def test_onglet_a_sauver(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from management.models import ProfilStaff
+        HistoriqueArticle.objects.filter(article=self.article).update(date_creation=timezone.now() - timedelta(hours=60))
+        Article.objects.filter(pk=self.article.pk).update(statut_traitement=S.ECHEC_LIVRAISON)
+        self.client.force_login(self.manager)
+        self.assertContains(self.client.get('/management/admin_liste_colis/?type_colis=a_sauver'), self.article.code)

@@ -148,6 +148,8 @@ class Vendeur(MyModelAbstract):
     # Paiement à la livraison (COD)
     cod_actif = models.BooleanField("Souhaitez-vous activer le paiement à la livraison ?", default=False)
     collecte_par_mlship = models.BooleanField("ML SHIP collecte et reverse l’argent ?", default=False)
+    # Vendeur dont le stock est chez nous : sorties de stock liées aux colis, pas de frais de garde sur les retours
+    option_stockage = models.BooleanField("Stock chez ML COD Intérieur", default=False)
 
     # Suivi par l'équipe : le commercial qui a activé le vendeur, l'agent COD qui confirme ses commandes
     commercial = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='vendeurs_suivis',
@@ -295,6 +297,12 @@ class Article(MyModelAbstract):
     confirme_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='articles_confirmes', verbose_name="confirmé par")
     nombre_appels = models.PositiveSmallIntegerField("Nombre d'appels", default=0)
     agent_cod = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='articles_a_confirmer', verbose_name="agent COD")
+
+    # Retours
+    frais_retour = models.DecimalField('Frais de retour', max_digits=10, decimal_places=2, default=0, db_comment="50 % des frais ML, facturés au passage « En retour vers Abidjan » (cumulés si plusieurs retours)")
+    frais_garde = models.DecimalField('Frais de garde', max_digits=10, decimal_places=2, default=0, db_comment="500 F par jour à partir de J11 après le retour à Abidjan, plafonnés à 10 000 F")
+    date_revenu_abidjan = models.DateTimeField('Revenu à Abidjan le', null=True, blank=True, db_index=True)
+    generation = models.PositiveSmallIntegerField('Nombre de substitutions', default=0, db_comment="Incrémenté à chaque substitution (nouveau client) : relance le parcours SMS")
     etat_encaissement = models.BooleanField('état encaissement client', default=False)
     etat_reglement = models.BooleanField('état reglement vendeur', default=False)
     etat_reversement = models.BooleanField('état reversement encaissement', default=False)

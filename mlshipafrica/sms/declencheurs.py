@@ -72,7 +72,8 @@ def sms_pour_historique(historique, maintenant=None):
         message = mettre_en_file(
             cle_client, article.numero_principal_destinataire, variables,
             # une fois par colis et par type de SMS (le 1er échec seulement, une seule confirmation…)
-            cle_dedoublonnage='%s:%s' % (cle_client, article.code),
+            # (après une substitution, le nouveau client repart avec son propre parcours SMS)
+            cle_dedoublonnage='%s:%s%s' % (cle_client, article.code, ':g%d' % article.generation if article.generation else ''),
             article=article, historique=historique, vendeur=vendeur,
             post_traitement=texte_deja_paye if not montant else None, maintenant=maintenant)
         if message:

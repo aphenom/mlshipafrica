@@ -32,6 +32,8 @@ DROITS = {
     'colis_voir': {CEO, COMPTABLE, MANAGER, AGENT},
     'colis_mouvements': {CEO, MANAGER, AGENT},         # faire avancer un statut
     'colis_annuler_mouvement': {CEO, MANAGER},         # revenir sur le dernier mouvement
+    'colis_retours': {CEO, MANAGER},                   # revenu à Abidjan, retourné, remis en stock, abandonné
+    'stock': {CEO, MANAGER},                           # réceptions de stock, inventaire
     'confirmations': {CEO, MANAGER, AGENT},            # appeler les clients, valider l'acompte
     'acomptes': {CEO, COMPTABLE},                      # rembourser les acomptes
     'activites_colis': {CEO, COMPTABLE, MANAGER},      # journal des mouvements

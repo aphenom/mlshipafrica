@@ -15,8 +15,13 @@ class StatutTraitement(models.TextChoices):
     LIVRE = 'livre', 'Livré'
     LIVRE_PAYE = 'livre_paye', 'Livré et payé'
     REVERSE = 'reverse', 'Reversé'
-    EN_RETOUR = 'en_retour', 'En retour'
-    RETOURNE = 'retourne', 'Retourné'
+    RECONDUIT = 'reconduit', 'Reconduit (nouvelle tentative)'
+    EN_RETOUR = 'en_retour', 'En retour vers Abidjan'
+    REVENU_ABIDJAN = 'revenu_abidjan', 'Revenu à Abidjan'
+    SUBSTITUE = 'substitue', 'Substitué (nouveau client)'
+    RETOURNE = 'retourne', 'Retourné au vendeur'
+    REMIS_EN_STOCK = 'remis_en_stock', 'Remis en stock'
+    ABANDONNE = 'abandonne', 'Abandonné'
     ANNULE = 'annule', 'Annulé avant expédition'
 
 
@@ -36,6 +41,11 @@ STATUT_TRAITEMENT_COULEURS = {
     'en_retour': 'light',
     'retourne': 'dark',
     'annule': 'secondary',
+    'reconduit': 'warning',
+    'revenu_abidjan': 'info',
+    'substitue': 'primary',
+    'remis_en_stock': 'success',
+    'abandonne': 'danger',
 }
 
 
@@ -55,6 +65,11 @@ STATUT_TRAITEMENT_ICONES = {
     'en_retour': 'undo',
     'retourne': 'ban',
     'annule': 'times-circle',
+    'reconduit': 'repeat',
+    'revenu_abidjan': 'home',
+    'substitue': 'exchange',
+    'remis_en_stock': 'archive',
+    'abandonne': 'trash',
 }
 
 
@@ -74,6 +89,11 @@ STATUT_TRAITEMENT_COMMENTAIRES = {
     'en_retour': 'Le colis est en cours de retour vers le vendeur suite à un échec de livraison ou une demande du client.',
     'retourne': 'Le colis est retourné au vendeur avec succès.',
     'annule': 'La commande a été annulée avant son expédition. Le colis reste disponible pour le vendeur.',
+    'reconduit': 'Une nouvelle tentative de livraison est organisée avec le client.',
+    'revenu_abidjan': 'Le colis est revenu à notre bureau d’Abidjan. Le vendeur peut le substituer ou le récupérer.',
+    'substitue': 'Le vendeur a donné un nouveau client pour ce colis : il repart en préparation.',
+    'remis_en_stock': 'Le colis est revenu en bon état et a été remis dans le stock du vendeur.',
+    'abandonne': 'Le colis n’a pas été récupéré dans les 30 jours : il est déclaré abandonné.',
 }
 
 
@@ -175,7 +195,10 @@ array_statut_traitement_en_cours = [
     StatutTraitement.EN_COURS_LIVRAISON,
     StatutTraitement.ARRIVE,
     StatutTraitement.ECHEC_LIVRAISON,
-    StatutTraitement.EN_RETOUR
+    StatutTraitement.RECONDUIT,
+    StatutTraitement.EN_RETOUR,
+    StatutTraitement.REVENU_ABIDJAN,
+    StatutTraitement.SUBSTITUE,
 ]
 
 
@@ -187,7 +210,10 @@ array_statut_traitement_livre = [
 
 array_statut_traitement_retour = [
     StatutTraitement.EN_RETOUR,
-    StatutTraitement.RETOURNE
+    StatutTraitement.REVENU_ABIDJAN,
+    StatutTraitement.RETOURNE,
+    StatutTraitement.REMIS_EN_STOCK,
+    StatutTraitement.ABANDONNE,
 ]
 
 class EtatConfirmation(models.TextChoices):

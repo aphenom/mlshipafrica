@@ -355,6 +355,7 @@ CRONJOBS = [
     ('* * * * *', 'django.core.management.call_command', ['sms_envoyer'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
     ('*/10 * * * *', 'django.core.management.call_command', ['sms_accuses'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
     ('0 19 * * *', 'django.core.management.call_command', ['sms_resume_soir'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
+    ('0 8 * * *', 'django.core.management.call_command', ['retours_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
 ]
 
 # Administration Django (paramètres et modèles de SMS), réservée aux super-utilisateurs.

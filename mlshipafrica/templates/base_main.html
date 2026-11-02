@@ -782,6 +782,12 @@
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == statut_traitement.ECHEC_LIVRAISON %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ statut_traitement.ECHEC_LIVRAISON }}">Échecs de livraison</a>
 														</li>
 														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == 'a_sauver' %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis=a_sauver">À sauver (48 h)</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == statut_traitement.REVENU_ABIDJAN %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ statut_traitement.REVENU_ABIDJAN }}">Revenus à Abidjan</a>
+														</li>
+														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == statut_traitement.ANNULE %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ statut_traitement.ANNULE }}">Annulés avant expédition</a>
 														</li>
 														<li>

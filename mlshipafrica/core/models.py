@@ -108,6 +108,12 @@ class Configuration(MyModelAbstract):
     json_api_sms  = models.TextField('JSON API SMS', null=True, blank=True)
     # Acompte demandé au client final lors de l'appel de confirmation (méthode interne : jamais affiché aux vendeurs)
     montant_acompte = models.DecimalField("montant de l'acompte client (interne)", max_digits=10, decimal_places=2, default=2000)
+    # Retours et stockage (cahier des charges : retour facturé 50 %, garde 500 F/jour dès J11 plafonnée à 10 000 F)
+    taux_frais_retour = models.DecimalField("frais de retour (% des frais ML)", max_digits=5, decimal_places=2, default=50)
+    garde_par_jour = models.DecimalField("garde par colis et par jour", max_digits=10, decimal_places=2, default=500)
+    garde_premier_jour = models.PositiveSmallIntegerField("premier jour de garde payante (J+)", default=11)
+    garde_plafond = models.DecimalField("plafond de la garde par colis", max_digits=10, decimal_places=2, default=10000)
+    tarif_stockage_jour = models.DecimalField("stockage par pièce et par jour", max_digits=10, decimal_places=2, default=10)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_configurations', related_query_name="license_configuration", verbose_name = "license")
     
     app_nom = models.CharField('nom plateforme', max_length=50)

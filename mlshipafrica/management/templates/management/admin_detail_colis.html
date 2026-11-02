@@ -190,6 +190,13 @@
 								{% empty %}
 									<p class="mb-1 text-muted">Pas d'acompte.</p>
 								{% endfor %}
+								{% if article.date_revenu_abidjan or article.frais_retour %}
+								<p class="mb-1 mt-2"><strong>Retour :</strong>
+									{% if article.date_revenu_abidjan %}revenu à Abidjan le {{ article.date_revenu_abidjan|date:"d/m/Y" }} (J+{{ jours_retour }}){% if jours_retour >= 30 %} · <span class="text-danger fw-bold">à déclarer abandonné</span>{% endif %}{% endif %}
+									{% if 'argent' in droits %} · frais de retour {{ article.frais_retour|floatformat:0 }} F · garde {{ article.frais_garde|floatformat:0 }} F{% endif %}
+									{% if article.generation %} · {{ article.generation }} substitution{{ article.generation|pluralize }}{% endif %}
+								</p>
+								{% endif %}
 								{% if appels_article %}
 								<ul class="small text-muted mb-0 mt-2">
 									{% for appel in appels_article %}<li>{{ appel.date|date:"d/m H:i" }} · {{ appel.get_resultat_display }}{% if appel.agent %} · {{ appel.agent.get_full_name|default:appel.agent.email }}{% endif %}{% if appel.commentaire %} · {{ appel.commentaire }}{% endif %}</li>{% endfor %}

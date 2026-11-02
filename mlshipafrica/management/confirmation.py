@@ -41,7 +41,7 @@ def file_de_confirmation(profil_staff):
 def changer_statut(article, nouveau, user, commentaire=''):
     """Applique un mouvement comme la vue d'administration : historique + statut, après contrôle du circuit."""
     dernier = article.get_last_historique()
-    if not transition_autorisee(article, dernier, nouveau):
+    if not transition_autorisee(article, dernier, nouveau, user):
         raise ValidationError("Ce changement de statut n'est pas permis pour ce colis.")
     article.statut_traitement = nouveau
     article.etat_validation = True

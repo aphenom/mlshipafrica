@@ -15,6 +15,28 @@
 	{% endblock %}
 
     {% block content %}
+				{% for message in messages %}
+					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+				{% endfor %}
+				{% if article.statut_traitement == statut_traitement.REVENU_ABIDJAN %}
+				<div class="card border-warning">
+					<div class="card-header"><h3 class="card-title">Votre colis est revenu à Abidjan (J+{{ jours_retour }})</h3></div>
+					<div class="card-body">
+						<p>Frais de retour : {{ article.frais_retour|floatformat:0 }} F{% if not article.vendeur.option_stockage %} · garde à ce jour : {{ article.frais_garde|floatformat:0 }} F. Vous avez 3 jours pour donner un nouveau client ou venir le récupérer ; à partir du 11e jour, une garde de 500 F par jour s'applique, et le colis est déclaré abandonné au 30e jour.{% endif %}</p>
+						<form method="post" action="{% url 'management:management_vendeur_substituer_colis' article.code %}" class="row g-2" onsubmit="return confirm('Envoyer ce colis à ce nouveau client ?')">
+							{% csrf_token %}
+							<div class="col-md-3"><label class="form-label">Nom</label><input name="nom" class="form-control" maxlength="100"></div>
+							<div class="col-md-3"><label class="form-label">Prénom(s)</label><input name="prenom" class="form-control" maxlength="255"></div>
+							<div class="col-md-3"><label class="form-label">Numéro du client *</label><input name="numero_principal" class="form-control" required placeholder="07 00 00 00 00"></div>
+							<div class="col-md-3"><label class="form-label">Autre numéro</label><input name="numero_secondaire" class="form-control"></div>
+							<div class="col-md-4"><label class="form-label">Localité *</label><select name="localite" class="form-control" required><option value="">Choisir</option>{% for pk, libelle in localites_substitution %}<option value="{{ pk }}">{{ libelle }}</option>{% endfor %}</select></div>
+							<div class="col-md-4"><label class="form-label">Adresse</label><input name="adresse" class="form-control" maxlength="255"></div>
+							<div class="col-md-2"><label class="form-label">Prix unitaire</label><input name="valeur" class="form-control" type="number" min="0" value="{{ article.valeur|floatformat:0 }}"></div>
+							<div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100">Nouveau client</button></div>
+						</form>
+					</div>
+				</div>
+				{% endif %}
 
 				<!-- row -->
 				<div class="row">

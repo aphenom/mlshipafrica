@@ -174,6 +174,12 @@ def vendeur_detail_colis(request, code):
         # statut_traitement = StatutTraitement
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
         historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
+        if article.statut_traitement == StatutTraitement.REVENU_ABIDJAN:
+            from management.forms import libelle_localite_avec_delai
+            from management.retours import jours_a_abidjan
+            jours_retour = jours_a_abidjan(article)
+            localites_substitution = [(l.pk, libelle_localite_avec_delai(l)) for l in Localite.objects.filter(
+                license=vendeur.license, is_arrivee=True, etat_validation=True, etat_suppression=False).select_related('zone')]
     except Exception as e:
         raise Http404
     return render(request, 'management/vendeur_detail_colis.html', locals())
@@ -375,6 +381,18 @@ def admin_liste_colis(request):
                     StatutTraitement.ECHEC_LIVRAISON,
                     StatutTraitement.EN_RETOUR
                 ])
+            if type_colis == "a_sauver":
+                # Colis sans mouvement depuis 48 h alors qu'ils sont en route ou chez le client
+                from django.db.models import Max
+                from management.statuts import STATUTS_SURVEILLES_48H
+                suite_breadcrumb = "À sauver (48 h sans mouvement)"
+                articles = (articles.filter(statut_traitement__in=STATUTS_SURVEILLES_48H)
+                            .annotate(dernier_mouvement=Max('article_historiquearticle__date_creation',
+                                                            filter=Q(article_historiquearticle__etat_suppression=False)))
+                            .filter(dernier_mouvement__lt=timezone.now() - timedelta(hours=48)))
+            if type_colis == StatutTraitement.REVENU_ABIDJAN:
+                suite_breadcrumb = "Revenus à Abidjan"
+                articles = articles.filter(statut_traitement=StatutTraitement.REVENU_ABIDJAN)
             if type_colis == StatutTraitement.ECHEC_LIVRAISON:
                 suite_breadcrumb = "Échecs de livraison"
                 articles = articles.filter(statut_traitement=StatutTraitement.ECHEC_LIVRAISON)
@@ -447,6 +465,8 @@ def admin_detail_colis(request, code):
             peut_annuler_mouvement = a_le_droit(user, 'colis_annuler_mouvement')
             peut_payer = a_le_droit(user, 'paiements')
             acomptes_article = article.acomptes.all().order_by('-date_reception')
+            from management.retours import jours_a_abidjan
+            jours_retour = jours_a_abidjan(article)
             appels_article = article.appels.select_related('agent').order_by('-date')[:20]
             # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
             # statut_traitement = StatutTraitement
@@ -461,7 +481,7 @@ def admin_detail_colis(request, code):
                 
             # Statuts proposés : table de transitions unique (management/statuts.py), vérifiée aussi au POST
             dernier_historique = article.get_last_historique()
-            statut_traitement_applicables = statuts_suivants(article, dernier_historique) if peut_bouger else []
+            statut_traitement_applicables = statuts_suivants(article, dernier_historique, user) if peut_bouger else []
 
             # print(statut_traitement_applicables)
 
@@ -911,3 +931,32 @@ def admin_acomptes(request):
     statuts_acompte = StatutAcompte
     suite_breadcrumb = "Acomptes"
     return render(request, 'management/admin_acomptes.html', locals())
+
+
+@login_required
+@transaction.atomic
+def vendeur_substituer_colis(request, code):
+    """Le vendeur donne un nouveau client pour son colis revenu à Abidjan."""
+    from management.retours import substituer
+    user = request.user
+    try:
+        vendeur = Vendeur.objects.get(user=user)
+        article = Article.objects.get(code=code, vendeur=vendeur, etat_suppression=False)
+    except (Vendeur.DoesNotExist, Article.DoesNotExist):
+        raise Http404
+    if request.method == 'POST':
+        localite = Localite.objects.filter(pk=request.POST.get('localite'), license=vendeur.license, is_arrivee=True,
+                                           etat_validation=True, etat_suppression=False).first()
+        valeur = request.POST.get('valeur')
+        try:
+            substituer(article, user, {
+                'nom': request.POST.get('nom', '')[:100], 'prenom': request.POST.get('prenom', '')[:255],
+                'numero_principal': request.POST.get('numero_principal', '').strip(),
+                'numero_secondaire': request.POST.get('numero_secondaire', '').strip(),
+                'adresse': request.POST.get('adresse', '')[:255], 'localite': localite,
+                'valeur': Decimal(valeur) if valeur not in (None, '') else None,
+            })
+            django_messages.success(request, "Nouveau client enregistré : le colis repart en préparation.")
+        except (ValidationError, ArithmeticError) as erreur:
+            django_messages.error(request, ' '.join(getattr(erreur, 'messages', [str(erreur)])))
+    return redirect('management:management_vendeur_detail_colis', article.code)
