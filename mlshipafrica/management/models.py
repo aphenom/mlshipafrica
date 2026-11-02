@@ -41,9 +41,10 @@ class MyModelAbstract(models.Model):
         ''' On save, update timestamps '''
         if not self.id:
             self.code = CodeGenerator(self.__class__, None, None)
-            self.creation_par = get_current_user()
+            # Utilisateur connecté seulement (webhook, API, tâches : pas d'auteur, au lieu d'une erreur)
+            self.creation_par = get_current_authenticated_user()
         else:
-            self.modification_par = get_current_user()
+            self.modification_par = get_current_authenticated_user()
         if self.etat_validation != self._init_etat_validation:
             if self.etat_validation == True:
                 self.date_validation = timezone.now()
@@ -200,7 +201,7 @@ class Vendeur(MyModelAbstract):
         if self.etat_approbation != self._init_etat_approbation:
             if self.etat_approbation == True:
                 self.date_approbation = timezone.now() 
-                self.approbation_par = get_current_user()
+                self.approbation_par = get_current_authenticated_user()
         return super(Vendeur, self).save(*args, **kwargs)        
 
     

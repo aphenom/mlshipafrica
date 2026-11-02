@@ -1,0 +1,53 @@
+{% extends "base_main.html" %}
+{% block title %}ML COD Intérieur - Intégrations{% endblock %}
+	{% block breadcrumb-li %}<li class="breadcrumb-item active">Intégrations</li>{% endblock %}
+    {% block content %}
+				{% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>{% endfor %}
+				<div class="row">
+					<div class="col-lg-6">
+						<div class="card">
+							<div class="card-header"><div class="card-title">Woura</div></div>
+							<div class="card-body">
+								<p class="small text-muted">Les commandes que vous nous assignez dans Woura arrivent toutes seules ici, et chaque étape de livraison remonte dans Woura.</p>
+								<form method="post">{% csrf_token %}<input type="hidden" name="action" value="woura">
+									<label class="d-block mb-2"><input type="checkbox" name="woura_actif" value="1" {% if integration.woura_actif %}checked{% endif %}> Activer Woura</label>
+									<label class="form-label">Identifiant de votre boutique Woura</label>
+									<input name="woura_boutique_id" class="form-control mb-2" value="{{ integration.woura_boutique_id }}" maxlength="80">
+									<button class="btn btn-primary btn-sm">Enregistrer</button>
+								</form>
+							</div>
+						</div>
+						<div class="card">
+							<div class="card-header"><div class="card-title">API et webhook (WooCommerce, Shopify, Google Sheets, votre site)</div></div>
+							<div class="card-body">
+								<form method="post">{% csrf_token %}<input type="hidden" name="action" value="api">
+									<label class="d-block mb-2"><input type="checkbox" name="api_actif" value="1" {% if integration.api_actif %}checked{% endif %}> Activer l'API</label>
+									<div class="small mb-1">Clé de test (les commandes ne partent jamais) : <code>{{ integration.cle_test }}</code></div>
+									<div class="small mb-2">Clé de production : <code>{{ integration.cle_live }}</code></div>
+									<label class="form-label">URL de votre webhook (https)</label>
+									<input name="webhook_url" class="form-control mb-2" value="{{ integration.webhook_url }}" placeholder="https://monsite.ci/webhook-mlcod">
+									<div class="small mb-1">Secret de signature (en-tête X-MLCOD-Signature) : <code>{{ integration.webhook_secret }}</code></div>
+									<div class="small mb-1">Statuts envoyés (aucun coché = tous) :</div>
+									<div class="d-flex flex-wrap gap-2 small mb-2">{% for v, l in statuts %}<label><input type="checkbox" name="evenements" value="{{ v }}" {% if v in integration.webhook_evenements %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+									<button class="btn btn-primary btn-sm">Enregistrer</button>
+								</form>
+								<form method="post" class="mt-2" onsubmit="return confirm('Les anciennes clés cesseront de fonctionner immédiatement. Continuer ?')">{% csrf_token %}<input type="hidden" name="action" value="regenerer"><button class="btn btn-outline-danger btn-sm">Régénérer les clés</button></form>
+								<hr>
+								<div class="small"><b>Documentation rapide</b> (en-tête <code>Authorization: Bearer &lt;clé&gt;</code>) :<br>
+								<code>POST /integrations/api/v1/colis/</code> : reference, nom, telephone, ville, adresse, montant, designation, taille (petit ou moyen)<br>
+								<code>GET /integrations/api/v1/colis/</code> · <code>GET /integrations/api/v1/colis/&lt;code&gt;/</code> · <code>GET /integrations/api/v1/tarifs/</code></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-6">
+						<div class="card">
+							<div class="card-header"><div class="card-title">Journal des appels</div></div>
+							<div class="card-body table-responsive">
+								<table class="table table-sm mb-0"><thead><tr><th>Date</th><th>Sens</th><th>Type</th><th>Statut</th><th>Colis</th></tr></thead>
+								<tbody>{% for e in journal %}<tr><td>{{ e.date|date:"d/m H:i" }}</td><td>{{ e.get_sens_display }} · {{ e.get_canal_display }}</td><td>{{ e.type }}</td><td>{{ e.get_statut_display }}</td><td>{{ e.article.code|default:"" }}</td></tr>
+								{% empty %}<tr><td colspan="5" class="text-muted text-center">Aucun appel.</td></tr>{% endfor %}</tbody></table>
+							</div>
+						</div>
+					</div>
+				</div>
+    {% endblock %}

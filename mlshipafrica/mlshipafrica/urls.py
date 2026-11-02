@@ -38,6 +38,8 @@ urlpatterns = [
 
     path('sms/', include('sms.urls')),
 
+    path('integrations/', include('integrations.urls')),
+
     path(settings.ADMIN_URL, admin.site.urls),
 
     # path('player/', include('player.urls')),

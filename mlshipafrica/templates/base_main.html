@@ -699,6 +699,9 @@
 							{% if user.account_vendeur.etat_approbation %}
 							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_releves' %} active {% endif %}" href="{% url 'management:management_vendeur_releves' %}"><i class="bx bx-receipt side-menu__icon"></i><span class="side-menu__label">Mes relevés</span></a></li>
 							{% endif %}
+							{% if user.account_vendeur.etat_approbation %}
+							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'vendeur_integrations' %} active {% endif %}" href="{% url 'integrations:vendeur_integrations' %}"><i class="bx bx-plug side-menu__icon"></i><span class="side-menu__label">Intégrations</span></a></li>
+							{% endif %}
 							{% if user.account_vendeur.option_stockage %}
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_vendeur_stock' %} active {% endif %}" href="{% url 'management:management_vendeur_stock' %}"><i class="bx bx-package side-menu__icon"></i><span class="side-menu__label">Mon stock</span></a>

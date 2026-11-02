@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'core',
     'management',
     'sms',
+    'integrations',
 ]
 
 MIDDLEWARE = [
@@ -345,6 +346,7 @@ LOGGING = {
 # L'envoi s'active dans l'administration : Paramètres SMS › « Envoi des SMS activé ».
 # ---------------------------------------------------------------------------
 LOGGING['loggers']['sms'] = {'handlers': LOG_HANDLERS, 'level': 'INFO', 'propagate': False}
+LOGGING['loggers']['integrations'] = {'handlers': LOG_HANDLERS, 'level': 'INFO', 'propagate': False}
 
 # Tâches planifiées (django-crontab) : après chaque déploiement, lancer
 #   python manage.py crontab add
@@ -358,6 +360,7 @@ CRONJOBS = [
     ('0 8 * * *', 'django.core.management.call_command', ['retours_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
     ('55 23 * * *', 'django.core.management.call_command', ['stockage_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
     ('0 6 * * 1,4', 'django.core.management.call_command', ['releves_vendeurs'], {}, '>> ' + str(LOG_DIR / 'cron_argent.log')),
+    ('* * * * *', 'django.core.management.call_command', ['integrations_envoyer'], {}, '>> ' + str(LOG_DIR / 'cron_integrations.log')),
 ]
 
 # Administration Django (paramètres et modèles de SMS), réservée aux super-utilisateurs.
