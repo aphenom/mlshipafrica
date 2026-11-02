@@ -711,7 +711,7 @@
 							<li class="slide d-none">
 								<a class="side-menu__item" href="#"><i class="bx bx-scan side-menu__icon"></i><span class="side-menu__label">Scanner colis</span></a>
 							</li>
-							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR or profil_staff.role_profil == type_profil_staff.COMPTABLE %}
+							{% if 'vendeurs_voir' in droits %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_vendeurs' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-store side-menu__icon"></i><span class="side-menu__label">Vendeurs</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -744,6 +744,7 @@
 							</li>
 							{% endif %}
 
+							{% if 'colis_voir' in droits %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_colis' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-box side-menu__icon"></i><span class="side-menu__label">Colis</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -768,6 +769,12 @@
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == statut_traitement.RETOURNE %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ statut_traitement.RETOURNE }}">Retournés</a>
 														</li>
 														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == statut_traitement.ECHEC_LIVRAISON %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ statut_traitement.ECHEC_LIVRAISON }}">Échecs de livraison</a>
+														</li>
+														<li>
+															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_liste_colis' and type_colis == statut_traitement.ANNULE %} active {% endif %}" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ statut_traitement.ANNULE }}">Annulés avant expédition</a>
+														</li>
+														<li>
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_vendeur_liste_colis' and statut_traitement == statut_traitement.ACTIF %} active {% endif %}" href="#">Vendeurs</a>
 														</li>
 														<li>
@@ -781,7 +788,8 @@
 								</ul>
 							</li>
 
-							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR or profil_staff.role_profil == type_profil_staff.COMPTABLE %}
+							{% endif %}
+							{% if 'paiements' in droits %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_liste_paiements_vendeurs' or request.resolver_match.url_name == 'management_admin_liste_paiements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-wallet-alt side-menu__icon"></i><span class="side-menu__label">Paiements</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -838,7 +846,7 @@
 							</li>
 							{% endif %}
 
-							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+							{% if 'activites_colis' in droits or 'activites_argent' in droits %}
 							<li class="slide {% if request.resolver_match.url_name == 'management_admin_mouvements_colis' or request.resolver_match.url_name == 'management_admin_activites_paiements' or request.resolver_match.url_name == 'management_admin_activites_reversements' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-pulse side-menu__icon"></i><span class="side-menu__label">Activités</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -851,13 +859,19 @@
 															<a href="javascript:void(0);">Activités</a>
 														</li>
 														<li>
+															{% if 'activites_colis' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_mouvements_colis' %} active {% endif %}" href="{% url 'management:management_admin_mouvements_colis' %}">Mouvements colis</a>
+															{% endif %}
 														</li>
 														<li>
+															{% if 'activites_argent' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_activites_paiements' %} active {% endif %}" href="{% url 'management:management_admin_activites_paiements' %}">Paiements</a>
+															{% endif %}
 														</li>
 														<li>
+															{% if 'activites_argent' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'management_admin_activites_reversements' %} active {% endif %}" href="{% url 'management:management_admin_activites_reversements' %}">Reversements</a>
+															{% endif %}
 														</li>
 													</ul>
 												</div>
@@ -868,7 +882,7 @@
 							</li>
 							{% endif %}
 
-							{% if profil_staff.role_profil == type_profil_staff.SUPER or profil_staff.role_profil == type_profil_staff.ADMINISTRATEUR %}
+							{% if 'parametres' in droits or 'parametres_tarifs' in droits or 'parametres_comptes' in droits %}
 							<li class="slide {% if request.resolver_match.url_name == 'core_liste' %} is-expanded {% endif %}">
 								<a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0);"><i class="bx bx-cog side-menu__icon"></i><span class="side-menu__label">Paramétrages</span><i class="angle fe fe-chevron-down"></i></a>
 								<ul class="slide-menu">
@@ -881,19 +895,29 @@
 															<a href="javascript:void(0);">Paramétrages</a>
 														</li>
 														<li>
+															{% if 'parametres_tarifs' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'tarifications' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=tarifications">Tarifications</a>
+															{% endif %}
 														</li>
 														<li>
+															{% if 'parametres_partenaires' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'partenaires_logistiques' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=partenaires_logistiques">Partenaires logistiques</a>
+															{% endif %}
 														</li>
 														<li>
+															{% if 'parametres' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'localites' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=localites">Localités</a>
+															{% endif %}
 														</li>
 														<li>
+															{% if 'parametres' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'zones' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=zones">Zones</a>
+															{% endif %}
 														</li>
 														<li>
+															{% if 'parametres' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'formats_articles' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=formats_articles">Formats colis</a>
+															{% endif %}
 														</li>
 														<li>
 															{% if profil_staff.role_profil == type_profil_staff.SUPER %}
@@ -907,7 +931,9 @@
 															{% endif %}
 														</li>
 														<li>
+															{% if 'parametres_comptes' in droits %}
 															<a class="slide-item {% if request.resolver_match.url_name == 'core_liste' and param == 'profils_staff' %} active {% endif %}" href="{% url 'core:core_liste' %}?param=profils_staff">Utilisateurs</a>
+															{% endif %}
 														</li>
 														{% if profil_staff.role_profil == type_profil_staff.SUPER %}
 														<li>

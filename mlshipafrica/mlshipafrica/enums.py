@@ -145,10 +145,12 @@ BOOLEAN_CHOICES = (
 
 class TypeProfilStaffChoice(models.TextChoices):
     # NA = '', 'Placholede'
-    AGENT = 'agent', 'Agent'
+    SUPER = 'super', 'CEO (direction)'
     COMPTABLE = 'comptable', 'Comptable'
-    ADMINISTRATEUR = 'administrateur', 'Administrateur'
-    SUPER = 'super', 'Super Administrateur'
+    MANAGER = 'manager', 'Manager'
+    AGENT = 'agent', 'Agent COD'
+    COMMERCIAL = 'commercial', 'Commercial'
+    ADMINISTRATEUR = 'administrateur', 'Administrateur technique'
 
 
 class StatutVendeur(models.TextChoices):

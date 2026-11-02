@@ -186,7 +186,7 @@ class ChargeListesTests(TestCase):
         call_command('appliquer_grille_ml_cod', stdout=StringIO())
         self.license, self.config, self.abidjan, self.petit = license, config, abidjan, petit
         staff = User.objects.create(username='agent', email='agent@test.ci', is_staff=True)
-        ProfilStaff.objects.create(user=staff, license=license, role_profil=TypeProfilStaffChoice.ADMINISTRATEUR)
+        ProfilStaff.objects.create(user=staff, license=license, role_profil=TypeProfilStaffChoice.MANAGER)
         self.staff = staff
         self.bouake = Localite.objects.get(nom='Bouaké')
         self.vendeurs = [vendeur_pour(license, 'Boutique %d' % i) for i in range(5)]
@@ -212,3 +212,127 @@ class ChargeListesTests(TestCase):
         petit_volume = self.requetes_liste()
         self.creer_colis(490)
         self.assertEqual(self.requetes_liste(), petit_volume)
+
+
+class RolesEtDroitsTests(TestCase):
+    """Chaque rôle n'ouvre que ses pages ; l'argent de la société n'est visible que du CEO et de la comptable."""
+
+    def setUp(self):
+        from management.models import ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        license, config, abidjan, petit, *_ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        self.vendeur = vendeur_pour(license)
+        self.article = Article(vendeur=self.vendeur, license=license, config=config, localite_depart=abidjan,
+                               localite_arrivee=Localite.objects.get(nom='Bouaké'), format_article=petit,
+                               valeur=15000, quantite=1, is_option_encaissement=True)
+        self.article.save()
+        self.article.statut_traitement = S.EN_ATTENTE_DEPOT
+        self.article.save()  # sans utilisateur connecté : l'historique est créé automatiquement
+        self.comptes = {}
+        for role in R.values:
+            u = User.objects.create(username='u-' + role, email=role + '@test.ci', is_staff=True)
+            ProfilStaff.objects.create(user=u, license=license, role_profil=role)
+            self.comptes[role] = u
+
+    def statut(self, role, url, methode='get', donnees=None):
+        self.client.force_login(self.comptes[role])
+        reponse = getattr(self.client, methode)(url, donnees or {})
+        return reponse.status_code
+
+    def test_matrice_des_pages(self):
+        attendus = {
+            '/management/admin_liste_colis/?type_colis=en_cours': {'super', 'comptable', 'manager', 'agent'},
+            '/management/admin_liste_paiements/': {'super', 'comptable'},
+            '/management/admin_liste_reversements/': {'super', 'comptable'},
+            '/management/admin_activites_paiements/': {'super', 'comptable'},
+            '/management/admin_mouvements_colis/': {'super', 'comptable', 'manager'},
+            '/management/admin_liste_vendeurs/': {'super', 'comptable', 'commercial', 'manager'},
+            '/core/_liste/?param=tarifications': {'super'},
+            '/core/_liste/?param=partenaires_logistiques': {'super'},
+            '/core/_liste/?param=zones': {'super', 'administrateur'},
+        }
+        for url, autorises in attendus.items():
+            for role in self.comptes:
+                code = self.statut(role, url)
+                if role in autorises:
+                    self.assertEqual(code, 200, '%s doit ouvrir %s' % (role, url))
+                else:
+                    self.assertEqual(code, 403, '%s ne doit pas ouvrir %s' % (role, url))
+
+    def test_argent_invisible_pour_agent_et_manager(self):
+        url = '/management/admin_detail_colis/%s/' % self.article.code
+        frais = '{:,}'.format(int(self.article.montant_total_frais)).replace(',', ' ')
+        for role in ('agent', 'manager'):
+            self.client.force_login(self.comptes[role])
+            page = self.client.get(url).content.decode()
+            self.assertNotIn('Total frais de service', page)
+            self.assertNotIn('Comptabilité', page)
+            self.assertNotIn(str(int(self.article.montant_total_frais)), page)
+        self.client.force_login(self.comptes['comptable'])
+        self.assertIn('Total frais de service', self.client.get(url).content.decode())
+
+    def test_agent_ne_peut_pas_payer_ni_annuler(self):
+        url = '/management/admin_detail_colis/%s/' % self.article.code
+        dernier = self.article.get_last_historique()
+        self.assertEqual(self.statut('agent', url, 'post', {'submit_new_reglement': '1', 'paiement_montant': '0',
+                                                             'paiement_reduction': '0'}), 403)
+        self.assertEqual(self.statut('agent', url, 'post', {'submit_annuler_last_mouvement': '1',
+                                                             'last_mouvement': str(dernier.pk)}), 403)
+        self.assertEqual(self.statut('commercial', url, 'post', {'submit_new_mouvement': '1'}), 403)
+
+    def test_agent_fait_avancer_un_colis(self):
+        url = '/management/admin_detail_colis/%s/' % self.article.code
+        dernier = self.article.get_last_historique()
+        self.statut('agent', url, 'post', {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk),
+                                           'mouvement_statut': S.DEPOT, 'mouvement_date': '2026-11-02 10:00',
+                                           'mouvement_commentaire': '', 'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.DEPOT)
+
+    def test_transition_interdite_refusee_par_le_serveur(self):
+        url = '/management/admin_detail_colis/%s/' % self.article.code
+        dernier = self.article.get_last_historique()
+        self.statut('super', url, 'post', {'submit_new_mouvement': '1', 'last_mouvement': str(dernier.pk),
+                                           'mouvement_statut': S.LIVRE_PAYE, 'mouvement_date': '2026-11-02 10:00',
+                                           'mouvement_commentaire': '', 'mouvement_code_tracking': ''})
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.statut_traitement, S.EN_ATTENTE_DEPOT)
+
+    def test_commercial_ne_voit_que_ses_vendeurs(self):
+        from management.models import Vendeur
+        autre = vendeur_pour(self.vendeur.license, 'Autre Boutique')
+        Vendeur.objects.filter(pk=self.vendeur.pk).update(commercial=self.comptes['commercial'].account_profil_staff)
+        Vendeur.objects.filter(pk=autre.pk).update(commercial=None)  # approuvé, suivi par personne
+        self.client.force_login(self.comptes['commercial'])
+        self.assertEqual(self.client.get('/management/admin_vendeur_profil/%s/' % self.vendeur.code).status_code, 200)
+        self.assertEqual(self.client.get('/management/admin_vendeur_profil/%s/' % autre.code).status_code, 404)
+
+    def test_admin_technique_ne_peut_pas_nommer_un_ceo(self):
+        from django_currentuser.middleware import _set_current_user
+        from management.forms import ProfilStaffForm
+        _set_current_user(self.comptes['administrateur'])
+        try:
+            form = ProfilStaffForm(data={'email': 'x@test.ci', 'role_profil': 'super'})
+            self.assertFalse(form.is_valid())
+        finally:
+            _set_current_user(None)
+
+    def test_journal_d_audit(self):
+        from core.models import JournalAudit
+        t = Tarification.objects.filter(etat_validation=True).first()
+        t.montant_frais = 9999
+        t.save()
+        ligne = JournalAudit.objects.filter(modele='Tarification', objet_id=str(t.pk), action='modification').latest('date')
+        self.assertEqual(int(ligne.apres['montant_frais']), 9999)
+        self.assertTrue(JournalAudit.objects.filter(modele='Article', objet_code=self.article.code).exists())
+
+    def test_tableau_de_bord_sans_argent_hors_direction(self):
+        for role in self.comptes:
+            self.client.force_login(self.comptes[role])
+            page = self.client.get('/').content.decode()
+            if role in ('super', 'comptable'):
+                self.assertIn('Paiements (', page)
+            else:
+                self.assertNotIn('Paiements (', page, role)
+                self.assertNotIn('Reversements (', page, role)

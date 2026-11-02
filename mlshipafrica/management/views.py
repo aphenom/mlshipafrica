@@ -2,11 +2,11 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django_dump_die.middleware import dd
 
-from management.models import Article, Encaissement, HistoriqueArticle, ReglementArticle, Reversement, Vendeur
+from management.models import Article, Encaissement, HistoriqueArticle, ProfilStaff, ReglementArticle, Reversement, Vendeur
 from management.forms import VendeurColisForm, VendeurForm
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 
 from core.models import Configuration, License, Localite
 
@@ -19,6 +19,7 @@ from tablib import Dataset
 
 from management.resources import VendeurResource
 from management.statuts import statuts_suivants
+from mlshipafrica.droits import a_le_droit, droit_requis, droits_de
 
 from django.utils import timezone
 
@@ -29,6 +30,15 @@ from django.db.models.functions import Coalesce
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)
+
+
+def vendeurs_visibles(user):
+    """Vendeurs de la licence ; un commercial ne voit que les siens et ceux en attente d'approbation."""
+    profil = user.account_profil_staff
+    vendeurs = Vendeur.objects.filter(license=profil.license)
+    if profil.role_profil == TypeProfilStaffChoice.COMMERCIAL:
+        vendeurs = vendeurs.filter(Q(commercial=profil) | Q(commercial__isnull=True, etat_approbation=False))
+    return vendeurs
 
 
 # Create edition profil vendeur
@@ -197,16 +207,16 @@ def vendeur_liste_colis_reversement(request):
 
 
 @login_required
+@droit_requis('vendeurs_voir')
 def admin_liste_vendeurs(request):
     try:
         type_vendeur = request.GET.get('type_vendeur', StatutVendeur.ACTIF)
         user = request.user
         profil_staff = user.account_profil_staff
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
-            vendeurs = Vendeur.objects.filter(license=profil_staff.license)
+            vendeurs = vendeurs_visibles(user)
             suite_breadcrumb = "" 
             if type_vendeur == StatutVendeur.ATTENTE_APPROBATION:
                 suite_breadcrumb = "En attente approbation" 
@@ -230,20 +240,34 @@ def admin_liste_vendeurs(request):
 
 
 @login_required
+@droit_requis('vendeurs_voir')
 def admin_vendeur_edit_profil(request, code):
     try:
         user = request.user
         profil_staff = user.account_profil_staff
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
-            vendeur = Vendeur.objects.get(code=code)
+            vendeur = vendeurs_visibles(user).get(code=code)
             configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
+            agents_cod = ProfilStaff.objects.filter(license=profil_staff.license, role_profil=TypeProfilStaffChoice.AGENT,
+                                                    etat_validation=True, etat_suppression=False).select_related('user')
+            commerciaux = ProfilStaff.objects.filter(license=profil_staff.license, role_profil=TypeProfilStaffChoice.COMMERCIAL,
+                                                     etat_validation=True, etat_suppression=False).select_related('user')
+            peut_approuver = a_le_droit(user, 'vendeurs_approuver')
+            peut_supprimer = a_le_droit(user, 'vendeurs_supprimer')
             if request.method == 'POST':
-                form = VendeurForm(data=(request.POST or None), files=(request.FILES or None), instance=vendeur)
+                # Chaque action est vérifiée côté serveur selon le rôle
+                actions_approbation = ("submit_approbation", "submit_activation", "submit_desactivation", "submit_affectation")
+                if any(request.POST.get(a) for a in actions_approbation) and not peut_approuver:
+                    raise PermissionDenied("Votre rôle ne permet pas de modifier ce vendeur.")
+                if request.POST.get("submit_suppression") and not peut_supprimer:
+                    raise PermissionDenied("Seule la direction peut supprimer un vendeur.")
                 if "submit_approbation" in request.POST and request.POST["submit_approbation"]:
                     vendeur.etat_approbation = True
+                    # Le commercial qui active le vendeur le suit, sauf s'il est déjà affecté
+                    if vendeur.commercial_id is None and profil_staff.role_profil == TypeProfilStaffChoice.COMMERCIAL:
+                        vendeur.commercial = profil_staff
                     vendeur.save()
                 if "submit_activation" in request.POST and request.POST["submit_activation"]:
                     vendeur.etat_validation = True
@@ -255,11 +279,18 @@ def admin_vendeur_edit_profil(request, code):
                 if "submit_suppression" in request.POST and request.POST["submit_suppression"]:
                     vendeur.etat_suppression = True
                     vendeur.save()
+                if "submit_affectation" in request.POST and request.POST["submit_affectation"]:
+                    vendeur.agent_cod = agents_cod.filter(code=request.POST.get("agent_cod")).first()
+                    if profil_staff.role_profil != TypeProfilStaffChoice.COMMERCIAL:
+                        vendeur.commercial = commerciaux.filter(code=request.POST.get("commercial")).first()
+                    vendeur.save()
                 return redirect('management:management_admin_vendeur_edit_profil', vendeur.code)
 
             else:
                 form = VendeurForm(instance=vendeur)
 
+    except PermissionDenied:
+        raise
     except Exception as e:
         raise Http404
     return render(request, 'management/admin_vendeur_edit_profil.html', locals())
@@ -267,15 +298,15 @@ def admin_vendeur_edit_profil(request, code):
 
 
 @login_required
+@droit_requis('vendeurs_voir')
 def admin_vendeur_profil(request, code):
     try:
         user = request.user
         profil_staff = user.account_profil_staff
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
-            vendeur = Vendeur.objects.get(code=code)
+            vendeur = vendeurs_visibles(user).get(code=code)
             type_vendeur = TypeVendeurChoice
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
     except Exception as e:
@@ -284,6 +315,7 @@ def admin_vendeur_profil(request, code):
 
 
 @login_required
+@droit_requis('vendeurs_importer')
 def admin_import_vendeur(request):
     type_vendeur = request.GET.get('type_vendeur', StatutVendeur.ACTIF)
     user = request.user
@@ -312,6 +344,7 @@ def admin_import_vendeur(request):
 
     
 @login_required
+@droit_requis('colis_voir')
 def admin_liste_colis(request):
     try:
         type_colis = request.GET.get('type_colis', "en_cours")
@@ -371,6 +404,7 @@ def admin_liste_colis(request):
 
 
 @login_required
+@droit_requis('colis_voir', 'vendeurs_voir')
 def admin_liste_colis_vendeurs(request):
     user = request.user
     profil_staff = user.account_profil_staff
@@ -381,8 +415,7 @@ def admin_liste_colis_vendeurs(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             vendeurs = get_articles_stats_by_vendeur(request)
             vendeurs = vendeurs.order_by("-nombre_articles_total") if vendeurs else None
@@ -396,6 +429,7 @@ def admin_liste_colis_vendeurs(request):
 
 
 @login_required
+@droit_requis('colis_voir')
 def admin_detail_colis(request, code):
 
     try:
@@ -405,7 +439,12 @@ def admin_detail_colis(request, code):
 
         if user.is_authenticated and user.is_staff:
             #vendeur = Vendeur.objects.get(user=user)
-            article = Article.objects.all().exclude(statut_traitement=StatutTraitement.BROUILLON).get(code=code)
+            # Un colis d'une autre licence n'existe pas pour cet utilisateur
+            article = Article.objects.filter(license=profil_staff.license).exclude(statut_traitement=StatutTraitement.BROUILLON).select_related(
+                'vendeur', 'localite_arrivee', 'localite_arrivee__zone', 'format_article').get(code=code)
+            peut_bouger = a_le_droit(user, 'colis_mouvements')
+            peut_annuler_mouvement = a_le_droit(user, 'colis_annuler_mouvement')
+            peut_payer = a_le_droit(user, 'paiements')
             # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
             # statut_traitement = StatutTraitement
             # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
@@ -419,11 +458,19 @@ def admin_detail_colis(request, code):
                 
             # Statuts proposés : table de transitions unique (management/statuts.py), vérifiée aussi au POST
             dernier_historique = article.get_last_historique()
-            statut_traitement_applicables = statuts_suivants(article, dernier_historique)
+            statut_traitement_applicables = statuts_suivants(article, dernier_historique) if peut_bouger else []
 
             # print(statut_traitement_applicables)
 
             if request.method == 'POST':
+                # Droits vérifiés côté serveur, action par action
+                if request.POST.get("submit_new_mouvement") and not peut_bouger:
+                    raise PermissionDenied("Votre rôle ne permet pas de changer le statut d'un colis.")
+                if request.POST.get("submit_annuler_last_mouvement") and not peut_annuler_mouvement:
+                    raise PermissionDenied("Seuls le manager et la direction peuvent annuler un mouvement.")
+                if any(request.POST.get(a) for a in ("submit_new_reglement", "submit_annuler_reglement",
+                                                     "submit_new_reversement", "submit_annuler_reversement")) and not peut_payer:
+                    raise PermissionDenied("Seules la comptable et la direction gèrent les paiements.")
 
                 if "submit_annuler_last_mouvement" in request.POST and request.POST["submit_annuler_last_mouvement"]:
                     if str(article.get_last_historique().id) == request.POST["last_mouvement"]:
@@ -534,6 +581,8 @@ def admin_detail_colis(request, code):
                     return HttpResponseRedirect(reverse('management:management_admin_liste_colis')) 
                 return redirect('management:management_admin_detail_colis', article.code)
                 
+    except PermissionDenied:
+        raise
     except Exception:
         # Ne jamais afficher le détail de l'erreur à l'écran (dd() exposait les données en production)
         logger.exception("admin_detail_colis %s", code)
@@ -561,6 +610,7 @@ def delete_reglement(article):
 
 
 @login_required
+@droit_requis('paiements')
 def admin_liste_paiements(request):
     try:
         type_paiements = request.GET.get('type_paiements', "en_attente")
@@ -568,8 +618,7 @@ def admin_liste_paiements(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).select_related('vendeur', 'localite_arrivee')
             suite_breadcrumb = "" 
@@ -587,6 +636,7 @@ def admin_liste_paiements(request):
 
 
 @login_required
+@droit_requis('paiements')
 def admin_liste_paiements_vendeurs(request):
     user = request.user
     profil_staff = user.account_profil_staff
@@ -597,8 +647,7 @@ def admin_liste_paiements_vendeurs(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             vendeurs = get_articles_stats_by_vendeur(request)
             vendeurs = vendeurs.order_by("-montant_frais_total") if vendeurs else None
@@ -612,6 +661,7 @@ def admin_liste_paiements_vendeurs(request):
 
 
 @login_required
+@droit_requis('paiements')
 def admin_liste_reversements(request):
     try:
         type_reversements = request.GET.get('type_reversements', "en_attente")
@@ -619,8 +669,7 @@ def admin_liste_reversements(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False, etat_encaissement=True).exclude(statut_traitement=StatutTraitement.BROUILLON).exclude(statut_traitement__in=array_statut_traitement_retour).select_related('vendeur', 'localite_arrivee')
             suite_breadcrumb = "" 
@@ -638,6 +687,7 @@ def admin_liste_reversements(request):
 
 
 @login_required
+@droit_requis('paiements')
 def admin_liste_reversements_vendeurs(request):
     user = request.user
     profil_staff = user.account_profil_staff
@@ -648,8 +698,7 @@ def admin_liste_reversements_vendeurs(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             vendeurs = get_articles_stats_by_vendeur(request)
             vendeurs = vendeurs.order_by("-montant_reversement_total") if vendeurs else None
@@ -663,6 +712,7 @@ def admin_liste_reversements_vendeurs(request):
 
 
 @login_required
+@droit_requis('activites_colis')
 def admin_mouvements_colis(request):
     try:
         statut_traitement_selected = request.GET.get('statut_traitement_selected', None)
@@ -673,8 +723,7 @@ def admin_mouvements_colis(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             historiques = HistoriqueArticle.objects.filter(license=profil_staff.license, etat_suppression=False, article__etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).select_related('article', 'article__vendeur', 'creation_par__account_profil_staff').order_by("-date_creation")
             vendeurs = Vendeur.objects.filter(license=profil_staff.license, vendeur_article__article_historiquearticle__isnull=False).exclude(vendeur_article__article_historiquearticle__statut_traitement=StatutTraitement.BROUILLON).distinct().order_by("-nom_store")
@@ -704,6 +753,7 @@ def admin_mouvements_colis(request):
 
 
 @login_required
+@droit_requis('activites_argent')
 def admin_activites_paiements(request):
     try:
         vendeur_selected = request.GET.get('vendeur_selected', None)
@@ -713,8 +763,7 @@ def admin_activites_paiements(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             reglements = ReglementArticle.objects.filter(license=profil_staff.license, etat_suppression=False, article__etat_suppression=False).select_related('article', 'vendeur', 'creation_par__account_profil_staff').order_by("-date_creation")
             vendeurs = Vendeur.objects.filter(license=profil_staff.license, vendeur_reglementarticle__isnull=False).distinct().order_by("-nom_store")
@@ -735,6 +784,7 @@ def admin_activites_paiements(request):
 
 
 @login_required
+@droit_requis('activites_argent')
 def admin_activites_reversements(request):
     try:
         vendeur_selected = request.GET.get('vendeur_selected', None)
@@ -744,8 +794,7 @@ def admin_activites_reversements(request):
         profil_staff = user.account_profil_staff
         #statut_traitement = StatutTraitement
 
-        if user.is_authenticated and user.is_staff \
-            and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff:
 
             reversements = Reversement.objects.filter(license=profil_staff.license, etat_suppression=False, article__etat_suppression=False).select_related('article', 'vendeur', 'creation_par__account_profil_staff').order_by("-date_creation")
             vendeurs = Vendeur.objects.filter(license=profil_staff.license, vendeur_reversement__isnull=False).distinct().order_by("-nom_store")

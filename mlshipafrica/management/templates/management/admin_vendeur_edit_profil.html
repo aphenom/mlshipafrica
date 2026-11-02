@@ -462,7 +462,38 @@
 										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
 									</div>
 								</div>
+								{% if peut_approuver %}
+								<div class="card-body border-top">
+									<div class="main-content-label mb-3">Suivi par l'équipe</div>
+									<div class="row row-xs">
+										<div class="col-md-4 mb-2">
+											<label class="form-label">Agent COD (confirme ses commandes)</label>
+											<select class="form-control" name="agent_cod">
+												<option value="">— Non affecté —</option>
+												{% for agent in agents_cod %}
+													<option value="{{ agent.code }}" {% if vendeur.agent_cod_id == agent.pk %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.email|default:agent.code }}</option>
+												{% endfor %}
+											</select>
+										</div>
+										{% if profil_staff.role_profil != type_profil_staff.COMMERCIAL %}
+										<div class="col-md-4 mb-2">
+											<label class="form-label">Commercial</label>
+											<select class="form-control" name="commercial">
+												<option value="">— Non affecté —</option>
+												{% for commercial in commerciaux %}
+													<option value="{{ commercial.code }}" {% if vendeur.commercial_id == commercial.pk %}selected{% endif %}>{{ commercial.user.get_full_name|default:commercial.email|default:commercial.code }}</option>
+												{% endfor %}
+											</select>
+										</div>
+										{% endif %}
+										<div class="col-md-4 mb-2 d-flex align-items-end">
+											<button type="submit" name="submit_affectation" value="submit_affectation" class="btn btn-primary">Enregistrer l'affectation</button>
+										</div>
+									</div>
+								</div>
+								{% endif %}
 								<div class="card-footer">
+									{% if peut_approuver %}
 									{% if vendeur.etat_approbation == False and vendeur.etat_validation == True and vendeur.etat_suppression == False %}
 										<button type="submit" name="submit_approbation" value="submit_approbation" class="btn btn-success waves-effect waves-light">
 										<i class="zmdi zmdi-badge-check me-1"></i>Approuver</button>
@@ -475,7 +506,8 @@
 										<button type="submit" name="submit_desactivation" value="submit_desactivation" class="btn btn-warning waves-effect waves-light">
 										<i class="zmdi zmdi-minus-circle me-1"></i>Désactiver</button>
 									{% endif %}
-									{% if vendeur.etat_suppression == False %}
+									{% endif %}
+									{% if peut_supprimer and vendeur.etat_suppression == False %}
 										<button type="submit" name="submit_suppression" value="submit_suppression" class="btn btn-danger waves-effect waves-light">
 										<i class="zmdi zmdi-delete me-1"></i>Supprimer</button>
 									{% endif %}

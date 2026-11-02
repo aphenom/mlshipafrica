@@ -149,6 +149,12 @@ class Vendeur(MyModelAbstract):
     cod_actif = models.BooleanField("Souhaitez-vous activer le paiement à la livraison ?", default=False)
     collecte_par_mlship = models.BooleanField("ML SHIP collecte et reverse l’argent ?", default=False)
 
+    # Suivi par l'équipe : le commercial qui a activé le vendeur, l'agent COD qui confirme ses commandes
+    commercial = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='vendeurs_suivis',
+                                   verbose_name="commercial", limit_choices_to={'role_profil': 'commercial'})
+    agent_cod = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='vendeurs_affectes',
+                                  verbose_name="agent COD", limit_choices_to={'role_profil': 'agent'})
+
     def __str__(self):
         return '{}'.format(self.nom_store)
 

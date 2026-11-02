@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from datetime import timedelta
 from django.utils import timezone
+from mlshipafrica.droits import droits_de
 
 
 def context(request):
@@ -62,5 +63,7 @@ def context(request):
             'statut_traitement': statut_traitement, 
             'type_profil_staff': type_profil_staff, 
             'my_current_url': my_current_url, 
-            'notification_messages': notification_messages
+            'notification_messages': notification_messages,
+            # Droits de l'utilisateur (mlshipafrica/droits.py) : {% if 'argent' in droits %}
+            'droits': droits_de(user),
             }      

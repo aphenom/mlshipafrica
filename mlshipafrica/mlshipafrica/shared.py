@@ -6,6 +6,9 @@ from mlshipafrica.enums import StatutTraitement, StatutVendeur, TypeProfilStaffC
 
 from management.resources import VendeurResource
 
+# Toute l'équipe voit les volumes ; les montants ne s'affichent qu'avec le droit 'argent' (mlshipafrica/droits.py)
+ROLES_EQUIPE = tuple(TypeProfilStaffChoice.values)
+
 from django.utils import timezone
 
 from django.db.models import Q, Count, Sum, F, ExpressionWrapper, DecimalField, Value
@@ -20,7 +23,7 @@ def get_global_vendeurs_stats(request):
         user = request.user
         profil_staff = user.account_profil_staff
 
-        if user.is_authenticated and user.is_staff and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER):
+        if user.is_authenticated and user.is_staff and profil_staff.role_profil in ROLES_EQUIPE:
             # Utilisez un queryset de base filtré par la licence
             queryset = Vendeur.objects.filter(license=profil_staff.license)
 
@@ -45,7 +48,7 @@ def get_global_article_stats(request, vendeur_code=None, period='all_time'):
         user = request.user
         
         # Vérification des permissions
-        is_staff_admin = user.is_authenticated and user.is_staff and user.account_profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER)
+        is_staff_admin = user.is_authenticated and user.is_staff and user.account_profil_staff.role_profil in ROLES_EQUIPE
 
         if not user.is_authenticated:
             return None
@@ -105,7 +108,7 @@ def get_articles_stats_by_vendeur(request, period='all_time'):
         user = request.user
         
         # Vérification des permissions
-        is_staff_admin = user.is_authenticated and user.is_staff and user.account_profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER)
+        is_staff_admin = user.is_authenticated and user.is_staff and user.account_profil_staff.role_profil in ROLES_EQUIPE
 
         if not is_staff_admin:
             return None
@@ -166,7 +169,7 @@ def get_top_n_vendeurs(request, n=5, metric='articles'):
         user = request.user
         profil_staff = user.account_profil_staff
 
-        if not (user.is_authenticated and user.is_staff and profil_staff.role_profil in (TypeProfilStaffChoice.ADMINISTRATEUR, TypeProfilStaffChoice.COMPTABLE, TypeProfilStaffChoice.SUPER)):
+        if not (user.is_authenticated and user.is_staff and profil_staff.role_profil in ROLES_EQUIPE):
             return None
 
         queryset = Vendeur.objects.filter(license=profil_staff.license, vendeur_article__statut_traitement__in=array_statut_traitement_livre)

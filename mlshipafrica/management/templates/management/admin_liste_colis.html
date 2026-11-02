@@ -49,9 +49,9 @@
 												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
 												<th class="fw-bold">Options</th>
 												{% endif %}
-												<th class="fw-bold">Coût Service ({{ configuration.monnaie|default:'FCFA' }})</th>
+												{% if 'argent' in droits %}<th class="fw-bold">Coût Service ({{ configuration.monnaie|default:'FCFA' }})</th>{% endif %}
 												<th class="fw-bold">Statut</th>
-												<th class="fw-bold">Paiement service</th>
+												{% if 'argent' in droits %}<th class="fw-bold">Paiement service</th>{% endif %}
 												<th class="fw-bold">Actions</th>
 											</tr>
 										</thead>
@@ -74,19 +74,19 @@
 													{% endif %}
 												</td>
 												{% endif %}
-												<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.montant_total_frais|floatformat:-2|intcomma }}</td>
+												{% if 'argent' in droits %}<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.montant_total_frais|floatformat:-2|intcomma }}</td>{% endif %}
 												<td><span class="badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
-												<td>
+												{% if 'argent' in droits %}<td>
 												{% if article.etat_reglement is True %}
 													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span>
 												{% else %}
 													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
 												{% endif %}
-												</td>
+												</td>{% endif %}
 												<td>
 													<div class="btn-list">
 														<a href="{% url 'management:management_admin_detail_colis' article.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
-														<a href="{% url 'management:management_vendeur_facture_colis' article.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14"><i class="fe fe-file"></i></a>
+
 													</div>
 												</td>
 											</tr>

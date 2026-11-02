@@ -5,6 +5,7 @@ import signal
 import subprocess
 from django.utils import timezone
 from django.http import Http404, HttpResponse, JsonResponse
+from mlshipafrica.droits import a_le_droit
 from django.shortcuts import redirect, render
 from django.conf import settings
 # from allauth.socialaccount.models import SocialAccount
@@ -52,7 +53,7 @@ def index(request):
                 profil_staff_pk = profil_staff.pk
                 stats_articles = get_global_article_stats(request)
                 stats_vendeurs = get_global_vendeurs_stats(request)
-                top_vendeurs = get_top_n_vendeurs(request, 5, 'ca')
+                top_vendeurs = get_top_n_vendeurs(request, 5, 'ca' if a_le_droit(user, 'argent') else 'articles')
             except ProfilStaff.DoesNotExist:
                 profil_staff_pk = None
                 profil_staff = None

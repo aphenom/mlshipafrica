@@ -241,3 +241,29 @@ class FormatArticle(MyModelAbstract):
         db_table_comment = "Les formats des colis à traiter"
 
       
+
+""" Journal d'audit : qui a fait quoi, quand, avec l'ancienne et la nouvelle valeur. Jamais modifié. """
+class JournalAudit(models.Model):
+
+    CREATION = 'creation'
+    MODIFICATION = 'modification'
+    SUPPRESSION = 'suppression'
+    ACTIONS = ((CREATION, 'Création'), (MODIFICATION, 'Modification'), (SUPPRESSION, 'Suppression'))
+
+    date = models.DateTimeField('Date', auto_now_add=True, db_index=True)
+    utilisateur = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='journal_audit', verbose_name='utilisateur')
+    role = models.CharField('Rôle', max_length=25, blank=True, default='')
+    action = models.CharField('Action', max_length=15, choices=ACTIONS)
+    modele = models.CharField('Objet', max_length=60, db_index=True)
+    objet_id = models.CharField('Identifiant', max_length=40, db_index=True)
+    objet_code = models.CharField('Code', max_length=40, blank=True, default='', db_index=True)
+    avant = models.JSONField('Avant', null=True, blank=True)
+    apres = models.JSONField('Après', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Ligne du journal d'audit"
+        verbose_name_plural = "Journal d'audit"
+        ordering = ['-date']
+
+    def __str__(self):
+        return '%s %s %s' % (self.get_action_display(), self.modele, self.objet_code or self.objet_id)

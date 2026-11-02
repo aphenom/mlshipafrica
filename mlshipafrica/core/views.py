@@ -6,6 +6,7 @@ from django_dump_die.middleware import dd
 from management.models import Article, Encaissement, HistoriqueArticle, ProfilStaff, ReglementArticle, Reversement, Tarification, Vendeur
 from management.forms import ProfilStaffForm, TarificationForm, VendeurColisForm, VendeurForm
 from django.contrib.auth.decorators import login_required
+from mlshipafrica.droits import DROIT_PAR_PARAMETRE, verifier
 from django.http import Http404, HttpResponseRedirect
 
 from core.models import AchatLicense, Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
@@ -25,6 +26,8 @@ def _liste(request):
     #aucun module selectionné donc erreur 404
     if param == '':
         raise Http404 
+    # Droit vérifié côté serveur pour chaque module de paramètres (mlshipafrica/droits.py)
+    verifier(request.user, DROIT_PAR_PARAMETRE.get(param, 'licenses'))
     try:
         user = request.user
         profil_staff = user.account_profil_staff
@@ -105,6 +108,8 @@ def _new(request):
     #aucun module selectionné donc erreur 404
     if param == '':
         raise Http404 
+    # Droit vérifié côté serveur pour chaque module de paramètres (mlshipafrica/droits.py)
+    verifier(request.user, DROIT_PAR_PARAMETRE.get(param, 'licenses'))
     try:
         with transaction.atomic():
             user = request.user
@@ -316,6 +321,8 @@ def _edit(request, code):
     #aucun module selectionné donc erreur 404
     if param == '':
         raise Http404 
+    # Droit vérifié côté serveur pour chaque module de paramètres (mlshipafrica/droits.py)
+    verifier(request.user, DROIT_PAR_PARAMETRE.get(param, 'licenses'))
     try:
         with transaction.atomic():
             user = request.user

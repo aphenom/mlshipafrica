@@ -272,6 +272,27 @@ class ProfilStaffForm(forms.ModelForm):
         required=False,
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Seul le CEO peut créer ou nommer un compte CEO ou comptable (comptes qui voient l'argent)
+        user = get_current_user()
+        profil = getattr(user, 'account_profil_staff', None) if user else None
+        if not (profil and profil.role_profil == TypeProfilStaffChoice.SUPER):
+            reserves = (TypeProfilStaffChoice.SUPER, TypeProfilStaffChoice.COMPTABLE)
+            actuel = self.instance.role_profil if self.instance and self.instance.pk else None
+            self.fields['role_profil'].choices = [(v, l) for v, l in self.fields['role_profil'].choices
+                                                  if v not in reserves or v == actuel]
+
+    def clean_role_profil(self):
+        role = self.cleaned_data.get('role_profil')
+        user = get_current_user()
+        profil = getattr(user, 'account_profil_staff', None) if user else None
+        actuel = self.instance.role_profil if self.instance and self.instance.pk else None
+        if role in (TypeProfilStaffChoice.SUPER, TypeProfilStaffChoice.COMPTABLE) and role != actuel \
+                and not (profil and profil.role_profil == TypeProfilStaffChoice.SUPER):
+            raise forms.ValidationError("Seul le CEO peut attribuer ce rôle.")
+        return role
+
     class Meta:
         model = ProfilStaff
         exclude = ['date_creation', 'date_modification']
