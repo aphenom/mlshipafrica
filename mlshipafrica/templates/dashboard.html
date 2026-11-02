@@ -337,6 +337,16 @@
 		
 
 		{% else%}
+			{% if cartes_resultats %}
+			<div class="row">
+				{% for c in cartes_resultats %}
+				<div class="col-md-4"><div class="card"><div class="card-body">
+					<p class="text-muted mb-1">{{ c.nom }} · ce mois</p>
+					<h2 class="mb-0">{{ c.valeur }}</h2><div class="small">{{ c.indicateur }}{% if c.taux is not None %} · taux de livraison {{ c.taux }} %{% if c.taux_min %} (minimum {{ c.taux_min }} %){% endif %}{% endif %}{% if c.prochain_seuil %} · prochain palier : {{ c.prochain_seuil }}{% endif %}</div>
+				</div></div></div>
+				{% endfor %}
+			</div>
+			{% endif %}
 
 			<div class="row">
 				<div class="col-sm-6 col-xl-4 col-lg-6">

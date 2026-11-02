@@ -31,6 +31,7 @@ urlpatterns = [
     path('admin_stock/', views.admin_stock, name='management_admin_stock'),
     path('admin_releves/', views.admin_releves, name='management_admin_releves'),
     path('admin_benefice/', views.admin_benefice, name='management_admin_benefice'),
+    path('admin_commissions/', views.admin_commissions, name='management_admin_commissions'),
     path('vendeur_releves/', views.vendeur_releves, name='management_vendeur_releves'),
     path('vendeur_stock/', views.vendeur_stock, name='management_vendeur_stock'),
 ]

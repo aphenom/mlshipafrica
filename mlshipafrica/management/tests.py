@@ -813,3 +813,65 @@ class ArgentTests(TestCase):
         page = self.client.get('/management/vendeur_releves/')
         self.assertEqual(page.status_code, 200)
         self.assertNotIn('prestataire', page.content.decode().lower())
+
+
+class CommissionsTests(TestCase):
+    """Test de fin de lot : désactivées, elles n'affichent rien ; activées, seuls les comptes choisis voient leur carte, en volumes."""
+
+    def setUp(self):
+        from management.models import CommissionConfig, ProfilStaff
+        from management.confirmation import enregistrer_appel
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        license, config, abidjan, petit, *_ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        self.comptes = {}
+        for nom, role in (('a1', R.AGENT), ('a2', R.AGENT), ('ceo', R.SUPER), ('cpt', R.COMPTABLE)):
+            u = User.objects.create(username='k' + nom, email=nom + '@k.ci', is_staff=True, first_name=nom.upper())
+            ProfilStaff.objects.create(user=u, license=license, role_profil=role)
+            self.comptes[nom] = u
+        vendeur = vendeur_pour(license)
+        for i in range(4):
+            a = Article(vendeur=vendeur, license=license, config=config, localite_depart=abidjan,
+                        localite_arrivee=Localite.objects.get(nom='Bouaké'), format_article=petit, valeur=10000, quantite=1,
+                        is_option_encaissement=True)
+            a.save()
+            a.statut_traitement = S.EN_ATTENTE_DEPOT
+            a.save()
+            enregistrer_appel(a, self.comptes['a1'], 'confirme')
+        self.config = CommissionConfig.objects.create(nom='Prime confirmation', departement='agent', type='fixe',
+                                                      indicateur='confirmees', montant_unitaire=500, license=license)
+        self.config.comptes.add(self.comptes['a1'].account_profil_staff)
+
+    def page(self, nom, url='/'):
+        self.client.force_login(self.comptes[nom])
+        return self.client.get(url).content.decode()
+
+    def test_desactivee_rien_ne_s_affiche(self):
+        self.assertNotIn('Prime confirmation', self.page('a1'))
+        self.assertIn('Aucune commission active', self.page('ceo', '/management/admin_commissions/'))
+
+    def test_activee_carte_en_volumes_pour_les_comptes_choisis(self):
+        self.config.actif = True
+        self.config.save()
+        page = self.page('a1')
+        self.assertIn('Prime confirmation', page)
+        self.assertIn('Commandes confirmées', page)
+        self.assertNotIn('2 000', page)                                  # 4 × 500 F : jamais montré à l'agent
+        self.assertNotIn('Prime confirmation', self.page('a2'))           # pas choisi
+        self.assertIn('2 000 F', self.page('ceo', '/management/admin_commissions/').replace(' ', ' ').replace('\xa0', ' '))
+
+    def test_droits(self):
+        self.client.force_login(self.comptes['a1'])
+        self.assertEqual(self.client.get('/management/admin_commissions/').status_code, 403)
+        self.client.force_login(self.comptes['cpt'])
+        self.assertEqual(self.client.get('/management/admin_commissions/').status_code, 200)
+        self.assertEqual(self.client.post('/management/admin_commissions/', {'config': self.config.pk, 'basculer': '1'}).status_code, 403)
+
+    def test_paliers(self):
+        from management.commissions import montant
+        self.config.type = 'objectif'
+        self.config.paliers = [{'seuil': 3, 'montant': 10000}, {'seuil': 10, 'montant': 30000}]
+        self.assertEqual(int(montant(self.config, {'confirmees': 4, 'taux_livraison': 100})), 10000)
+        self.assertEqual(int(montant(self.config, {'confirmees': 2, 'taux_livraison': 100})), 0)
+        self.config.taux_livraison_minimum = 60
+        self.assertEqual(int(montant(self.config, {'confirmees': 4, 'taux_livraison': 50})), 0)

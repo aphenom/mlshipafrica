@@ -288,3 +288,22 @@ class SourceCommande(models.TextChoices):
     DIRECTE = 'directe', 'Espace vendeur'
     WOURA = 'woura', 'Woura'
     API = 'api', 'API vendeur'
+
+
+class DepartementCommission(models.TextChoices):
+    AGENT = 'agent', 'Agents COD'
+    MANAGER = 'manager', 'Manager'
+    COMMERCIAL = 'commercial', 'Commerciaux'
+
+
+class TypeCommission(models.TextChoices):
+    FIXE = 'fixe', 'Fixe par unité'
+    OBJECTIF = 'objectif', 'Par objectif (paliers)'
+
+
+class IndicateurCommission(models.TextChoices):
+    CONFIRMEES = 'confirmees', 'Commandes confirmées'
+    LIVRES_CONFIRMES = 'livres_confirmes', 'Colis livrés parmi ses confirmations'
+    LIVRES = 'livres', 'Colis livrés (tous)'
+    VENDEURS_ACTIVES = 'vendeurs_actives', 'Vendeurs activés'
+    LIVRES_VENDEURS = 'livres_vendeurs', 'Colis livrés de ses vendeurs'

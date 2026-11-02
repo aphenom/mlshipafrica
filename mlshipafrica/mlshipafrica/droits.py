@@ -30,6 +30,7 @@ DROITS = {
     'releves': {CEO, COMPTABLE},                       # relevés vendeurs, versements
     'benefice': {CEO, COMPTABLE},                      # journal en temps réel, bénéfice, fichier prestataire
     'commissions_regler': {CEO},                       # paramétrer les commissions
+    'commissions_voir': {CEO, COMPTABLE},              # montants des commissions
 
     # Colis
     'colis_voir': {CEO, COMPTABLE, MANAGER, AGENT},

@@ -54,6 +54,12 @@ def index(request):
                 stats_articles = get_global_article_stats(request)
                 stats_vendeurs = get_global_vendeurs_stats(request)
                 top_vendeurs = get_top_n_vendeurs(request, 5, 'ca' if a_le_droit(user, 'argent') else 'articles')
+                # Cartes de résultats (volumes seulement) si une commission active concerne ce compte
+                from management.commissions import cartes_pour
+                from django.utils import timezone as tz_
+                from datetime import datetime as dt_, time as tm_, timedelta as td_
+                _debut = tz_.make_aware(dt_.combine(tz_.localdate().replace(day=1), tm_.min))
+                cartes_resultats = cartes_pour(profil_staff, _debut, tz_.now() + td_(seconds=1))
             except ProfilStaff.DoesNotExist:
                 profil_staff_pk = None
                 profil_staff = None

@@ -8,7 +8,7 @@ from tinymce.models import HTMLField
 from core.models import Configuration, FormatArticle, License, Localite, PartenaireLogistique, Zone
 from mlshipafrica.utils import CodeGenerator
 
-from mlshipafrica.enums import MoyenVersement, SourceCommande, StatutReleve, TypeEcriture, StatutEntreeStock, TypeMouvementStock, EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
+from mlshipafrica.enums import DepartementCommission, IndicateurCommission, TypeCommission, MoyenVersement, SourceCommande, StatutReleve, TypeEcriture, StatutEntreeStock, TypeMouvementStock, EtatConfirmation, StatutAcompte, ReseauPaiement, ResultatAppel, STATUT_TRAITEMENT_COMMENTAIRES, STATUT_TRAITEMENT_ICONES, STATUT_VENDEUR_COULEURS, DureeActiviteChoice, FrequenceEnvoiChoice, NombreColisSemaineChoice, ProduitsChoice, StatutTraitement, STATUT_TRAITEMENT_COULEURS, StatutVendeur, TypePieceIdentiteChoice, TypeProfilStaffChoice, TypeVendeurChoice
 
 from django.db.models.signals import pre_save, post_save, m2m_changed
 from django.dispatch import receiver
@@ -784,3 +784,29 @@ class Ecriture(models.Model):
     class Meta:
         ordering = ['-date']
         indexes = [models.Index(fields=['vendeur', 'releve'], name='ecriture_vendeur_releve_idx')]
+
+
+""" Commissions de l'équipe (réglées par le CEO, désactivées par défaut) """
+class CommissionConfig(models.Model):
+
+    nom = models.CharField("Nom", max_length=100)
+    departement = models.CharField("Département", max_length=12, choices=DepartementCommission.choices)
+    type = models.CharField("Type", max_length=10, choices=TypeCommission.choices, default=TypeCommission.FIXE)
+    indicateur = models.CharField("Compté sur", max_length=20, choices=IndicateurCommission.choices)
+    montant_unitaire = models.DecimalField("Montant par unité (type fixe)", max_digits=10, decimal_places=2, default=0)
+    paliers = models.JSONField("Paliers (type objectif)", default=list, blank=True,
+                               help_text='Liste de {"seuil": 300, "montant": 25000}, du plus petit au plus grand.')
+    taux_livraison_minimum = models.PositiveSmallIntegerField(
+        "Taux de livraison minimum (%)", default=0, help_text="Agents : pas de commission en dessous de ce taux de livraison de leurs confirmations.")
+    comptes = models.ManyToManyField(ProfilStaff, blank=True, related_name='commissions', verbose_name="comptes concernés")
+    actif = models.BooleanField("Active", default=False)
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='commissions')
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Commission'
+        verbose_name_plural = 'Commissions'
+        ordering = ['departement', 'nom']
+
+    def __str__(self):
+        return self.nom

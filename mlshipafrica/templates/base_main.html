@@ -765,6 +765,9 @@
 							{% if 'releves' in droits %}
 							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_releves' %} active {% endif %}" href="{% url 'management:management_admin_releves' %}"><i class="bx bx-receipt side-menu__icon"></i><span class="side-menu__label">Relevés vendeurs</span></a></li>
 							{% endif %}
+							{% if 'commissions_voir' in droits %}
+							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_commissions' %} active {% endif %}" href="{% url 'management:management_admin_commissions' %}"><i class="bx bx-award side-menu__icon"></i><span class="side-menu__label">Commissions</span></a></li>
+							{% endif %}
 							{% if 'benefice' in droits %}
 							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_benefice' %} active {% endif %}" href="{% url 'management:management_admin_benefice' %}"><i class="bx bx-line-chart side-menu__icon"></i><span class="side-menu__label">Journal et bénéfice</span></a></li>
 							{% endif %}

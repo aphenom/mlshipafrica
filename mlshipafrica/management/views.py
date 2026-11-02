@@ -1157,3 +1157,68 @@ def admin_benefice(request):
     resultat = journal(profil_staff.license, debut, fin)
     dernier_import = request.session.pop('dernier_import', None)
     return render(request, 'management/admin_benefice.html', locals())
+
+
+# ---------------------------------------------------------------------------
+# Commissions (réglées par le CEO ; montants pour le CEO et la comptable)
+# ---------------------------------------------------------------------------
+
+@login_required
+@droit_requis('commissions_voir')
+def admin_commissions(request):
+    import json
+    from management.commissions import tableau
+    from management.models import CommissionConfig
+    from mlshipafrica.enums import DepartementCommission, IndicateurCommission, TypeCommission
+    user = request.user
+    profil_staff = user.account_profil_staff
+    peut_regler = a_le_droit(user, 'commissions_regler')
+    configs = CommissionConfig.objects.filter(license=profil_staff.license).prefetch_related('comptes__user')
+    comptes_equipe = ProfilStaff.objects.filter(license=profil_staff.license, etat_suppression=False,
+                                                role_profil__in=(TypeProfilStaffChoice.AGENT, TypeProfilStaffChoice.MANAGER,
+                                                                 TypeProfilStaffChoice.COMMERCIAL)).select_related('user')
+    if request.method == 'POST':
+        if not peut_regler:
+            raise PermissionDenied("Seul le CEO règle les commissions.")
+        try:
+            config = configs.filter(pk=request.POST.get('config')).first() or CommissionConfig(license=profil_staff.license)
+            if request.POST.get('basculer'):
+                config.actif = not config.actif
+                config.save()
+            else:
+                config.nom = (request.POST.get('nom') or '').strip()[:100] or 'Commission'
+                config.departement = request.POST.get('departement')
+                config.type = request.POST.get('type')
+                config.indicateur = request.POST.get('indicateur')
+                if config.departement not in DepartementCommission.values or config.type not in TypeCommission.values \
+                        or config.indicateur not in IndicateurCommission.values:
+                    raise ValidationError("Département, type ou indicateur inconnu.")
+                config.montant_unitaire = Decimal(request.POST.get('montant_unitaire') or 0)
+                config.taux_livraison_minimum = int(request.POST.get('taux_livraison_minimum') or 0)
+                paliers = []
+                for ligne in (request.POST.get('paliers') or '').splitlines():
+                    if ':' in ligne:
+                        seuil, montant_palier = ligne.split(':', 1)
+                        paliers.append({'seuil': int(seuil.strip()), 'montant': int(montant_palier.strip().replace(' ', ''))})
+                config.paliers = paliers
+                config.save()
+                config.comptes.set(comptes_equipe.filter(code__in=request.POST.getlist('comptes'),
+                                                         role_profil=config.departement))
+            django_messages.success(request, "Commission « %s » enregistrée." % config.nom)
+        except (ValidationError, ValueError, ArithmeticError) as erreur:
+            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Saisie invalide (paliers : une ligne « seuil : montant »)."])))
+        return redirect(reverse('management:management_admin_commissions') + '?' + request.GET.urlencode())
+    debut, fin, periode, jour_debut, jour_fin = _periode(request) if request.GET.get('periode') else _periode_mois()
+    lignes = tableau(profil_staff.license, debut, fin)
+    total = sum((l['montant'] for l in lignes), Decimal('0'))
+    departements, types, indicateurs = DepartementCommission.choices, TypeCommission.choices, IndicateurCommission.choices
+    return render(request, 'management/admin_commissions.html', locals())
+
+
+def _periode_mois():
+    from datetime import datetime, time as dtime
+    aujourd_hui = timezone.localdate()
+    debut = aujourd_hui.replace(day=1)
+    tz = timezone.get_current_timezone()
+    return (timezone.make_aware(datetime.combine(debut, dtime.min), tz),
+            timezone.make_aware(datetime.combine(aujourd_hui + timedelta(days=1), dtime.min), tz), 'mois', debut, aujourd_hui)
