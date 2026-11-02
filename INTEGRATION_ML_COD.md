@@ -1,6 +1,6 @@
 # Intégration : zones 2 à 6, SMS HSMS, tenue à 1 000 colis par jour
 
-Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 7 commits :
+Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 13 commits :
 
 1. **Zones 2 à 6, grille ML COD, circuit des statuts, robustesse** (`core`, `management`)
 2. **Module SMS HSMS** (nouvelle app `sms`, `settings.py`, `urls.py`)
@@ -9,6 +9,12 @@ Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 7
 5. Mise à jour de ce guide
 6. **Confirmation des commandes et acomptes** (voir section 10)
 7. Mise à jour de ce guide
+8. **Circuit complet et retours** (section 11)
+9. **Stock** (section 12)
+10. **Argent : relevés, bénéfice, fichier prestataire** (section 13)
+11. **Commissions** (section 14)
+12. **Intégrations : Woura et API vendeur** (section 15)
+13. Mise à jour de ce guide
 
 Aucune nouvelle dépendance Python : tout tourne avec le `requirements.txt` actuel.
 
@@ -25,8 +31,8 @@ git am ml-cod-interieur-*.patch        # ou : git pull du dépôt fourni
 
 ```bash
 cd mlshipafrica
-python manage.py migrate                               # core 0007-0009, management 0022-0025, sms 0001-0002
-python manage.py test management sms                   # 51 tests, tous doivent passer
+python manage.py migrate                               # core 0007-0010, management 0022-0029, sms 0001-0004, integrations 0001
+python manage.py test management sms integrations      # puis : python manage.py test management sms integrations  (81 tests)
 python manage.py appliquer_grille_ml_cod --dry-run     # LIRE le rapport : rien n'est écrit
 ```
 
@@ -61,13 +67,17 @@ Voir `.env.example`. Nouvelles variables :
 ## 4. Tâches planifiées
 
 ```bash
-python manage.py crontab add      # installe les 3 tâches ci-dessous
+python manage.py crontab add      # installe les 7 tâches ci-dessous
 python manage.py crontab show
 ```
 
 | Quand | Commande | Rôle |
 |---|---|---|
 | chaque minute | `sms_envoyer` | Envoie les SMS en file |
+| chaque minute | `integrations_envoyer` | Événements vers Woura et webhooks des vendeurs |
+| 8 h | `retours_quotidien` | Rappels J5, J7, J8, J10 et garde des retours |
+| 23 h 55 | `stockage_quotidien` | Coût de stockage du jour |
+| lundi et jeudi, 6 h | `releves_vendeurs` | Relevés des vendeurs |
 | toutes les 10 min | `sms_accuses` | Statuts de livraison (secours du webhook) et solde |
 | 19 h | `sms_resume_soir` | Résumé aux vendeurs. Ne fait rien tant qu'il est désactivé |
 
@@ -192,3 +202,93 @@ Correction au passage : le détail d'un colis plantait (erreur 500) quand un mou
 - La migration 0025 marque « confirmés » les colis déjà partis, pour qu'ils n'encombrent pas la file des agents.
 - Les colis encore chez le vendeur ou au hub entrent dans la file.
 - L'agent COD affecté au vendeur est reporté sur ses colis.
+
+## 11. Circuit complet des statuts et retours (commit 8)
+
+**Le circuit**
+
+- **Aller** : en attente → ramassé ou déposé → en transit → en cours de livraison → arrivé.
+- **Livraison** : arrivé → livré, ou échec. Un échec peut être reconduit pour une nouvelle tentative, ou repartir.
+- **Retour** : en retour vers Abidjan → revenu à Abidjan.
+- **Une fois revenu à Abidjan**, le colis peut être :
+  - substitué : nouveau client, le colis repasse par « Déposé » ;
+  - retourné au vendeur ;
+  - remis en stock, ou mis de côté s'il est abîmé (vendeurs en stockage seulement) ;
+  - abandonné, seulement après J30.
+- **Réservé au manager et au CEO** : « Revenu à Abidjan », « Retourné », « Remis en stock », « Mis de côté » et « Abandonné ».
+
+**L'argent des retours**
+
+- Les **frais de retour** (50 % des frais ML) sont facturés au passage « En retour ». Ils se cumulent si le colis revient plusieurs fois.
+- La **tâche `retours_quotidien`** envoie un SMS au vendeur à J0, J5, J7, J8 et J10. Elle compte la garde de 500 F par jour dès J11, plafonnée à 10 000 F, et liste les colis à déclarer abandonnés à J30. Elle peut être relancée sans compter deux fois.
+- **Vendeurs en stockage** : ni garde, ni rappels.
+
+**Substitution et suivi**
+
+- Le **vendeur** donne un nouveau client depuis la page de son colis. Les frais sont recalculés et le colis doit être reconfirmé.
+- Le **parcours SMS repart** pour le nouveau client.
+- **Nouveaux onglets** : « À sauver (48 h sans mouvement) » et « Revenus à Abidjan ».
+
+## 12. Stock (commit 9)
+
+- **Activation** : option « Vendeur en stockage » sur la fiche vendeur (bloc « Suivi par l'équipe »).
+- **Arrivée du stock** : le vendeur annonce son envoi dans « Mon stock ». Le manager le contrôle dans « Stock » et saisit les quantités reçues ; les écarts restent visibles. Le vendeur reçoit le SMS `v_stock`.
+- **Commandes** : le vendeur choisit le produit de son stock.
+  - Le stock sort à la validation de la commande. C'est refusé si le stock est insuffisant.
+  - Le stock revient si la commande est annulée avant l'expédition.
+  - Il ressort si la commande est relancée.
+- **Retours** : un colis revenu en bon état est « Remis en stock ». Un colis abîmé est « Mis de côté » et n'est plus compté comme disponible.
+- **Inventaire** : chaque ajustement demande un motif. Aucun mouvement de stock n'est jamais modifié.
+- **Coût du stockage** : chaque jour, pièces en stock × `tarif_stockage_jour` (10 F par défaut). Il est déduit des relevés.
+
+## 13. Argent : relevés, bénéfice, fichier prestataire (commit 10)
+
+- **Écritures** (`management/finance.py`) : chaque mouvement d'argent est une écriture liée au colis, jamais modifiée. Pour chaque colis, on compare ce qui devrait être compté à ce qui l'est déjà, et seule la différence est écrite.
+  - Ce qui est compté : frais et collecte à la livraison, retours, garde, stockage, et le coût prestataire à chaque départ (figé au départ).
+  - Revenir sur une livraison crée une écriture de correction, sans rien effacer.
+- **Relevés vendeurs** (lundi et jeudi, ou bouton « Générer maintenant »).
+  - Calcul : encaissé − frais − retours − garde − stockage.
+  - La comptable les marque versés (moyen, référence), et les colis encaissés passent « Reversé ».
+  - Les colis suivis par les relevés ne peuvent plus être reversés à l'unité dans l'ancien écran, ce qui évite un double paiement.
+- **Le vendeur** voit « Mes relevés » et y saisit ses coordonnées de versement. Il reçoit un SMS de sécurité à chaque changement.
+- **Journal et bénéfice** (CEO et comptable) : jour, semaine, mois ou dates libres. On y voit les revenus, le coût prestataire, le bénéfice, les livrés, les départs, les acomptes et les colis engagés.
+- **Fichier du prestataire** : import CSV avec une colonne référence (code tracking ou code colis) et une colonne montant. Les lignes sont rapprochées des départs et les écarts s'affichent.
+- **Mise en service, une fois** :
+  1. Terminer les reversements en cours dans l'ancien écran.
+  2. Lancer `python manage.py reprise_comptable --dry-run`, puis la même commande sans `--dry-run`.
+  3. Les colis déjà reversés par l'ancien outil sont ignorés.
+- **Test de fin de lot** : sur 50 colis, le relevé, le journal et le fichier prestataire tombent juste au franc près.
+
+## 14. Commissions (commit 11)
+
+- **Réglage par le CEO** : département, type (fixe par unité, ou par objectif avec des paliers), indicateur, taux de livraison minimum et comptes concernés. Une commission est toujours créée désactivée.
+- **Montants** : le CEO et la comptable les voient dans le menu « Commissions ».
+- **Comptes concernés** : ils voient sur leur tableau de bord une carte du mois, en **volumes seulement**, jamais de montant.
+
+## 15. Intégrations : Woura et API vendeur (commit 12)
+
+**Woura**
+
+- **Variables d'environnement** : `WOURA_API_KEY` (wk_test… puis wk_live…), `WOURA_WEBHOOK_SECRET`, `WOURA_BASE_URL`, `WOURA_EVENTS_PATH` (par défaut `/shipments/{id}/events`).
+- **Webhook à déclarer chez Woura** : `https://app.mlcodinterieur.com/integrations/woura/webhook/`.
+- **Commandes entrantes** : la signature est vérifiée (HMAC-SHA256 « t.corps », tolérance 5 min). Chaque événement n'est traité qu'une fois. La commande arrive « En attente de dépôt » et entre dans la file de confirmation.
+- **Événements renvoyés à Woura** : accepted, in_transit, delivered (avec delivery_fee), failed, rescheduled, returned, cancelled. Le livreur déclaré est toujours « ML COD Intérieur », avec le numéro du service client.
+- **Zones** : `python manage.py woura_zones` affiche la liste, `--envoyer` la transmet (PUT /zones).
+- **À confirmer avec Woura avant la mise en ligne** : le format exact du JSON reçu et envoyé, et l'URL des événements. Tout est regroupé dans `integrations/service.py`, fonctions `lire_shipment` et `evenement_woura`.
+
+**API vendeur** (pour WooCommerce, Shopify, Google Sheets ou tout site, via n8n, Make ou un script)
+
+- **Activation** : le vendeur l'active dans « Intégrations ». Il y trouve ses clés de test et de production (régénérables), et l'URL de son webhook signé (`X-MLCOD-Signature`).
+- **Appels** :
+  - `POST /integrations/api/v1/colis/`
+  - `GET /integrations/api/v1/colis/`
+  - `GET /integrations/api/v1/colis/<code>/`
+  - `GET /integrations/api/v1/tarifs/`
+- **Garde-fous** :
+  - Une commande créée avec la clé de test ne part jamais.
+  - Une même référence ne crée qu'une commande.
+  - Aucune donnée interne dans les réponses.
+
+**Journal** : tous les appels entrants et sortants sont gardés. Le vendeur voit les siens. La direction voit tout dans l'administration Django, rubrique « Journal des intégrations ».
+
+**Correction au passage** : un enregistrement fait sans utilisateur connecté (webhook, API) plantait sur `creation_par`. Il passe maintenant.
