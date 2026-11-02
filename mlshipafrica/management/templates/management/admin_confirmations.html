@@ -47,7 +47,7 @@
 										<div class="text-end">
 											<span class="badge {% if article.etat_confirmation == 'injoignable' %}bg-warning{% else %}bg-info{% endif %}">{{ article.get_etat_confirmation_display }}</span>
 											<div class="small text-muted mt-1">{{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }} · créé {{ article.date_creation|naturaltime }}</div>
-											<div class="small text-muted">Agent : {{ article.agent_cod.user.get_full_name|default:article.agent_cod.code|default:"aucun" }}</div>
+											<div class="small text-muted">Agent : {% if article.agent_cod %}{{ article.agent_cod.user.get_full_name|default:article.agent_cod.email|default:article.agent_cod.code }}{% else %}aucun{% endif %}</div>
 										</div>
 									</div>
 									<form method="post" class="row g-2 mt-2 align-items-end">

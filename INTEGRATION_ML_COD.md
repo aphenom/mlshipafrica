@@ -1,6 +1,6 @@
 # Intégration : zones 2 à 6, SMS HSMS, tenue à 1 000 colis par jour
 
-Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 13 commits :
+Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 14 commits :
 
 1. **Zones 2 à 6, grille ML COD, circuit des statuts, robustesse** (`core`, `management`)
 2. **Module SMS HSMS** (nouvelle app `sms`, `settings.py`, `urls.py`)
@@ -15,6 +15,7 @@ Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 1
 11. **Commissions** (section 14)
 12. **Intégrations : Woura et API vendeur** (section 15)
 13. Mise à jour de ce guide
+14. **Correctif page Confirmations** et recette de toutes les pages par rôle (`management/tests_pages.py`)
 
 Aucune nouvelle dépendance Python : tout tourne avec le `requirements.txt` actuel.
 
@@ -32,7 +33,7 @@ git am ml-cod-interieur-*.patch        # ou : git pull du dépôt fourni
 ```bash
 cd mlshipafrica
 python manage.py migrate                               # core 0007-0010, management 0022-0029, sms 0001-0004, integrations 0001
-python manage.py test management sms integrations      # puis : python manage.py test management sms integrations  (81 tests)
+python manage.py test management sms integrations      # puis : python manage.py test management sms integrations  (82 tests, dont la recette : chaque rôle ouvre toutes les pages)
 python manage.py appliquer_grille_ml_cod --dry-run     # LIRE le rapport : rien n'est écrit
 ```
 
