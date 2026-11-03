@@ -6,7 +6,7 @@ from io import StringIO
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from core.models import Configuration, FormatArticle, License, Localite, Zone
 from management.grille_ml_cod import LOCALITES, TARIFS_ML
@@ -773,7 +773,7 @@ class ArgentTests(TestCase):
         self.assertEqual((j['livres'], j['departs']), (attendu['livres'], attendu['departs']))
 
         # Fichier prestataire : tous les départs facturés au prix prévu, sauf un facturé 100 F de plus
-        lignes = ['reference;montant']
+        lignes = ['reference;cout']
         for i, depart in enumerate(Depart.objects.select_related('article').order_by('pk')):
             lignes.append('%s;%d' % (depart.article.code, int(depart.cout_prevu) + (100 if i == 0 else 0)))
         bilan = importer_fichier_prestataire(self.license, SimpleUploadedFile('f.csv', '\n'.join(lignes).encode()))
@@ -875,3 +875,156 @@ class CommissionsTests(TestCase):
         self.assertEqual(int(montant(self.config, {'confirmees': 2, 'taux_livraison': 100})), 0)
         self.config.taux_livraison_minimum = 60
         self.assertEqual(int(montant(self.config, {'confirmees': 4, 'taux_livraison': 50})), 0)
+
+
+def xlsx_prestataire(lignes, notes, nom_onglet='Novembre'):
+    """Petit .xlsx comme l'export Google Sheets du prestataire : en-tête en ligne 1, commentaires sur des cellules."""
+    import io, zipfile
+    from xml.sax.saxutils import escape
+
+    def cellule(ref, v):
+        if isinstance(v, (int, float)):
+            return '<c r="%s"><v>%s</v></c>' % (ref, v)
+        return '<c r="%s" t="inlineStr"><is><t>%s</t></is></c>' % (ref, escape(str(v)))
+    lettres = 'ABCDEFGHIJ'
+    rows = ''.join('<row r="%d">%s</row>' % (i + 1, ''.join(cellule('%s%d' % (lettres[j], i + 1), v)
+                                                            for j, v in enumerate(l) if v is not None)) for i, l in enumerate(lignes))
+    coms = ''.join('<comment ref="%s" authorId="0"><text><r><t xml:space="preserve">%s</t></r></text></comment>' % (ref, escape(t))
+                   for ref, t in notes.items())
+    b = io.BytesIO()
+    with zipfile.ZipFile(b, 'w') as z:
+        ns = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+        z.writestr('xl/workbook.xml', '<workbook %s><sheets><sheet name="Octobre" sheetId="1" r:id="rId1"/><sheet name="%s" sheetId="2" r:id="rId2"/></sheets></workbook>' % (ns, nom_onglet))
+        z.writestr('xl/_rels/workbook.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="x" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="x" Target="worksheets/sheet2.xml"/></Relationships>')
+        z.writestr('xl/worksheets/sheet1.xml', '<worksheet %s><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>vide</t></is></c></row></sheetData></worksheet>' % ns)
+        z.writestr('xl/worksheets/sheet2.xml', '<worksheet %s><sheetData>%s</sheetData></worksheet>' % (ns, rows))
+        z.writestr('xl/worksheets/_rels/sheet2.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="../comments1.xml"/></Relationships>')
+        z.writestr('xl/comments1.xml', '<comments xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><authors><author>a</author></authors><commentList>%s</commentList></comments>' % coms)
+    return b.getvalue()
+
+
+@override_settings(NOMS_A_MASQUER=['acme'])
+class FichierPrestataireTests(TestCase):
+    """Le fichier du prestataire tel qu'il l'envoie : commandes, statuts, commentaires, rien sur le coût sans colonne coût."""
+
+    def setUp(self):
+        from management.models import ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        self.license, config, abidjan, petit, *_ = base_ancienne()
+        call_command('appliquer_grille_ml_cod', stdout=StringIO())
+        self.vendeur = vendeur_pour(self.license)
+        self.colis = []
+        for i, statut in enumerate((S.EN_TRANSIT, S.ARRIVE, S.LIVRE_PAYE)):
+            a = Article(vendeur=self.vendeur, license=self.license, config=config, localite_depart=abidjan,
+                        localite_arrivee=Localite.objects.get(nom='Bouaké'), format_article=petit, valeur=14900,
+                        quantite=1, is_option_encaissement=True, designation='Crème %d' % i)
+            a.save()
+            for st in (S.EN_ATTENTE_DEPOT, S.DEPOT, S.EN_TRANSIT) + ((statut,) if statut != S.EN_TRANSIT else ()):
+                a.statut_traitement = st
+                a.save()
+            self.colis.append(a)
+        self.colis[1].reference_externe = '7002'
+        self.colis[1].save()
+        self.comptes = {}
+        for role in (R.SUPER, R.MANAGER, R.AGENT):
+            u = User.objects.create(username='u-' + role, email=role + '@test.ci', is_staff=True)
+            ProfilStaff.objects.create(user=u, license=self.license, role_profil=role)
+            self.comptes[role] = u
+
+    def fichier(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        lignes = [
+            [None, 'Fiche', 'AGENT ACME', 'Numéro de commande', 'Montant ', 'Type de livraison', 'Adresse de livraison détaillée', 'Statut', 'date de retait'],
+            [None, None, 'BROU', self.colis[0].code, 14900, 'Livraison post payée', 'ACME-COD: acompte 2000 via Wave, reste à payer 14 900', 'livré', '02-11-26'],
+            [None, None, 'BROU', 7002, 16500, 'Livraison post payée', 'total à payer', 'arrivé', None],
+            [None, None, 'BROU', self.colis[2].code, 14900, 'Livraison post payée', 'total à payer', 'livré', 46328],
+            [None, None, 'DORINE', 'ML999', 9400, 'Livraison post payée', 'total à payer', 'en transit', None],
+            [None, None, 'DORINE', 'ML999', 9400, 'Livraison post payée', 'total à payer', 'en transit', None],
+        ]
+        notes = {'G2': '[Threaded comment]\nYour version of Excel...\nComment:\n\t0707070707 le bon numéro\nReply:\n\tclient passe ce soir (acme)\n',
+                 'G3': 'Agent:\ncolis arrivé, client injoignable'}
+        return SimpleUploadedFile('ACME COD semaine.xlsx', xlsx_prestataire(lignes, notes))
+
+    def test_import_relie_les_commandes_et_garde_les_commentaires(self):
+        from management.finance import importer_fichier_prestataire
+        from management.models import Depart
+        couts_avant = list(Depart.objects.values_list('cout_facture', flat=True))
+        bilan = importer_fichier_prestataire(self.license, self.fichier())
+        imp = bilan['import']
+        self.assertEqual((imp.onglet, bilan['lignes'], bilan['rapprochees'], bilan['inconnues']), ('Novembre', 5, 3, ['ML999', 'ML999']))
+        l1, l2, l3, l4, _ = imp.lignes.all()
+        self.assertEqual(l1.article, self.colis[0])
+        self.assertEqual(l1.commentaires, ['0707070707 le bon numéro', 'client passe ce soir'])
+        self.assertEqual(l2.article, self.colis[1])                       # relié par la référence de la commande
+        self.assertEqual(l2.commentaires, ['colis arrivé, client injoignable'])
+        self.assertEqual(int(l2.montant), 16500)
+        self.assertEqual(str(l1.date_retrait), '2026-11-02')
+        self.assertEqual(str(l3.date_retrait), '2026-11-02')             # date Excel en nombre
+        self.assertIsNone(l4.article)
+        textes = ' '.join(l.infos + l.agent + ' '.join(l.commentaires) for l in imp.lignes.all()).lower()
+        self.assertNotIn('acme', textes)                                   # le nom du prestataire n'est jamais enregistré
+        # « Montant » = à encaisser : aucun coût prestataire n'est modifié
+        self.assertEqual(list(Depart.objects.values_list('cout_facture', flat=True)), couts_avant)
+
+    def test_page_par_role(self):
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        self.client.force_login(self.comptes[R.MANAGER])
+        reponse = self.client.post('/management/admin_fichier_prestataire/', {'fichier': self.fichier()})
+        self.assertEqual(reponse.status_code, 302)
+        page = self.client.get(reponse['Location']).content.decode()
+        self.assertIn(self.colis[0].code, page)
+        self.assertIn('client passe ce soir', page)
+        self.assertIn('Inconnu chez nous', page)
+        self.assertIn('En double dans le fichier', page)
+        self.assertNotIn('Frais ML', page)                                # le manager ne voit pas l'argent
+        self.assertNotIn('ACME', page.upper())                               # ni dans le nom du fichier, ni dans les lignes
+        statut = self.client.get('/management/admin_fichier_prestataire/?filtre=statut').content.decode()
+        self.assertIn(self.colis[0].code, statut)                         # livré chez eux, en transit chez nous
+        self.client.force_login(self.comptes[R.SUPER])
+        page = self.client.get('/management/admin_fichier_prestataire/').content.decode()
+        self.assertIn('Frais ML', page)
+        self.assertIn('Coût partenaire', page)
+        csv = self.client.get('/management/admin_fichier_prestataire/?export=csv').content.decode('utf-8-sig')
+        self.assertIn('Commentaires de suivi', csv.splitlines()[0])
+        self.assertIn('0707070707 le bon numéro | client passe ce soir', csv)
+        self.client.force_login(self.comptes[R.AGENT])
+        self.assertEqual(self.client.get('/management/admin_fichier_prestataire/').status_code, 403)
+
+
+@override_settings(NOMS_A_MASQUER=['acme'])
+class SuppressionFichierPrestataireTests(FichierPrestataireTests):
+    """Un fichier importé par erreur : seul le CEO le supprime, et les coûts qu'il avait rapprochés sont remis à zéro."""
+
+    def test_le_ceo_supprime_un_fichier_importe_par_erreur(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from core.models import JournalAudit
+        from management.models import Depart, ImportPrestataire, ProfilStaff
+        from mlshipafrica.enums import TypeProfilStaffChoice as R
+        transit = HistoriqueArticle.objects.filter(article=self.colis[0], statut_traitement=S.EN_TRANSIT).first()
+        depart = Depart.objects.filter(article=self.colis[0]).first() or Depart.objects.create(
+            article=self.colis[0], historique=transit, cout_prevu=2714)
+        fichier = SimpleUploadedFile('erreur.csv', ('reference;cout\n%s;9999\n' % self.colis[0].code).encode())
+        comptable = User.objects.create(username='u-compta', email='compta@test.ci', is_staff=True)
+        ProfilStaff.objects.create(user=comptable, license=self.license, role_profil=R.COMPTABLE)
+        self.client.force_login(comptable)
+        self.client.post('/management/admin_fichier_prestataire/', {'fichier': fichier})
+        imp = ImportPrestataire.objects.get()
+        depart.refresh_from_db()
+        self.assertEqual(int(depart.cout_facture), 9999)
+        # La comptable ne peut pas supprimer et ne voit pas le bouton
+        self.assertNotIn('Supprimer ce fichier', self.client.get('/management/admin_fichier_prestataire/').content.decode())
+        self.assertEqual(self.client.post('/management/admin_fichier_prestataire/', {'supprimer': imp.pk}).status_code, 403)
+        # Le CEO supprime
+        self.client.force_login(self.comptes[R.SUPER])
+        self.assertIn('Supprimer ce fichier', self.client.get('/management/admin_fichier_prestataire/').content.decode())
+        self.client.post('/management/admin_fichier_prestataire/', {'supprimer': imp.pk})
+        imp.refresh_from_db()
+        depart.refresh_from_db()
+        self.assertTrue(imp.supprime)
+        self.assertEqual(imp.supprime_par, self.comptes[R.SUPER])
+        self.assertEqual(imp.lignes.count(), 0)
+        self.assertIsNone(depart.cout_facture)                         # le coût rapproché par erreur est retiré
+        self.assertTrue(JournalAudit.objects.filter(modele='ImportPrestataire', objet_id=str(imp.pk), apres__supprime=True).exists())
+        page = self.client.get('/management/admin_fichier_prestataire/').content.decode()
+        self.assertIn('Fichiers supprimés', page)
+        self.assertNotIn('?import=%d' % imp.pk, page)

@@ -28,7 +28,9 @@ DROITS = {
     'paiements': {CEO, COMPTABLE},                     # régler les frais, reverser aux vendeurs
     'activites_argent': {CEO, COMPTABLE},              # journaux des paiements et reversements
     'releves': {CEO, COMPTABLE},                       # relevés vendeurs, versements
-    'benefice': {CEO, COMPTABLE},                      # journal en temps réel, bénéfice, fichier prestataire
+    'benefice': {CEO, COMPTABLE},                      # journal en temps réel, bénéfice, frais et coût du fichier prestataire
+    'prestataire': {CEO, COMPTABLE, MANAGER},          # fichier hebdomadaire du prestataire : commandes, statuts, commentaires
+    'prestataire_supprimer': {CEO},                    # supprimer un fichier importé par erreur
     'commissions_regler': {CEO},                       # paramétrer les commissions
     'commissions_voir': {CEO, COMPTABLE},              # montants des commissions
 

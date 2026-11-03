@@ -1,6 +1,6 @@
 # Intégration : zones 2 à 6, SMS HSMS, tenue à 1 000 colis par jour
 
-Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 14 commits :
+Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 15 commits :
 
 1. **Zones 2 à 6, grille ML COD, circuit des statuts, robustesse** (`core`, `management`)
 2. **Module SMS HSMS** (nouvelle app `sms`, `settings.py`, `urls.py`)
@@ -16,6 +16,7 @@ Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 1
 12. **Intégrations : Woura et API vendeur** (section 15)
 13. Mise à jour de ce guide
 14. **Correctif page Confirmations** et recette de toutes les pages par rôle (`management/tests_pages.py`)
+15. **Fichier hebdomadaire du prestataire** lu tel qu'il est envoyé, avec frais et commentaires de suivi (section 16)
 
 Aucune nouvelle dépendance Python : tout tourne avec le `requirements.txt` actuel.
 
@@ -33,7 +34,7 @@ git am ml-cod-interieur-*.patch        # ou : git pull du dépôt fourni
 ```bash
 cd mlshipafrica
 python manage.py migrate                               # core 0007-0010, management 0022-0029, sms 0001-0004, integrations 0001
-python manage.py test management sms integrations      # puis : python manage.py test management sms integrations  (82 tests, dont la recette : chaque rôle ouvre toutes les pages)
+python manage.py test management sms integrations      # puis : python manage.py test management sms integrations  (87 tests, dont la recette : chaque rôle ouvre toutes les pages)
 python manage.py appliquer_grille_ml_cod --dry-run     # LIRE le rapport : rien n'est écrit
 ```
 
@@ -253,7 +254,7 @@ Correction au passage : le détail d'un colis plantait (erreur 500) quand un mou
   - Les colis suivis par les relevés ne peuvent plus être reversés à l'unité dans l'ancien écran, ce qui évite un double paiement.
 - **Le vendeur** voit « Mes relevés » et y saisit ses coordonnées de versement. Il reçoit un SMS de sécurité à chaque changement.
 - **Journal et bénéfice** (CEO et comptable) : jour, semaine, mois ou dates libres. On y voit les revenus, le coût prestataire, le bénéfice, les livrés, les départs, les acomptes et les colis engagés.
-- **Fichier du prestataire** : import CSV avec une colonne référence (code tracking ou code colis) et une colonne montant. Les lignes sont rapprochées des départs et les écarts s'affichent.
+- **Fichier du prestataire** (menu « Fichier du prestataire », CEO, comptable et manager) : voir section 16.
 - **Mise en service, une fois** :
   1. Terminer les reversements en cours dans l'ancien écran.
   2. Lancer `python manage.py reprise_comptable --dry-run`, puis la même commande sans `--dry-run`.
@@ -293,3 +294,20 @@ Correction au passage : le détail d'un colis plantait (erreur 500) quand un mou
 **Journal** : tous les appels entrants et sortants sont gardés. Le vendeur voit les siens. La direction voit tout dans l'administration Django, rubrique « Journal des intégrations ».
 
 **Correction au passage** : un enregistrement fait sans utilisateur connecté (webhook, API) plantait sur `creation_par`. Il passe maintenant.
+
+---
+
+## 16. Fichier hebdomadaire du prestataire (commit 15)
+
+Page **Fichier du prestataire** (`/management/admin_fichier_prestataire/`), droit `prestataire` : CEO, comptable, manager.
+
+- **Import** : le fichier tel que le prestataire l'envoie, en Excel (.xlsx, export Google Sheets compris) ou CSV. L'en-tête est cherché dans les 15 premières lignes (« Numéro de commande », « Montant », « Statut », « date de retrait », « Agent », « Type de livraison », « Adresse… »). Par défaut, le **dernier onglet** qui contient des commandes ; un champ permet de choisir l'onglet (ex. « Novembre »).
+- **Commentaires** : les commentaires posés sur les cellules (fils Google Sheets : commentaire + réponses) sont lus et rattachés à la ligne. Lecture Excel faite avec la bibliothèque standard (`management/fichier_prestataire.py`) : **aucune dépendance ajoutée**.
+- **Rapprochement** : chaque numéro est relié à notre colis par `code`, `code_tracking` ou `reference_externe` (n° de commande Woura ou API).
+- **Affichage par commande** : n° du fichier, notre ID colis (lien), code tracking, ID et nom du vendeur, produit (désignation ou produit en stock) et format, ville et zone, agent, montant à encaisser (fichier / nous, avec l'écart), statut (fichier / nous), date de retrait, puis les commentaires de suivi en pleine largeur. CEO et comptable voient en plus **frais ML, frais de collecte, coût partenaire (figé au départ) et marge**. Le manager ne voit aucun montant de la société.
+- **Contrôles** : filtres « Statut différent » (ligne rouge si livré chez le prestataire mais pas chez nous), « Montant différent », « Inconnues chez nous », « Avec commentaires », recherche, et badge « En double dans le fichier ». Export CSV (Excel) avec les mêmes colonnes et les commentaires.
+- **Important** : la colonne « Montant » du prestataire est ce que paie le client, **pas** ce qu'il nous facture. Le coût facturé n'est rapproché des départs que si le fichier a une colonne explicitement nommée coût / frais / facturé. (L'ancien import prenait « montant » pour le coût : il aurait faussé le bénéfice.)
+- **Confidentialité** : le nom du prestataire est retiré de tout ce qui est enregistré et affiché (nom du fichier, infos de ligne, agent, commentaires). Le nom n'est pas dans le code : il se règle dans le `.env` avec `NOMS_A_MASQUER=` (valeur fournie à part, avec le fichier des coûts). **À remplir avant le premier import.**
+- **Fichier importé par erreur** : le CEO seul (droit `prestataire_supprimer`) a un bouton « Supprimer ce fichier ». Les coûts que ce fichier avait rapprochés sur les départs sont remis à zéro, ses lignes sont retirées, l'import reste listé dans « Fichiers supprimés » (qui, quand) et le journal d'audit garde la trace. On peut ensuite réimporter le bon fichier.
+- Modèles : `ImportPrestataire`, `LignePrestataire` (migration `0030_fichier_prestataire`). Chaque import est conservé ; la page propose les 30 derniers.
+

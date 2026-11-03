@@ -1,0 +1,89 @@
+{% extends "base_main.html" %}
+{% block title %}ML COD Intérieur - Fichier du prestataire{% endblock %}
+{% load humanize %}
+	{% block breadcrumb-li %}<li class="breadcrumb-item"><a href="#">Colis</a></li><li class="breadcrumb-item active">Fichier du prestataire</li>{% endblock %}
+    {% block content %}
+				{% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>{% endfor %}
+				<div class="card">
+					<div class="card-header"><div class="card-title">Importer le fichier de la semaine</div></div>
+					<div class="card-body">
+						<form method="post" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap align-items-end">{% csrf_token %}
+							<div><label class="form-label small mb-1">Fichier Excel ou CSV</label><input type="file" name="fichier" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="form-control form-control-sm" style="max-width:320px" required></div>
+							<div><label class="form-label small mb-1">Onglet (vide = le dernier)</label><input type="text" name="onglet" class="form-control form-control-sm" style="max-width:200px" placeholder="ex. Novembre"></div>
+							<button class="btn btn-sm btn-primary">Importer</button>
+						</form>
+						<p class="small text-muted mt-2 mb-0">Le fichier est lu tel que le prestataire l'envoie : numéro de commande, montant à encaisser, statut, date de retrait, agent, et les commentaires posés sur les cellules. Depuis Google Sheets : Fichier › Télécharger › Microsoft Excel (.xlsx), les commentaires suivent. Chaque ligne est reliée à notre colis par son numéro (ID colis, code tracking ou référence de la commande).</p>
+					</div>
+				</div>
+
+				{% if imp %}
+				<div class="card">
+					<div class="card-header d-flex flex-wrap align-items-center gap-2">
+						<div class="card-title mb-0">{{ imp.nom_fichier|default:"Fichier" }} · onglet « {{ imp.onglet }} » · importé le {{ imp.date|date:"d/m/Y H:i" }}{% if imp.par %} par {{ imp.par.get_full_name|default:imp.par.email }}{% endif %}</div>
+						{% if peut_supprimer %}
+						<form method="post" class="ms-auto" onsubmit="return confirm('Supprimer ce fichier et ses {{ imp.nb_lignes }} ligne(s) ? Les coûts qu\'il avait rapprochés seront remis à zéro. Vous pourrez réimporter le bon fichier.');">{% csrf_token %}<input type="hidden" name="supprimer" value="{{ imp.pk }}"><button class="btn btn-sm btn-outline-danger">Supprimer ce fichier</button></form>
+						{% endif %}
+						{% if imports|length > 1 %}
+						<form method="get" class="{% if not peut_supprimer %}ms-auto{% endif %}"><select name="import" class="form-select form-select-sm" onchange="this.form.submit()">{% for i in imports %}<option value="{{ i.pk }}" {% if i.pk == imp.pk %}selected{% endif %}>{{ i.date|date:"d/m/Y H:i" }} · {{ i.onglet }} · {{ i.nb_lignes }}</option>{% endfor %}</select></form>
+						{% endif %}
+					</div>
+					<div class="card-body">
+						<div class="d-flex flex-wrap gap-2 mb-3">
+							<a class="btn btn-sm {% if filtre == 'tous' %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?import={{ imp.pk }}&filtre=tous">Toutes · {{ compteurs.tous }}</a>
+							<a class="btn btn-sm {% if filtre == 'statut' %}btn-danger{% else %}btn-outline-danger{% endif %}" href="?import={{ imp.pk }}&filtre=statut">Statut différent · {{ compteurs.statut }}</a>
+							<a class="btn btn-sm {% if filtre == 'montant' %}btn-warning{% else %}btn-outline-warning{% endif %}" href="?import={{ imp.pk }}&filtre=montant">Montant différent · {{ compteurs.montant }}</a>
+							<a class="btn btn-sm {% if filtre == 'inconnues' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" href="?import={{ imp.pk }}&filtre=inconnues">Inconnues chez nous · {{ compteurs.inconnues }}</a>
+							<a class="btn btn-sm {% if filtre == 'commentaires' %}btn-info{% else %}btn-outline-info{% endif %}" href="?import={{ imp.pk }}&filtre=commentaires">Avec commentaires · {{ compteurs.commentaires }}</a>
+							<form method="get" class="d-flex gap-1 ms-auto"><input type="hidden" name="import" value="{{ imp.pk }}"><input type="hidden" name="filtre" value="{{ filtre }}"><input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="N°, ID colis, vendeur, commentaire"><button class="btn btn-sm btn-outline-primary">Chercher</button></form>
+							<a class="btn btn-sm btn-outline-success" href="?import={{ imp.pk }}&filtre={{ filtre }}&q={{ q|urlencode }}&export=csv">Télécharger (Excel)</a>
+						</div>
+						<div class="table-responsive">
+							<table class="table table-sm table-bordered align-middle" style="font-size:13px">
+								<thead class="table-light"><tr>
+									<th>#</th><th>N° commande<br><small class="text-muted">fichier</small></th><th>Notre colis<br><small class="text-muted">ID · vendeur</small></th><th>Produit</th><th>Ville</th><th>Agent</th>
+									<th class="text-end">À encaisser<br><small class="text-muted">fichier / nous</small></th><th>Statut<br><small class="text-muted">fichier / nous</small></th><th>Retrait</th>
+									{% if voir_argent %}<th class="text-end">Frais ML</th><th class="text-end">Coût partenaire</th><th class="text-end">Marge</th>{% endif %}
+								</tr></thead>
+								<tbody>
+								{% for l in lignes %}
+									<tr class="{% if l.livre_pas_chez_nous %}table-danger{% elif not l.article %}table-secondary{% endif %}">
+										<td class="text-muted">{{ l.rang }}</td>
+										<td class="fw-bold text-nowrap">{{ l.numero }}{% if l.doublon %}<br><span class="badge bg-warning text-dark">En double dans le fichier</span>{% endif %}</td>
+										<td class="text-nowrap">{% if l.article %}<a href="{% url 'management:management_admin_detail_colis' l.article.code %}" class="fw-bold">{{ l.article.code }}</a>{% if l.article.code_tracking %}<br><small class="text-muted">{{ l.article.code_tracking }}</small>{% endif %}{% if l.article.vendeur %}<br><small>{{ l.article.vendeur.code }} · {{ l.article.vendeur.nom_store }}</small>{% endif %}{% else %}<span class="badge bg-secondary">Inconnu chez nous</span>{% endif %}</td>
+										<td>{% if l.article %}{{ l.produit_affiche|default:l.produit|default:"—" }}{% if l.article.quantite and l.article.quantite > 1 %} × {{ l.article.quantite }}{% endif %}{% if l.article.format_article %}<br><small class="text-muted">{{ l.article.format_article.nom }}</small>{% endif %}{% else %}{{ l.produit|default:"—" }}{% endif %}</td>
+										<td>{% if l.article and l.article.localite_arrivee %}{{ l.article.localite_arrivee.nom }}{% if l.article.zone_arrivee %}<br><small class="text-muted">{{ l.article.zone_arrivee.nom }}</small>{% endif %}{% else %}{{ l.ville|default:"—" }}{% endif %}</td>
+										<td>{{ l.agent|default:"—" }}</td>
+										<td class="text-end text-nowrap">{% if l.montant is not None %}{{ l.montant|floatformat:0|intcomma }}{% else %}—{% endif %}{% if l.article %}<br><small class="{% if l.ecart_montant %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ l.a_encaisser|floatformat:0|intcomma }}{% if l.ecart_montant %} (écart {{ l.ecart_montant|floatformat:0|intcomma }}){% endif %}</small>{% endif %}</td>
+										<td>{{ l.statut|default:"—" }}{% if l.article %}<br><small class="{% if l.alerte_statut %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ l.article.get_statut_traitement_display }}</small>{% endif %}</td>
+										<td class="text-nowrap">{{ l.date_retrait|date:"d/m/Y"|default:"—" }}</td>
+										{% if voir_argent %}
+										<td class="text-end text-nowrap">{% if l.article %}{{ l.frais_ml|floatformat:0|intcomma }}{% if l.frais_collecte %}<br><small class="text-muted">+ {{ l.frais_collecte|floatformat:0|intcomma }} collecte</small>{% endif %}{% else %}—{% endif %}</td>
+										<td class="text-end text-nowrap">{% if l.cout_partenaire is not None %}{{ l.cout_partenaire|floatformat:0|intcomma }}{% else %}—{% endif %}{% if l.cout is not None %}<br><small class="text-muted">facturé {{ l.cout|floatformat:0|intcomma }}</small>{% endif %}</td>
+										<td class="text-end text-nowrap fw-bold {% if l.marge is not None and l.marge < 0 %}text-danger{% endif %}">{% if l.marge is not None %}{{ l.marge|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+										{% endif %}
+									</tr>
+									{% if l.commentaires or l.infos and l.infos|lower != 'total à payer' %}
+									<tr class="{% if l.livre_pas_chez_nous %}table-danger{% elif not l.article %}table-secondary{% endif %}">
+										<td></td>
+										<td colspan="{% if voir_argent %}11{% else %}8{% endif %}" class="pt-0 border-top-0">
+											{% if l.commentaires %}<div class="small"><span class="fw-bold">Suivi :</span>{% for c in l.commentaires %} <span class="badge bg-light text-dark border fw-normal text-wrap text-start" style="font-size:12px">{{ forloop.counter }}. {{ c }}</span>{% endfor %}</div>{% endif %}
+											{% if l.infos and l.infos|lower != 'total à payer' %}<details class="small text-muted mt-1"><summary>Infos de la ligne</summary>{{ l.infos }}</details>{% endif %}
+										</td>
+									</tr>
+									{% endif %}
+								{% empty %}
+									<tr><td colspan="12" class="text-center text-muted">Aucune commande pour ce filtre.</td></tr>
+								{% endfor %}
+								</tbody>
+							</table>
+						</div>
+						<p class="small text-muted mb-0">Ligne rouge : livré chez le prestataire mais pas chez nous (à vérifier en priorité). Ligne grise : numéro inconnu chez nous. « En double » : le même numéro apparaît plusieurs fois dans le fichier.{% if voir_argent %} Frais ML = ce que paie le vendeur ; coût partenaire = coût figé au départ du colis ; marge = frais ML + frais de collecte − coût partenaire.{% endif %}</p>
+					</div>
+				</div>
+				{% endif %}
+				{% if peut_supprimer and supprimes %}
+				<div class="card"><div class="card-header"><div class="card-title">Fichiers supprimés</div></div><div class="card-body"><ul class="small mb-0">
+					{% for s in supprimes %}<li>{{ s.nom_fichier|default:"Fichier" }} · onglet « {{ s.onglet }} » · importé le {{ s.date|date:"d/m/Y H:i" }} · {{ s.nb_lignes }} ligne(s) · supprimé le {{ s.date_suppression|date:"d/m/Y H:i" }}{% if s.supprime_par %} par {{ s.supprime_par.get_full_name|default:s.supprime_par.email }}{% endif %}</li>{% endfor %}
+				</ul></div></div>
+				{% endif %}
+    {% endblock %}

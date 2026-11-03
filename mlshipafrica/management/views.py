@@ -1140,23 +1140,144 @@ def vendeur_releves(request):
 @login_required
 @droit_requis('benefice')
 def admin_benefice(request):
-    from management.finance import importer_fichier_prestataire, journal
+    from management.finance import journal
+    from management.models import ImportPrestataire
     user = request.user
     profil_staff = user.account_profil_staff
-    if request.method == 'POST' and request.FILES.get('fichier'):
-        try:
-            bilan_import = importer_fichier_prestataire(profil_staff.license, request.FILES['fichier'])
-            django_messages.success(request, "Fichier importé : %d ligne(s), %d rapprochée(s), %d inconnue(s), %d écart(s)." % (
-                bilan_import['lignes'], bilan_import['rapprochees'], len(bilan_import['inconnues']), len(bilan_import['ecarts'])))
-            request.session['dernier_import'] = {'inconnues': bilan_import['inconnues'][:200],
-                                                 'ecarts': [(c, str(p), str(f)) for c, p, f in bilan_import['ecarts'][:200]]}
-        except ValidationError as erreur:
-            django_messages.error(request, ' '.join(erreur.messages))
-        return redirect(reverse('management:management_admin_benefice') + '?' + request.GET.urlencode())
     debut, fin, periode, jour_debut, jour_fin = _periode(request)
     resultat = journal(profil_staff.license, debut, fin)
-    dernier_import = request.session.pop('dernier_import', None)
+    dernier_import = ImportPrestataire.objects.filter(license=profil_staff.license, supprime=False).first()
     return render(request, 'management/admin_benefice.html', locals())
+
+
+FAMILLES_NOTRE_STATUT = {
+    StatutTraitement.LIVRE: 'livre', StatutTraitement.LIVRE_PAYE: 'livre', StatutTraitement.REVERSE: 'livre',
+    StatutTraitement.EN_TRANSIT: 'transit', StatutTraitement.ARRIVE: 'arrive', StatutTraitement.EN_COURS_LIVRAISON: 'livraison',
+    StatutTraitement.RECONDUIT: 'livraison', StatutTraitement.ECHEC_LIVRAISON: 'echec', StatutTraitement.EN_RETOUR: 'retour',
+    StatutTraitement.REVENU_ABIDJAN: 'retour', StatutTraitement.RETOURNE: 'retour', StatutTraitement.REMIS_EN_STOCK: 'retour',
+    StatutTraitement.MIS_DE_COTE: 'retour', StatutTraitement.ABANDONNE: 'retour', StatutTraitement.ANNULE: 'annule',
+}
+
+
+@login_required
+@droit_requis('prestataire')
+def admin_fichier_prestataire(request):
+    """Fichier hebdomadaire du prestataire : chaque commande avec nos IDs, le produit, les frais et les commentaires de suivi."""
+    import csv
+    from django.http import HttpResponse
+    from management.fichier_prestataire import famille_prestataire
+    from management.finance import importer_fichier_prestataire
+    from management.models import ImportPrestataire
+    user = request.user
+    profil_staff = user.account_profil_staff
+    voir_argent = a_le_droit(user, 'benefice')
+    peut_supprimer = a_le_droit(user, 'prestataire_supprimer')
+
+    if request.method == 'POST' and request.POST.get('supprimer'):
+        from management.finance import supprimer_import_prestataire
+        if not peut_supprimer:
+            raise PermissionDenied("Seul le CEO peut supprimer un fichier importé.")
+        cible = ImportPrestataire.objects.filter(license=profil_staff.license, supprime=False, pk=request.POST.get('supprimer')).first()
+        if cible is None:
+            django_messages.error(request, "Ce fichier n'existe plus ou a déjà été supprimé.")
+        else:
+            n = supprimer_import_prestataire(cible, user)
+            django_messages.success(request, "Fichier du %s supprimé : %d ligne(s) retirée(s). Vous pouvez réimporter le bon fichier." % (
+                cible.date.strftime('%d/%m/%Y %H:%M'), n))
+        return redirect('management:management_admin_fichier_prestataire')
+
+    if request.method == 'POST':
+        if not request.FILES.get('fichier'):
+            django_messages.error(request, "Choisissez le fichier du prestataire (Excel ou CSV).")
+            return redirect('management:management_admin_fichier_prestataire')
+        try:
+            bilan = importer_fichier_prestataire(profil_staff.license, request.FILES['fichier'], par=user,
+                                                 onglet=request.POST.get('onglet', '').strip())
+        except ValidationError as erreur:
+            django_messages.error(request, ' '.join(erreur.messages))
+            return redirect('management:management_admin_fichier_prestataire')
+        imp = bilan['import']
+        message = "Onglet « %s » : %d commande(s), %d reliée(s) à nos colis, %d inconnue(s)." % (
+            imp.onglet, bilan['lignes'], bilan['rapprochees'], len(bilan['inconnues']))
+        if voir_argent and bilan['ecarts']:
+            message += " %d écart(s) de coût." % len(bilan['ecarts'])
+        django_messages.success(request, message)
+        return redirect(reverse('management:management_admin_fichier_prestataire') + '?import=%d' % imp.pk)
+
+    imports = ImportPrestataire.objects.filter(license=profil_staff.license, supprime=False)[:30]
+    supprimes = ImportPrestataire.objects.filter(license=profil_staff.license, supprime=True).select_related('supprime_par')[:10]
+    imp = None
+    if request.GET.get('import'):
+        imp = ImportPrestataire.objects.filter(license=profil_staff.license, supprime=False, pk=request.GET.get('import')).first()
+    imp = imp or (imports[0] if imports else None)
+    filtre = request.GET.get('filtre', 'tous')
+    q = request.GET.get('q', '').strip()
+    lignes, compteurs = [], {'tous': 0, 'inconnues': 0, 'statut': 0, 'montant': 0, 'commentaires': 0}
+    if imp:
+        qs = imp.lignes.select_related('article__vendeur', 'article__localite_arrivee', 'article__zone_arrivee',
+                                       'article__format_article', 'article__produit_stock').prefetch_related('article__departs')
+        from collections import Counter
+        doublons = {n for n, k in Counter(imp.lignes.values_list('numero', flat=True)).items() if k > 1}
+        for l in qs:
+            l.doublon = l.numero in doublons
+            a = l.article
+            l.famille = famille_prestataire(l.statut)
+            l.notre_famille = FAMILLES_NOTRE_STATUT.get(a.statut_traitement, 'avant') if a else ''
+            l.alerte_statut = bool(a and l.famille and l.famille != 'autre' and l.famille != l.notre_famille)
+            l.livre_pas_chez_nous = bool(a and l.famille == 'livre' and l.notre_famille != 'livre')
+            l.a_encaisser = a.valeur_totale if (a and a.is_option_encaissement) else (Decimal('0') if a else None)
+            l.ecart_montant = (l.montant - l.a_encaisser) if (a and l.montant is not None and l.a_encaisser is not None) else None
+            if a:
+                l.produit_affiche = (a.produit_stock.designation if a.produit_stock_id and hasattr(a.produit_stock, 'designation')
+                                     else (a.designation or a.produits_autre or ''))
+                departs = list(a.departs.all())
+                l.cout_partenaire = departs[0].cout_prevu if departs else None
+                l.frais_ml = (a.montant_frais or Decimal('0')) + (a.cout_option_recuperation or Decimal('0'))
+                l.frais_collecte = a.cout_option_encaissement or Decimal('0')
+                l.marge = (l.frais_ml + l.frais_collecte - l.cout_partenaire) if l.cout_partenaire is not None else None
+            compteurs['tous'] += 1
+            compteurs['inconnues'] += a is None
+            compteurs['statut'] += l.alerte_statut
+            compteurs['montant'] += bool(l.ecart_montant)
+            compteurs['commentaires'] += bool(l.commentaires)
+            garder = {'inconnues': a is None, 'statut': l.alerte_statut, 'montant': bool(l.ecart_montant),
+                      'commentaires': bool(l.commentaires)}.get(filtre, True)
+            if garder and q:
+                texte = ' '.join([l.numero, l.agent, l.statut, l.infos, ' '.join(l.commentaires),
+                                  a.code if a else '', (a.code_tracking or '') if a else '',
+                                  (a.vendeur.nom_store or '') if a and a.vendeur else '']).lower()
+                garder = q.lower() in texte
+            if garder:
+                lignes.append(l)
+
+        if request.GET.get('export') == 'csv':
+            reponse = HttpResponse(content_type='text/csv; charset=utf-8')
+            reponse['Content-Disposition'] = 'attachment; filename="fichier-prestataire-%s.csv"' % imp.date.strftime('%Y-%m-%d')
+            reponse.write('\ufeff')
+            ecrire = csv.writer(reponse, delimiter=';')
+            entetes = ['Ligne', 'N° commande (fichier)', 'ID colis', 'Code tracking', 'ID vendeur', 'Vendeur', 'Produit', 'Ville',
+                       'Agent', 'Montant à encaisser (fichier)', 'Montant à encaisser (nous)', 'Statut (fichier)', 'Notre statut',
+                       'Date de retrait']
+            if voir_argent:
+                entetes += ['Frais ML', 'Frais de collecte', 'Coût partenaire', 'Marge']
+            ecrire.writerow(entetes + ['Infos', 'Commentaires de suivi'])
+            for l in lignes:
+                a = l.article
+                ligne = [l.rang, l.numero, a.code if a else '', (a.code_tracking or '') if a else '',
+                         a.vendeur.code if a and a.vendeur else '', a.vendeur.nom_store if a and a.vendeur else '',
+                         getattr(l, 'produit_affiche', '') or l.produit, a.localite_arrivee.nom if a and a.localite_arrivee else l.ville,
+                         l.agent, l.montant if l.montant is not None else '', l.a_encaisser if l.a_encaisser is not None else '',
+                         l.statut, a.get_statut_traitement_display() if a else 'Inconnu chez nous',
+                         l.date_retrait.strftime('%d/%m/%Y') if l.date_retrait else '']
+                if voir_argent:
+                    ligne += [getattr(l, 'frais_ml', ''), getattr(l, 'frais_collecte', ''),
+                              '' if getattr(l, 'cout_partenaire', None) is None else l.cout_partenaire,
+                              '' if getattr(l, 'marge', None) is None else l.marge]
+                ecrire.writerow(ligne + [l.infos, ' | '.join(l.commentaires)])
+            return reponse
+
+    suite_breadcrumb = "Fichier du prestataire"
+    return render(request, 'management/admin_fichier_prestataire.html', locals())
 
 
 # ---------------------------------------------------------------------------

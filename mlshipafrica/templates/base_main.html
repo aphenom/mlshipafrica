@@ -774,6 +774,9 @@
 							{% if 'benefice' in droits %}
 							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_benefice' %} active {% endif %}" href="{% url 'management:management_admin_benefice' %}"><i class="bx bx-line-chart side-menu__icon"></i><span class="side-menu__label">Journal et bénéfice</span></a></li>
 							{% endif %}
+							{% if 'prestataire' in droits %}
+							<li class="slide"><a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_fichier_prestataire' %} active {% endif %}" href="{% url 'management:management_admin_fichier_prestataire' %}"><i class="bx bx-spreadsheet side-menu__icon"></i><span class="side-menu__label">Fichier du prestataire</span></a></li>
+							{% endif %}
 							{% if 'acomptes' in droits %}
 							<li class="slide">
 								<a class="side-menu__item {% if request.resolver_match.url_name == 'management_admin_acomptes' %} active {% endif %}" href="{% url 'management:management_admin_acomptes' %}"><i class="bx bx-coin-stack side-menu__icon"></i><span class="side-menu__label">Acomptes clients</span></a>

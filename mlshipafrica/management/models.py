@@ -811,3 +811,47 @@ class CommissionConfig(models.Model):
 
     def __str__(self):
         return self.nom
+
+
+""" Fichier hebdomadaire du prestataire : chaque import et ses lignes (commande, montant, statut, commentaires) """
+class ImportPrestataire(models.Model):
+
+    license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='imports_prestataire')
+    date = models.DateTimeField("Importé le", default=timezone.now, db_index=True)
+    nom_fichier = models.CharField("Fichier", max_length=255, blank=True, default='')
+    onglet = models.CharField("Onglet", max_length=100, blank=True, default='')
+    par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='imports_prestataire')
+    nb_lignes = models.PositiveIntegerField(default=0)
+    nb_rapprochees = models.PositiveIntegerField(default=0)
+    supprime = models.BooleanField("Supprimé", default=False, db_index=True)
+    date_suppression = models.DateTimeField("Supprimé le", null=True, blank=True)
+    supprime_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='imports_prestataire_supprimes')
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return '%s · %s' % (self.date.strftime('%d/%m/%Y %H:%M'), self.nom_fichier)
+
+
+class LignePrestataire(models.Model):
+
+    import_fichier = models.ForeignKey(ImportPrestataire, on_delete=models.CASCADE, related_name='lignes')
+    rang = models.PositiveIntegerField("Ligne du fichier", default=0)
+    numero = models.CharField("N° de commande (fichier)", max_length=100, db_index=True)
+    article = models.ForeignKey(Article, models.SET_NULL, null=True, blank=True, related_name='lignes_prestataire')
+    depart = models.ForeignKey(Depart, models.SET_NULL, null=True, blank=True, related_name='lignes_prestataire',
+                               help_text="Départ dont le coût facturé vient de cette ligne (remis à zéro si l'import est supprimé)")
+    agent = models.CharField("Agent", max_length=100, blank=True, default='')
+    montant = models.DecimalField("Montant à encaisser (fichier)", max_digits=12, decimal_places=2, null=True, blank=True)
+    cout = models.DecimalField("Coût facturé (fichier)", max_digits=12, decimal_places=2, null=True, blank=True)
+    statut = models.CharField("Statut (fichier)", max_length=60, blank=True, default='')
+    date_retrait = models.DateField("Date de retrait", null=True, blank=True)
+    type_livraison = models.CharField(max_length=255, blank=True, default='')
+    infos = models.TextField("Infos de la ligne", blank=True, default='')
+    produit = models.CharField("Produit (fichier)", max_length=255, blank=True, default='')
+    ville = models.CharField("Ville (fichier)", max_length=100, blank=True, default='')
+    commentaires = models.JSONField("Commentaires de suivi", default=list, blank=True)
+
+    class Meta:
+        ordering = ['rang']

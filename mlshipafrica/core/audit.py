@@ -40,6 +40,7 @@ SUIVIS = {
     ('management', 'Acompte'): None,
     ('management', 'EntreeStock'): ('statut', 'date_reception', 'recu_par'),
     ('management', 'MouvementStock'): None,
+    ('management', 'ImportPrestataire'): ('onglet', 'nom_fichier', 'nb_lignes', 'nb_rapprochees', 'supprime', 'date_suppression'),
     ('management', 'Releve'): ('statut', 'date_versement', 'reference_versement', 'moyen_versement', 'net'),
     ('sms', 'SmsParametres'): ('actif', 'tel_service', 'heure_debut_silence', 'heure_fin_silence', 'resume_soir_actif'),
     ('sms', 'SmsModele'): ('texte', 'actif', 'priorite'),

@@ -34,15 +34,8 @@
 				<div class="card">
 					<div class="card-header"><div class="card-title">Fichier du prestataire</div></div>
 					<div class="card-body">
-						<form method="post" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap">{% csrf_token %}
-							<input type="file" name="fichier" accept=".csv,text/csv" class="form-control form-control-sm" style="max-width:320px" required>
-							<button class="btn btn-sm btn-primary">Importer et rapprocher</button>
-						</form>
-						<p class="small text-muted mt-2 mb-0">CSV avec une colonne référence (code tracking ou code colis) et une colonne montant. Chaque ligne est rapprochée du départ correspondant, les écarts avec le coût prévu s'affichent ci-dessous.</p>
-						{% if dernier_import %}
-							{% if dernier_import.ecarts %}<div class="mt-2 fw-bold">Écarts</div><ul class="small">{% for code, prevu, facture in dernier_import.ecarts %}<li>{{ code }} : prévu {{ prevu }} F, facturé {{ facture }} F</li>{% endfor %}</ul>{% endif %}
-							{% if dernier_import.inconnues %}<div class="mt-2 fw-bold">Références non trouvées</div><div class="small">{{ dernier_import.inconnues|join:", " }}</div>{% endif %}
-						{% endif %}
+						{% if dernier_import %}<p class="mb-2">Dernier import : {{ dernier_import.date|date:"d/m/Y H:i" }} · onglet « {{ dernier_import.onglet }} » · {{ dernier_import.nb_lignes }} commande(s), {{ dernier_import.nb_rapprochees }} reliée(s) à nos colis.</p>{% else %}<p class="mb-2 text-muted">Aucun fichier importé.</p>{% endif %}
+						<a class="btn btn-sm btn-primary" href="{% url 'management:management_admin_fichier_prestataire' %}">Importer et voir les commandes du fichier</a>
 					</div>
 				</div>
     {% endblock %}

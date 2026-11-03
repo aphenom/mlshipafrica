@@ -204,42 +204,68 @@ def journal(license, debut, fin):
 
 # --------------------------------------------------------------------------------------------- fichier prestataire
 
-def importer_fichier_prestataire(license, fichier):
+def importer_fichier_prestataire(license, fichier, par=None, onglet=''):
     """
-    CSV (séparateur ; ou ,) avec au moins deux colonnes : la référence du colis (code tracking ou code ML) et le
-    montant facturé. Les noms de colonnes reconnus : reference / tracking / code, et montant / cout / total.
-    Rattache chaque ligne au dernier départ non encore rapproché du colis. Renvoie un bilan avec les écarts.
+    Lit le fichier du prestataire (Excel ou CSV, tel qu'il l'envoie : voir management/fichier_prestataire.py),
+    enregistre chaque commande avec son statut, sa date de retrait et ses commentaires de suivi, et la relie à
+    notre colis par son numéro (code colis, code tracking ou référence externe).
+
+    Le coût facturé n'est rapproché des départs que si le fichier a une colonne coût / frais / facturé : la
+    colonne « Montant » du prestataire est ce que le client paie, pas ce qu'il nous facture.
+    Renvoie un bilan : lignes, rapprochées, inconnues, écarts de coût, et l'import créé.
     """
+    from management.fichier_prestataire import lire, masquer
+    from management.models import ImportPrestataire, LignePrestataire
     contenu = fichier.read()
-    texte = contenu.decode('utf-8-sig', errors='replace') if isinstance(contenu, bytes) else contenu
-    dialecte = csv.Sniffer().sniff(texte[:2000], delimiters=';,') if texte.strip() else csv.excel
-    lignes = list(csv.DictReader(io.StringIO(texte), dialect=dialecte))
-    if not lignes:
-        raise ValidationError("Fichier vide.")
-    colonnes = {c.lower().strip(): c for c in lignes[0].keys() if c}
-    col_ref = next((colonnes[c] for c in colonnes if c in ('reference', 'référence', 'tracking', 'code', 'code_tracking', 'numero', 'numéro')), None)
-    col_montant = next((colonnes[c] for c in colonnes if c in ('montant', 'cout', 'coût', 'total', 'prix', 'amount')), None)
-    if not col_ref or not col_montant:
-        raise ValidationError("Colonnes attendues : une référence (reference, tracking ou code) et un montant (montant, cout ou total).")
+    nom = getattr(fichier, 'name', '') or ''
+    try:
+        nom_onglet, commandes = lire(nom, contenu, onglet)
+    except ValueError as erreur:
+        raise ValidationError(str(erreur))
+    refs = {c['numero'] for c in commandes}
+    articles = {}
+    for a in (Article.objects.filter(license=license)
+              .filter(Q(code__in=refs) | Q(code_tracking__in=refs) | Q(reference_externe__in=refs)).order_by('pk')):
+        for ref in (a.reference_externe, a.code_tracking, a.code):
+            if ref in refs:
+                articles[ref] = a
     bilan = {'lignes': 0, 'rapprochees': 0, 'inconnues': [], 'ecarts': []}
-    for ligne in lignes:
-        ref = (ligne.get(col_ref) or '').strip()
-        if not ref:
-            continue
-        bilan['lignes'] += 1
-        try:
-            montant = Decimal(str(ligne.get(col_montant) or '0').replace(' ', '').replace(' ', '').replace(',', '.'))
-        except ArithmeticError:
-            bilan['inconnues'].append(ref)
-            continue
-        depart = (Depart.objects.filter(article__license=license, cout_facture__isnull=True)
-                  .filter(Q(article__code_tracking=ref) | Q(article__code=ref)).order_by('date').first())
-        if depart is None:
-            bilan['inconnues'].append(ref)
-            continue
-        depart.cout_facture, depart.reference_import = montant, ref
-        depart.save()
-        bilan['rapprochees'] += 1
-        if montant != depart.cout_prevu:
-            bilan['ecarts'].append((depart.article.code, depart.cout_prevu, montant))
+    with transaction.atomic():
+        imp = ImportPrestataire.objects.create(license=license, nom_fichier=masquer(nom)[:255], onglet=nom_onglet[:100], par=par)
+        lignes = []
+        for c in commandes:
+            article, depart = articles.get(c['numero']), None
+            bilan['lignes'] += 1
+            if article is None:
+                bilan['inconnues'].append(c['numero'])
+            else:
+                bilan['rapprochees'] += 1
+                if c['cout'] is not None:
+                    depart = article.departs.filter(cout_facture__isnull=True).order_by('date').first()
+                    if depart is not None:
+                        depart.cout_facture, depart.reference_import = c['cout'], c['numero']
+                        depart.save()
+                        if c['cout'] != depart.cout_prevu:
+                            bilan['ecarts'].append((article.code, depart.cout_prevu, c['cout']))
+            lignes.append(LignePrestataire(import_fichier=imp, article=article, depart=depart, **{k: v for k, v in c.items()}))
+        LignePrestataire.objects.bulk_create(lignes, batch_size=500)
+        imp.nb_lignes, imp.nb_rapprochees = bilan['lignes'], bilan['rapprochees']
+        imp.save()
+    bilan['import'] = imp
     return bilan
+
+
+def supprimer_import_prestataire(imp, par):
+    """Fichier importé par erreur (CEO) : les coûts qu'il avait rapprochés sont remis à zéro, ses lignes retirées.
+    L'import reste listé comme supprimé (qui, quand), et le journal d'audit garde la trace."""
+    with transaction.atomic():
+        for ligne in imp.lignes.filter(depart__isnull=False).select_related('depart'):
+            depart = ligne.depart
+            depart.cout_facture, depart.reference_import = None, ''
+            depart.save()
+        n = imp.lignes.count()
+        imp.lignes.all().delete()
+        imp.supprime, imp.date_suppression, imp.supprime_par = True, timezone.now(), par
+        imp.save()
+    return n
+

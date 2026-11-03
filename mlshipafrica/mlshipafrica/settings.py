@@ -367,3 +367,6 @@ CRONJOBS = [
 # Administration Django (paramètres et modèles de SMS), réservée aux super-utilisateurs.
 # Adresse volontairement non standard : la changer dans le .env (ADMIN_URL).
 ADMIN_URL = config('ADMIN_URL', default='direction-mlcod/')
+
+# Noms du prestataire à retirer du fichier importé (jamais affichés ni enregistrés). Dans le .env seulement.
+NOMS_A_MASQUER = [n for n in config('NOMS_A_MASQUER', default='').split(',') if n.strip()]
