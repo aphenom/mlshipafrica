@@ -12,7 +12,7 @@ from core.models import AchatLicense, Configuration, FormatArticle, License, Loc
 from management.models import ProfilStaff, Tarification, Vendeur
 from django.db import transaction
 
-from mlshipafrica.mlshipafrica.enums import TypeProfilStaffChoice
+from mlshipafrica.enums import TypeProfilStaffChoice
 
 class Command(BaseCommand):
     help = 'Seed the database with initial data'
@@ -31,7 +31,7 @@ class Command(BaseCommand):
             {"username": "demo1@example.com", "email": "demo1@example.com", "password": "demo123", "role": "VENDEUR"},
             {"username": "demo2@example.com", "email": "demo2@example.com", "password": "demo123", "role": "VENDEUR"},
             {"username": "agent@example.com", "email": "agent@example.com", "password": "demo123", "is_staff": True, "role": "AGENT"},
-            {"username": "comptable@example.com", "email": "comptable@example.com", "password": "demo123", "is_staff": True, "role": "COMPTALE"},
+            {"username": "comptable@example.com", "email": "comptable@example.com", "password": "demo123", "is_staff": True, "role": "COMPTABLE"},
             {"username": "administrateur@example.com", "email": "administrateur@example.com", "password": "demo123", "is_staff": True, "role": "ADMINISTRATEUR"},
             {"username": "admin@example.com", "email": "admin@example.com", "password": "12345", "is_staff": True, "is_superuser": True, "role": "SUPER"},
         ]

@@ -113,7 +113,8 @@ DATABASES = {
         # Garde la connexion ouverte entre deux requêtes (évite une reconnexion MySQL à chaque page)
         'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),
         'OPTIONS': {  
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            # InnoDB obligatoire (transactions, verrous) : certains MySQL locaux (WAMP) créent en MyISAM par défaut
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES', default_storage_engine=INNODB",
             'charset': 'utf8',  
         } 
     }  
