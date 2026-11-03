@@ -24,7 +24,7 @@
 						<form method="post" class="ms-auto" onsubmit="return confirm('Supprimer ce fichier et ses {{ imp.nb_lignes }} ligne(s) ? Les coûts qu\'il avait rapprochés seront remis à zéro. Vous pourrez réimporter le bon fichier.');">{% csrf_token %}<input type="hidden" name="supprimer" value="{{ imp.pk }}"><button class="btn btn-sm btn-outline-danger">Supprimer ce fichier</button></form>
 						{% endif %}
 						{% if imports|length > 1 %}
-						<form method="get" class="{% if not peut_supprimer %}ms-auto{% endif %}"><select name="import" class="form-select form-select-sm" onchange="this.form.submit()">{% for i in imports %}<option value="{{ i.pk }}" {% if i.pk == imp.pk %}selected{% endif %}>{{ i.date|date:"d/m/Y H:i" }} · {{ i.onglet }} · {{ i.nb_lignes }}</option>{% endfor %}</select></form>
+						<form method="get" class="{% if not peut_supprimer %}ms-auto{% endif %}"><select name="import" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()">{% for i in imports %}<option value="{{ i.pk }}" {% if i.pk == imp.pk %}selected{% endif %}>{{ i.date|date:"d/m/Y H:i" }} · {{ i.onglet }} · {{ i.nb_lignes }}</option>{% endfor %}</select></form>
 						{% endif %}
 					</div>
 					<div class="card-body">

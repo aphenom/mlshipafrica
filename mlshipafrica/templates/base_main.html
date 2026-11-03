@@ -2557,7 +2557,8 @@
 
 	<!--Peitychart js-->
 	<script src="{% static 'assets/plugins/peitychart/jquery.peity.min.js' %}"></script>
-	<script src="{% static 'assets/plugins/peitychart/peitychart.init.js' %}"></script>
+	<!-- peitychart.init.js (script de démonstration du thème) retiré : il déclenchait « change » sur toutes les listes
+	     déroulantes à l'ouverture (les filtres se soumettaient en boucle) et relançait un graphique toutes les 2,5 s. -->
 
 	<!-- JVectormap js-->
 	<script src="{% static 'assets/plugins/jvectormap/jquery-jvectormap-2.0.2.min.js' %}"></script>

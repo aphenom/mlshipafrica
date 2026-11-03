@@ -27,7 +27,7 @@
 				<div class="card">
 					<div class="card-header d-flex align-items-center">
 						<div class="card-title mb-0">Inventaire</div>
-						<form method="get" class="ms-auto"><select name="vendeur" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">Tous les vendeurs en stockage</option>{% for v in vendeurs_stockage %}<option value="{{ v.code }}" {% if vendeur_selected == v.code %}selected{% endif %}>{{ v.nom_store }}</option>{% endfor %}</select></form>
+						<form method="get" class="ms-auto"><select name="vendeur" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()"><option value="">Tous les vendeurs en stockage</option>{% for v in vendeurs_stockage %}<option value="{{ v.code }}" {% if vendeur_selected == v.code %}selected{% endif %}>{{ v.nom_store }}</option>{% endfor %}</select></form>
 					</div>
 					<div class="card-body table-responsive">
 						<table class="table table-bordered table-sm mb-0">

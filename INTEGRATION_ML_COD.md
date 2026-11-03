@@ -1,6 +1,6 @@
 # Intégration : zones 2 à 6, SMS HSMS, tenue à 1 000 colis par jour
 
-Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 15 commits :
+Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 16 commits :
 
 1. **Zones 2 à 6, grille ML COD, circuit des statuts, robustesse** (`core`, `management`)
 2. **Module SMS HSMS** (nouvelle app `sms`, `settings.py`, `urls.py`)
@@ -17,6 +17,7 @@ Ce lot s'applique sur `main` (commit `1069b9a image page erreur`). Il contient 1
 13. Mise à jour de ce guide
 14. **Correctif page Confirmations** et recette de toutes les pages par rôle (`management/tests_pages.py`)
 15. **Fichier hebdomadaire du prestataire** lu tel qu'il est envoyé, avec frais et commentaires de suivi (section 16)
+16. **Correctifs** : pages qui se rechargeaient en boucle (script de démo du thème retiré), tâches planifiées regroupées
 
 Aucune nouvelle dépendance Python : tout tourne avec le `requirements.txt` actuel.
 
@@ -69,18 +70,17 @@ Voir `.env.example`. Nouvelles variables :
 ## 4. Tâches planifiées
 
 ```bash
-python manage.py crontab add      # installe les 7 tâches ci-dessous
+python manage.py crontab remove && python manage.py crontab add   # installe les 6 tâches ci-dessous (remove retire les anciennes)
 python manage.py crontab show
 ```
 
 | Quand | Commande | Rôle |
 |---|---|---|
-| chaque minute | `sms_envoyer` | Envoie les SMS en file |
-| chaque minute | `integrations_envoyer` | Événements vers Woura et webhooks des vendeurs |
+| toutes les 2 minutes | `files_envoyer` | SMS en file et événements vers Woura / webhooks des vendeurs (une seule tâche ; `sms_envoyer` et `integrations_envoyer` restent utilisables à la main) |
 | 8 h | `retours_quotidien` | Rappels J5, J7, J8, J10 et garde des retours |
 | 23 h 55 | `stockage_quotidien` | Coût de stockage du jour |
 | lundi et jeudi, 6 h | `releves_vendeurs` | Relevés des vendeurs |
-| toutes les 10 min | `sms_accuses` | Statuts de livraison (secours du webhook) et solde |
+| toutes les 15 min | `sms_accuses` | Statuts de livraison (secours du webhook) et solde |
 | 19 h | `sms_resume_soir` | Résumé aux vendeurs. Ne fait rien tant qu'il est désactivé |
 
 Les tâches ne se chevauchent pas (`CRONTAB_LOCK_JOBS`). Leurs journaux vont dans `logs/cron_sms.log`.

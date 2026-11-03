@@ -24,7 +24,7 @@
 									{% if profil_staff.role_profil != type_profil_staff.AGENT %}
 									<form method="get" class="d-flex gap-1">
 										<input type="hidden" name="filtre" value="{{ filtre }}">
-										<select name="agent" class="form-select form-select-sm" onchange="this.form.submit()">
+										<select name="agent" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()">
 											<option value="">Tous les agents</option>
 											<option value="aucun" {% if agent_selected == 'aucun' %}selected{% endif %}>Sans agent</option>
 											{% for agent in agents %}<option value="{{ agent.code }}" {% if agent_selected == agent.code %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.email|default:agent.code }}</option>{% endfor %}

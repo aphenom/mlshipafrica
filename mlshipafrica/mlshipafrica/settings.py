@@ -354,14 +354,15 @@ LOGGING['loggers']['integrations'] = {'handlers': LOG_HANDLERS, 'level': 'INFO',
 # Heures du serveur = UTC = heure d'Abidjan.
 CRONTAB_LOCK_JOBS = True  # une tâche ne démarre pas si la précédente tourne encore
 CRONTAB_COMMAND_SUFFIX = '2>&1'
+# Fréquences : le plus rapide est toutes les 2 minutes (cron ne descend jamais sous la minute). Chaque ligne
+# démarre un processus Django ; on en garde le moins possible.
 CRONJOBS = [
-    ('* * * * *', 'django.core.management.call_command', ['sms_envoyer'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
-    ('*/10 * * * *', 'django.core.management.call_command', ['sms_accuses'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
+    ('*/2 * * * *', 'django.core.management.call_command', ['files_envoyer'], {}, '>> ' + str(LOG_DIR / 'cron_files.log')),
+    ('*/15 * * * *', 'django.core.management.call_command', ['sms_accuses'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
     ('0 19 * * *', 'django.core.management.call_command', ['sms_resume_soir'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
     ('0 8 * * *', 'django.core.management.call_command', ['retours_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
     ('55 23 * * *', 'django.core.management.call_command', ['stockage_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
     ('0 6 * * 1,4', 'django.core.management.call_command', ['releves_vendeurs'], {}, '>> ' + str(LOG_DIR / 'cron_argent.log')),
-    ('* * * * *', 'django.core.management.call_command', ['integrations_envoyer'], {}, '>> ' + str(LOG_DIR / 'cron_integrations.log')),
 ]
 
 # Administration Django (paramètres et modèles de SMS), réservée aux super-utilisateurs.

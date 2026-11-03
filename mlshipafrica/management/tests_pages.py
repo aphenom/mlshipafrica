@@ -105,6 +105,14 @@ class RecettePages(TestCase):
                 '/management/vendeur_facture_colis/%s/' % c for c in codes] + [
                 '/management/vendeur_substituer_colis/%s/' % c for c in codes]:
             self.ouvrir(self.vendeur.user, url, erreurs, vus)
+        # Aucune page ne doit se recharger toute seule : pas de script de démo du thème qui déclenche « change »,
+        # et les filtres ne se soumettent que sur un vrai choix de l'utilisateur.
+        for user, url in ((self.comptes[R.SUPER], '/management/admin_stock/'), (self.comptes[R.MANAGER], '/management/admin_confirmations/'),
+                          (self.comptes[R.SUPER], '/management/admin_fichier_prestataire/')):
+            self.client.force_login(user)
+            page = self.client.get(url).content.decode()
+            self.assertNotIn('peitychart.init.js"', page)
+            self.assertNotIn('onchange="this.form.submit()"', page)
         from collections import Counter
         print('\nPAGES OUVERTES :', len(vus), dict(Counter(vus)))
         print('\n'.join(erreurs) or 'AUCUNE ERREUR 500')
