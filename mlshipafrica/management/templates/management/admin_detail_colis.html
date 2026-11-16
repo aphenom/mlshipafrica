@@ -1,459 +1,192 @@
 {% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Colis {{ article.code }} · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Shipping</li><li class="active" aria-current="page">{{ article.code }}</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+{% if form.errors and form.non_field_errors %}<div class="note bad">{{ form.non_field_errors }}</div>{% endif %}
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Détail colis{% endblock %}
+<div class="card ml">
+	<div class="head">
+		<div>
+			<div class="crumb">Créé le {{ article.date_creation|date:"d/m/Y à H:i" }}{% if article.code_tracking %} · tracking <span class="mono">{{ article.code_tracking }}</span>{% endif %}{% if article.reference_externe %} · réf. {{ article.get_source_display }} <span class="mono">{{ article.reference_externe }}</span>{% endif %}</div>
+			<h1 class="mono">{{ article.code }}
+				<span class="badge {{ article.statut_traitement|st_classe }}" style="font-family:var(--font);vertical-align:4px">{{ article.get_statut_traitement_display }}</span>
+				<span class="badge {% if article.etat_confirmation == 'confirme' %}st-livre{% elif article.etat_confirmation == 'annule' %}st-echec{% else %}st-livraison{% endif %}" style="font-family:var(--font);vertical-align:4px">{{ article.get_etat_confirmation_display }}</span>
+				{% if article.etat_suppression %}<span class="badge b-bad" style="font-family:var(--font);vertical-align:4px">Supprimé</span>{% endif %}
+			</h1>
+			<div class="muted">Vendeur : {% if article.vendeur %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store|default:article.vendeur.code }}</a> <span class="mono" style="font-size:12px">{{ article.vendeur.code }}</span>{% if article.vendeur.numero_contact %} · {{ article.vendeur.numero_contact }}{% endif %}{% else %}—{% endif %}</div>
+		</div>
+		{% if 'confirmations' in droits and article.etat_confirmation != 'confirme' %}<a class="btn" href="{% url 'management:management_admin_confirmations' %}">File de confirmation</a>{% endif %}
+	</div>
+</div>
 
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
+<div class="split">
+	<div class="grow">
+		<div class="card">
+			<h2>Client et livraison</h2>
+			<div class="kvs">
+				<div><b>Client :</b> {{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}</div>
+				<div><b>Téléphone :</b> <a href="tel:{{ article.numero_principal_destinataire }}">{{ article.numero_principal_destinataire|default:"—" }}</a>{% if article.numero_secondaire_destinataire %} · {{ article.numero_secondaire_destinataire }}{% endif %}</div>
+				<div><b>Destination :</b> {{ article.localite_arrivee.nom|default:"—" }}{% if article.zone_arrivee %} · {{ article.zone_arrivee.nom }}{% endif %}</div>
+				<div><b>Adresse :</b> {{ article.adresse_destinataire|default:"—" }}</div>
+				<div><b>Départ :</b> {{ article.localite_depart|default:"—" }} · {% if article.produit_stock_id %}sortie de stock{% elif article.is_option_recuperation %}ramassage chez le vendeur{% else %}dépôt par le vendeur{% endif %}</div>
+				<div><b>Encaissement :</b> {% if article.is_option_encaissement %}ML COD Intérieur encaisse {{ article.valeur_totale|fcfa }}{% else %}rien à encaisser (déjà payé){% endif %}</div>
+			</div>
+		</div>
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Colis</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{{ article.code }}</li>
-	{% endblock %}
+		<div class="card">
+			<h2>Contenu{% if 'argent' in droits %} et argent{% endif %}</h2>
+			<div class="tablewrap"><table>
+				<thead><tr><th>Produit</th><th>Format</th><th class="r">Prix</th><th class="r">Qté</th><th class="r">Total</th>{% if 'argent' in droits %}<th class="r">Frais</th>{% endif %}</tr></thead>
+				<tbody><tr>
+					<td><b>{% if article.produit_stock %}{{ article.produit_stock.designation }}{% else %}{{ article.designation|default:"—" }}{% endif %}</b><div class="muted" style="font-size:11.5px">{{ article.get_produits_display }}</div></td>
+					<td>{{ article.format_article.nom|default:"—" }}</td>
+					<td class="r num nw">{{ article.valeur|fcfa }}</td><td class="r num">× {{ article.quantite }}</td><td class="r num nw"><b>{{ article.valeur_totale|fcfa }}</b></td>
+					{% if 'argent' in droits %}<td class="r num nw">{{ article.montant_frais|fcfa }}</td>{% endif %}
+				</tr></tbody>
+			</table></div>
+			{% if 'argent' in droits %}
+			<div class="recap" style="max-width:460px">
+				<div class="rl"><span>Frais de livraison</span><span class="num">{{ article.montant_frais|fcfa }}</span></div>
+				{% if article.is_option_recuperation and article.cout_option_recuperation %}<div class="rl"><span>Ramassage</span><span class="num">{{ article.cout_option_recuperation|fcfa }}</span></div>{% endif %}
+				{% if article.is_option_encaissement and article.cout_option_encaissement %}<div class="rl"><span>Collecte{% if article.taux_option_encaissement %} {{ article.taux_option_encaissement|floatformat:"-2" }} %{% endif %}</span><span class="num">{{ article.cout_option_encaissement|fcfa }}</span></div>{% endif %}
+				<div class="rl" style="border-top:1px solid var(--line);padding-top:6px"><b>Total frais de service</b><b class="num">{{ article.montant_total_frais|fcfa }} {% if article.etat_reglement %}<span class="badge b-ok">réglés</span>{% else %}<span class="badge b-bad">non réglés</span>{% endif %}</b></div>
+				{% if reglement_article.montant_reduction %}<div class="rl"><span>Réduction accordée</span><span class="num">{{ reglement_article.montant_reduction|fcfa }}</span></div>{% endif %}
+				{% if article.is_option_encaissement %}<div class="net"><b>À reverser au vendeur {% if article.etat_reversement %}<span class="badge b-ok">reversé</span>{% else %}<span class="badge b-mute">pas encore</span>{% endif %}</b><b class="num">{{ article.montant_a_reverser|fcfa }}</b></div>{% endif %}
+			</div>
+			{% endif %}
+		</div>
 
-    {% block content %}
+		<div class="card">
+			<h2>Confirmation et acompte</h2>
+			<div class="muted">{{ article.get_etat_confirmation_display }}{% if article.date_confirmation %} le {{ article.date_confirmation|date:"d/m/Y H:i" }}{% if article.confirme_par %} par {{ article.confirme_par.get_full_name|default:article.confirme_par.email }}{% endif %}{% endif %} · {{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }}{% if article.agent_cod %} · agent {{ article.agent_cod.user.get_full_name|default:article.agent_cod.user.email }}{% endif %}</div>
+			{% for acompte in acomptes_article %}
+			<div><span class="badge {% if acompte.statut == 'recu' %}b-acok{% elif acompte.statut == 'a_rembourser' %}b-warn{% else %}b-mute{% endif %}">Acompte {{ acompte.get_statut_display|lower }}</span> {{ acompte.get_reseau_display }}{% if profil_staff.role_profil != type_profil_staff.MANAGER %} · réf. <span class="mono">{{ acompte.reference_depot }}</span> · {{ acompte.montant|fcfa }}{% endif %} · {{ acompte.date_reception|date:"d/m/Y H:i" }}</div>
+			{% empty %}<div class="muted">Pas d’acompte.</div>{% endfor %}
+			{% if appels_article %}
+			<div class="tablewrap"><table><thead><tr><th>Appel</th><th>Résultat</th><th>Agent</th><th>Commentaire</th></tr></thead><tbody>
+				{% for appel in appels_article %}<tr><td class="nw">{{ appel.date|date:"d/m H:i" }}</td><td>{{ appel.get_resultat_display }}</td><td>{% if appel.agent %}{{ appel.agent.get_full_name|default:appel.agent.email }}{% endif %}</td><td>{{ appel.commentaire|default:"" }}</td></tr>{% endfor %}
+			</tbody></table></div>
+			{% endif %}
+			{% if article.date_revenu_abidjan or article.frais_retour %}
+			<div class="note{% if jours_retour >= 30 %} bad{% endif %}"><b>Retour :</b>
+				{% if article.date_revenu_abidjan %}revenu à Abidjan le {{ article.date_revenu_abidjan|date:"d/m/Y" }} (J+{{ jours_retour }}){% if jours_retour >= 30 %} · <b>à déclarer abandonné</b>{% endif %}{% endif %}
+				{% if 'argent' in droits %} · frais de retour {{ article.frais_retour|fcfa }} · garde {{ article.frais_garde|fcfa }}{% endif %}
+				{% if article.generation %} · {{ article.generation }} substitution{{ article.generation|pluralize }}{% endif %}
+			</div>
+			{% endif %}
+		</div>
 
-				<!-- row -->
-				<div class="row">
-					<div class="col-lg-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Produits -  Colis #{{ article.code }} - Créé le {{ article.date_creation|date:'d-m-Y H:i:s' }} - <span class="badge me-1 my-2 bg-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span> {% if article.etat_suppression is True %} <span class="badge me-1 my-2 bg-danger">Supprimé</span> {% endif %}</h3>
-								<div class="ms-auto">
-								<a href="#" class="btn ripple btn-sm btn-outline-light"><i class="fe fe-file me-1"></i>Facture vendeur</a>
-								<a href="#" class="btn ripple btn-sm btn-outline-light"><i class="fe fe-file me-1"></i>Facture Client</a>
-								</div>
-							</div>
-							<div class="card-body">
-								<div class="table-responsive">
-									<table class="table table-bordered border text-nowrap mb-0" id="new-edit">
-										<thead>
-											<tr>
-												<th class="wd-25p">Type</th>
-												<th class="wd-25p">Désignation</th>
-												<th>Format</th>
-												<th>Valeur unitaire ({{ configuration.monnaie|default:'FCFA' }})</th>
-												<th>Quantité</th>
-												<th>Valeur Totale ({{ configuration.monnaie|default:'FCFA' }})</th>
-												{% if 'argent' in droits %}<th>Frais ({{ configuration.monnaie|default:'FCFA' }})</th>{% endif %}
-										</tr></thead>
-										<tbody>
-											<tr>
-												<td>{{ article.get_produits_display }}</td>
-												<td>{{ article.designation }}</td>
-												<td>{{ article.format_article.nom }}</td>
-												<td class="tx-right text-end">{{ article.valeur|floatformat:-2|intcomma }}</td>
-												<td class="tx-center">{{ article.quantite }}</td>
-												<td class="tx-right text-end">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
-												{% if 'argent' in droits %}<td class="tx-right text-end">{{ article.montant_frais|floatformat:-2|intcomma }}</td>{% endif %}
-											</tr>
-											{% if 'argent' in droits %}
-												<tr>
-												<!--
-													<td class="valign-middle" colspan="2" rowspan="4">
-														<div class="invoice-notes">
-															<label class="main-content-label tx-13">Notes</label>
-															<p>Sed ut perspiciatis unde omnis iste natus error sit
-																voluptatem accusantium doloremque laudantium, totam rem
-																aperiam, eaque ipsa quae ab illo inventore veritatis et
-																quasi architecto beatae vitae dicta sunt explicabo.</p>
-														</div><!- invoice-notes ->
-													</td>
-													-->
-													<td class="tx-right text-end" colspan="4">Sous-Total Frais</td>
-													<td class="tx-right text-end" colspan="3">{{ article.montant_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% if article.is_option_recuperation == True %}
-												<tr>
-													<td class="tx-right text-end" colspan="4">Frais ramassage colis</td>
-													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% endif %}
-												{% if article.is_option_encaissement == True %}
-												<tr>
-													<td class="tx-right text-end" colspan="4">Frais collecte de fond {% if article.taux_option_encaissement %} ({{article.taux_option_encaissement|floatformat:-2}}%) {% endif %}</td>
-													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% endif %}
-												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total frais de service</td>
-													<td class="tx-right text-end" colspan="3">
-														<h5 class="tx-danger tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h5>
-													</td>
-												</tr>
-												{% if article.is_option_encaissement == True %}
-												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total à reverser</td>
-													<td class="tx-right text-end" colspan="3">
-														<h4 class="tx-primary tx-bold">{{ article.montant_a_reverser|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
-													</td>
-												</tr>
-												{% endif %}
-											{% endif %}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
+		{% if peut_payer %}
+		<div class="card">
+			<h2>Comptabilité (ancien circuit)</h2>
+			<div class="muted" style="font-size:12.5px">Règlement des frais et reversement colis par colis. Les colis suivis par les relevés du lundi et du jeudi se versent depuis « Relevés vendeurs ».</div>
+			<form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
+				{% csrf_token %}
+				<h3 style="font-size:14px;font-weight:700;margin:6px 0">Paiement des frais</h3>
+				{% if reglement_article is None or article.etat_reglement is False %}<button id="btn-init-paiement" data-montrer="div-paiement" type="button" class="btn primary sm">Enregistrer un paiement</button>{% endif %}
+				<div id="div-paiement" {% if reglement_article is None or article.etat_reglement is False %}hidden{% endif %}>
+					<div class="form">
+						<label class="field">Date de paiement<input name="paiement_date" min="{{ article.date_creation|date:'Y-m-d H:i' }}" max="{% now 'Y-m-d H:i' %}" value="{{ reglement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
+						<label class="field">Réduction (F)<input id="paiement_reduction" name="paiement_reduction" type="number" min="0" max="{{ article.montant_total_frais|default:0|stringformat:'d' }}" value="{{ reglement_article.montant_reduction|default:0|stringformat:'d' }}" {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
+						<label class="field">Montant payé (F)<input id="paiement_montant" name="paiement_montant" type="number" min="0" max="{{ article.montant_total_frais|default:0|stringformat:'d' }}" value="{{ reglement_article.montant_reglement|default:article.montant_total_frais|stringformat:'d' }}" required readonly></label>
+						<label class="field">Référence<input id="paiement_reference" name="paiement_reference" value="{{ reglement_article.reference|default:'' }}" type="text" {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
+					</div>
+					<div class="tools" style="margin-top:10px">
+					{% if reglement_article is None or article.etat_reglement is False %}
+						<button name="submit_new_reglement" value="submit_new_reglement" class="btn primary">Enregistrer</button>
+						<button data-cacher="div-paiement" type="button" class="btn">Annuler</button>
+					{% elif article.etat_reglement is True %}
+						<input type="hidden" value="{{ article.get_last_reglement.pk }}" name="last_reglement">
+						<button value="submit_annuler_reglement" name="submit_annuler_reglement" type="submit" class="btn danger">Annuler le paiement</button>
+					{% endif %}
 					</div>
 				</div>
+			</form>
 
-				<div class="row">
-					<div class="col-lg-12 col-md-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Livraison</h3>
-							</div>
-							<div class="card-body">
-
-								<div class="table-responsive ">
-									<table class="table row table-borderless">
-										<tbody class="col-lg-12 col-xl-6 p-0">
-											<tr>
-												<td><strong>Vendeur :</strong> <a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.code }} - {{ article.vendeur.nom_store|default:"" }}</a></td>
-											</tr>
-											<tr>
-												<td><strong>Départ :</strong> {{ article.localite_depart }}</td>
-											</tr>
-											{% if article.is_option_recuperation == True or configuration.enable_option_recuperation == True %}
-											<tr>
-												<td><strong>Option ramassage colis :</strong> {% if article.is_option_recuperation == True %}Oui{% else %}Non{% endif %}</td>
-											</tr>
-											{% endif %}
-											{% if article.is_option_encaissement == True or configuration.enable_option_encaissement == True %}
-											<tr>
-												<td><strong>Option collecte de fond :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
-											</tr>
-											{% endif %}
-											{% if article.is_option_encaissement == True and 'argent' in droits %}
-											<tr>
-												<td><strong>Montant à reversé :</strong> {{ article.montant_a_reverser|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
-												{% if article.etat_reversement is True %}
-													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Reversé</span> 
-												{% else %}
-													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span>
-												{% endif %}
-												</td>
-											</tr>
-											{% endif %}
-										</tbody>
-										<tbody class="col-lg-12 col-xl-6 p-0">
-											<tr>
-												<td><strong></strong>
-													{% if article.vendeur.adresse %} {{ article.vendeur.adresse }}<br> {% endif %}
-													{% if article.vendeur.numero_contact %} Tel No : {{ article.vendeur.numero_contact }}<br> {% endif %}
-													{% if article.vendeur.email %} Email : {{ article.vendeur.email }} {% endif %}</td>
-											</tr>
-											<tr>
-												<td><strong>Destinataire :</strong> {{ article.nom_destinataire }} {{ article.prenom_destinataire }}</td>
-											</tr>
-											<tr>
-												<td><strong>Adresse destinataire :</strong> {{ article.adresse_destinataire }}</td>
-											</tr>
-											<tr>
-												<td><strong>Contact(s) destinataire :</strong> {{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</td>
-											</tr>
-											{% if 'argent' in droits %}<tr>
-												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
-												{% if article.etat_reglement is True %}
-													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span> {% if reglement_article.montant_reduction and reglement_article.montant_reduction > 0 %} (Réduction = {{ reglement_article.montant_reduction|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }}) {% endif %}
-												{% else %}
-													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
-												{% endif %}
-												</td>
-											</tr>{% endif %}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
+			{% if encaissement_article and article.etat_encaissement is True %}
+			<form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')" style="border-top:1px solid var(--line);padding-top:10px">
+				{% csrf_token %}
+				<input type="hidden" value="{{ encaissement_article.pk }}" name="last_encaissement">
+				<h3 style="font-size:14px;font-weight:700;margin:6px 0">Reversement au vendeur</h3>
+				{% if reversement_article is None or article.etat_reversement is False %}<button id="btn-init-reversement" data-montrer="div-reversement" type="button" class="btn primary sm">Enregistrer un reversement</button>{% endif %}
+				<div id="div-reversement" {% if reversement_article is None or article.etat_reversement is False %}hidden{% endif %}>
+					<div class="form">
+						<label class="field">Date de reversement<input name="reversement_date" min="{{ article.get_last_historique.date|date:'Y-m-d H:i' }}" max="{% now 'Y-m-d H:i' %}" value="{{ reversement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reversement_article or article.etat_reversement is True %}readonly{% endif %}></label>
+						<label class="field">Montant reversé (F)<input id="reversement_montant" name="reversement_montant" type="number" min="0" max="{{ article.montant_a_reverser|default:0|stringformat:'d' }}" value="{{ reversement_article.montant_reversement|default:article.montant_a_reverser|stringformat:'d' }}" required readonly></label>
+						<label class="field">Référence<input id="reversement_reference" name="reversement_reference" value="{{ reversement_article.reference|default:'' }}" type="text" {% if reversement_article or article.etat_reversement is True %}readonly{% endif %}></label>
+					</div>
+					<div class="tools" style="margin-top:10px">
+					{% if reversement_article is None or article.etat_reversement is False %}
+						<button name="submit_new_reversement" value="submit_new_reversement" class="btn primary">Enregistrer</button>
+						<button data-cacher="div-reversement" type="button" class="btn">Annuler</button>
+					{% elif article.etat_reversement is True %}
+						<input type="hidden" value="{{ article.get_last_reversement.pk }}" name="last_reversement">
+						<button value="submit_annuler_reversement" name="submit_annuler_reversement" type="submit" class="btn danger">Annuler le reversement</button>
+					{% endif %}
 					</div>
 				</div>
+			</form>
+			{% endif %}
+		</div>
+		{% endif %}
+	</div>
 
-				{% for message in messages %}
-					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+	<aside class="aside">
+		<div class="card">
+			<h2>Suivi</h2>
+			<div class="timeline">
+				{% for h in historique_articles %}
+				<div class="step {% if h.statut_traitement in statuts_echec %}fail{% else %}done{% endif %}">
+					<div class="rail"><span class="dot"></span>{% if not forloop.last %}<span class="bar"></span>{% endif %}</div>
+					<div class="txt"><b>{{ h.get_statut_traitement_display }}</b><small>{{ h.date|default:h.date_creation|date:"d/m/Y H:i" }} · {% if h.creation_par %}{{ h.creation_par.get_full_name|default:h.creation_par.email }}{% else %}automatique{% endif %}</small>
+						{% if h.commentaire %}<div class="trace">{{ h.commentaire }}</div>{% endif %}
+					</div>
+				</div>
 				{% endfor %}
-				<div class="row">
-					<div class="col-lg-12 col-md-12">
-						<div class="card">
-							<div class="card-header"><h3 class="card-title">Confirmation client</h3></div>
-							<div class="card-body">
-								<p class="mb-2"><strong>État :</strong> <span class="badge {% if article.etat_confirmation == 'confirme' %}bg-success{% elif article.etat_confirmation == 'annule' %}bg-danger{% else %}bg-warning{% endif %}">{{ article.get_etat_confirmation_display }}</span>
-								{% if article.date_confirmation %} le {{ article.date_confirmation|date:"d/m/Y H:i" }}{% if article.confirme_par %} par {{ article.confirme_par.get_full_name|default:article.confirme_par.email }}{% endif %}{% endif %}
-								· {{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }}
-								{% if 'confirmations' in droits and article.etat_confirmation != 'confirme' %} · <a href="{% url 'management:management_admin_confirmations' %}">File de confirmation</a>{% endif %}</p>
-								{% for acompte in acomptes_article %}
-									<p class="mb-1"><strong>Acompte :</strong> {{ acompte.get_statut_display }} · {{ acompte.get_reseau_display }}{% if profil_staff.role_profil != type_profil_staff.MANAGER %} · réf. {{ acompte.reference_depot }} · {{ acompte.montant|floatformat:0 }} F{% endif %} · {{ acompte.date_reception|date:"d/m/Y H:i" }}</p>
-								{% empty %}
-									<p class="mb-1 text-muted">Pas d'acompte.</p>
-								{% endfor %}
-								{% if article.date_revenu_abidjan or article.frais_retour %}
-								<p class="mb-1 mt-2"><strong>Retour :</strong>
-									{% if article.date_revenu_abidjan %}revenu à Abidjan le {{ article.date_revenu_abidjan|date:"d/m/Y" }} (J+{{ jours_retour }}){% if jours_retour >= 30 %} · <span class="text-danger fw-bold">à déclarer abandonné</span>{% endif %}{% endif %}
-									{% if 'argent' in droits %} · frais de retour {{ article.frais_retour|floatformat:0 }} F · garde {{ article.frais_garde|floatformat:0 }} F{% endif %}
-									{% if article.generation %} · {{ article.generation }} substitution{{ article.generation|pluralize }}{% endif %}
-								</p>
-								{% endif %}
-								{% if appels_article %}
-								<ul class="small text-muted mb-0 mt-2">
-									{% for appel in appels_article %}<li>{{ appel.date|date:"d/m H:i" }} · {{ appel.get_resultat_display }}{% if appel.agent %} · {{ appel.agent.get_full_name|default:appel.agent.email }}{% endif %}{% if appel.commentaire %} · {{ appel.commentaire }}{% endif %}</li>{% endfor %}
-								</ul>
-								{% endif %}
-							</div>
-						</div>
-					</div>
-				</div>
+				{% if article.etat_suppression %}<div class="step fail"><div class="rail"><span class="dot"></span></div><div class="txt"><b>Supprimé</b><small>{{ article.date_suppression|date:"d/m/Y H:i" }}</small></div></div>{% endif %}
+			</div>
+		</div>
 
-				<div class="row">
-					<div class="col-lg-12 col-md-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Suivi - {{ article.code_tracking|default:"N/A" }} (Code tracking)</h3>
-							</div>
-							<div class="card-body">
-								<div class="product-timeline">
-									<ul class="timeline-1">
-										{% for historique_article in historique_articles %}
-										<li class="mt-0">
-											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date|date:"d-m-Y H:i:s" }} - <i>{% if historique_article.creation_par %}par {{ historique_article.creation_par.get_full_name|default:historique_article.creation_par.email }}{% else %}automatique{% endif %}</i></small></span>
-											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
-											{% if historique_article.commentaire %}
-												<div class="alert alert-light tx-12 mb-0" role="alert">
-													{{ historique_article.commentaire }}
-												</div>
-											{% endif %}
-										</li>
-										{% endfor %}
-										{% if article.etat_suppression is True %} 
-										<li class="mt-0">
-											<i class="fa fa-trash text-danger bg-danger-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">Supprimé <small>- {{ article.date_suppression|date:"d-m-Y H:i:s" }}</small></span>
-										</li>
-										{% endif %}
-									</ul>
-									{% if article.etat_suppression is False %}
-									<form id="form-init-mouvement" class="mt-2" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
-										{% csrf_token %}
-										{% if statut_traitement_applicables %}
-										<button onclick="initArticleMouvement()" type="button" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5 mt-2">Nouveau mouvement</button>
-										{% endif %}
-										{% if peut_annuler_mouvement %}
-											{% if article.statut_traitement == article.get_last_historique.statut_traitement and article.etat_reversement is False %}
-												<input type="hidden" value="{{article.get_last_historique.pk}}" name="last_mouvement" id="last_mouvement">
-												<button value="submit_annuler_last_mouvement" name="submit_annuler_last_mouvement" type="submit" class="btn btn-dark pd-x-30 mg-t-5 mt-2">Annuler mouvement</button>
-											{% endif %}
-										{% endif %}
-									</form>
-									<div id="div-mouvement" class="mt-4 d-none">
-										<form class="form-horizontal mb-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
-											{% csrf_token %}
-											<input type="hidden" value="{{article.get_last_historique.pk}}" name="last_mouvement" id="last_mouvement">
-											{% if form.errors and form.non_field_errors %}
-												<div class="alert alert-danger">
-													{{ form.non_field_errors }}
-												</div>
-											{% endif %}
-											<div class="row row-xs formgroup-wrapper div-mouvement">
-												{% if article.code_tracking is None or article.code_tracking == "" %}
-												<div class="col-md-3">
-													<div class="main-form-group">
-														<label class="form-label">Code Traking</label> <input name="mouvement_code_tracking" class="form-control" type="text">
-													</div><!-- main-form-group -->
-												</div>
-												{% endif %}
-												<div class="col-md-3 mg-t-20 mg-md-t-0">
-													<div class="main-form-group ">
-														<label class="form-label">Date mouvement</label> <input name="mouvement_date" class="form-control" min="{{article.get_last_historique.date|date:'Y-m-d H:i'}}" max="{% now 'Y-m-d H:i' %}" value="{% now 'Y-m-d H:i' %}" type="datetime-local" required>
-													</div><!-- main-form-group -->
-												</div>
-												<div class="col-md-3 mg-t-20 mg-md-t-0">
-													<div class="main-form-group ">
-														<label class="form-label">Satut</label> 
-														<select name="mouvement_statut" class="form-control" required>
-															{% for value, label in statut_traitement_applicables %}
-																<option value="{{ value }}">{{ label }}</option>
-															{% endfor %}
-														</select>
-													</div><!-- main-form-group -->
-												</div>
-												<div class="col-md-6 mg-t-20 mg-md-t-0">
-													<div class="main-form-group ">
-														<label class="form-label">Commentaire</label> <input name="mouvement_commentaire" class="form-control" type="text">
-													</div><!-- main-form-group -->
-												</div>
-											</div>
-											<button value="submit_new_mouvement"  name="submit_new_mouvement" type="submit" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
-											<button onclick="closeArticleMouvement()" type="button" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
-										</form>
-									</div>
-									{% endif %}
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>			
-											
-				{% if peut_payer %}
+		{% if not article.etat_suppression and statut_traitement_applicables or not article.etat_suppression and peut_annuler_mouvement %}
+		<div class="card" style="margin-top:14px">
+			<h2>Faire avancer le colis</h2>
+			{% if statut_traitement_applicables %}
+			<form method="POST" enctype="multipart/form-data" class="form" style="grid-template-columns:1fr" onsubmit="return confirm('Enregistrer ce mouvement ?')">
+				{% csrf_token %}
+				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
+				<label class="field">Nouveau statut *<select name="mouvement_statut" required>{% for value, label in statut_traitement_applicables %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+				<label class="field">Date du mouvement *<input name="mouvement_date" min="{{ article.get_last_historique.date|date:'Y-m-d H:i' }}" max="{% now 'Y-m-d H:i' %}" value="{% now 'Y-m-d H:i' %}" type="datetime-local" required></label>
+				{% if not article.code_tracking %}<label class="field">Code tracking<input name="mouvement_code_tracking" type="text"></label>{% endif %}
+				<label class="field">Commentaire<input name="mouvement_commentaire" type="text" placeholder="obligatoire pour un colis non confirmé qui part"></label>
+				<button value="submit_new_mouvement" name="submit_new_mouvement" type="submit" class="btn primary">Enregistrer le mouvement</button>
+			</form>
+			{% endif %}
+			{% if peut_annuler_mouvement and article.statut_traitement == article.get_last_historique.statut_traitement and article.etat_reversement is False %}
+			<form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Annuler le dernier mouvement ?')">
+				{% csrf_token %}
+				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
+				<button value="submit_annuler_last_mouvement" name="submit_annuler_last_mouvement" type="submit" class="btn danger sm">Annuler le dernier mouvement</button>
+			</form>
+			{% endif %}
+		</div>
+		{% endif %}
+	</aside>
+</div>
+{% endblock %}
 
-				<div class="row">
-					<div class="col-lg-12 col-md-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Comptabilité</h3>
-							</div>
-							<div class="card-body">
-
-								<form class="form-horizontal mb-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
-									{% csrf_token %}
-									{% if form.errors and form.non_field_errors %}
-										<div class="alert alert-danger">
-											{{ form.non_field_errors }}
-										</div>
-									{% endif %}
-									<div class="mb-4 main-content-label">Paiement service</div>
-									{% if reglement_article is None or article.etat_reglement is False %}
-									<button id="btn-init-paiement" onclick="initPaiement()" type="button" class="btn btn-main-primary pd-x-30">Enregistrer paiement</button>
-									{% endif %}
-									<div id="div-paiement" class="{% if reglement_article is None or article.etat_reglement is False %} d-none {% endif %}">
-										<div class="row row-xs formgroup-wrapper">
-											<div class="col-md-3">
-												<div class="main-form-group ">
-													<label class="form-label">Date de paiement</label> <input name="paiement_date" class="form-control" min="{{article.date_creation|date:'Y-m-d H:i'}}" max="{% now 'Y-m-d H:i' %}" value="{{ reglement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reglement_article or article.etat_reglement is True %} readonly {% endif %}>
-												</div><!-- main-form-group -->
-											</div>
-											<div class="col-md-3 mg-t-20 mg-md-t-0">
-												<div class="main-form-group ">
-													<label class="form-label">Réduction ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="paiement_reduction"name="paiement_reduction" onchange="recalculMontantPaiement()" class="form-control" type="number" min="0" max="{{article.montant_total_frais|default:0|stringformat:'d'}}" value="{{reglement_article.montant_reduction|default:0|stringformat:'d'}}" {% if reglement_article or article.etat_reglement is True %} readonly {% endif %}>
-												</div><!-- main-form-group -->
-											</div>
-											<div class="col-md-3 mg-t-20 mg-md-t-0">
-												<div class="main-form-group ">
-													<label class="form-label">Montant payé ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="paiement_montant" name="paiement_montant" class="form-control" type="number" min="0" max="{{article.montant_total_frais|default:0|stringformat:'d'}}" value="{{reglement_article.montant_reglement|default:article.montant_total_frais|stringformat:'d'}}" required readonly>
-												</div><!-- main-form-group -->
-											</div>
-											<div class="col-md-3 mg-t-20 mg-md-t-0">
-												<div class="main-form-group ">
-													<label class="form-label">Référence</label> <input id="paiement_reference" name="paiement_reference" class="form-control" value="{{ reglement_article.reference }}" type="text" {% if reglement_article or article.etat_reglement is True %} readonly {% endif %}>
-												</div><!-- main-form-group -->
-											</div>
-										</div>
-										{% if reglement_article is None or article.etat_reglement is False %}
-											<button name="submit_new_reglement" value="submit_new_reglement" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
-											<button onclick="closePaiement()" type="button" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
-										{% else %}
-											{% if peut_payer %}
-												{% if article.etat_reglement is True %}
-													<input type="hidden" value="{{article.get_last_reglement.pk}}" name="last_reglement" id="last_reglement">
-													<button value="submit_annuler_reglement" name="submit_annuler_reglement" type="submit" class="btn btn-dark pd-x-30 mg-t-5 mt-2">Annuler paiement</button>
-												{% endif %}
-											{% endif %}
-										{% endif %}
-									</div>
-								</form>
-
-
-								{% if encaissement_article and article.etat_encaissement is True %}
-								<form class="form-horizontal bd-t pt-4" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
-									{% csrf_token %}
-									<input type="hidden" value="{{encaissement_article.pk}}" name="last_encaissement" id="last_encaissement">
-									{% if form.errors and form.non_field_errors %}
-										<div class="alert alert-danger">
-											{{ form.non_field_errors }}
-										</div>
-									{% endif %}
-									<div class="mb-4 main-content-label">Reversement</div>
-									{% if reversement_article is None or article.etat_reversement is False %}
-									<button id="btn-init-reversement" onclick="initReversement()" type="button" class="btn btn-main-primary pd-x-30">Enregistrer reversement</button>
-									{% endif %}
-									<div id="div-reversement" class="{% if reversement_article is None or article.etat_reversement is False %} d-none {% endif %}">
-										<div class="row row-xs formgroup-wrapper">
-											<div class="col-md-3">
-												<div class="main-form-group ">
-													<label class="form-label">Date de reversement</label> <input name="reversement_date" class="form-control" min="{{article.get_last_historique.date|date:'Y-m-d H:i'}}" max="{% now 'Y-m-d H:i' %}" value="{{ reversement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reversement_article or article.etat_reversement is True %} readonly {% endif %}>
-												</div><!-- main-form-group -->
-											</div>
-											<div class="col-md-3 mg-t-20 mg-md-t-0">
-												<div class="main-form-group ">
-													<label class="form-label">Montant reversé ({{ configuration.monnaie|default:'FCFA' }})</label> <input id="reversement_montant" name="reversement_montant" class="form-control" type="number" min="0" max="{{article.montant_a_reverser|default:0|stringformat:'d'}}" value="{{reversement_article.montant_reversement|default:article.montant_a_reverser|stringformat:'d'}}" required readonly>
-												</div><!-- main-form-group -->
-											</div>
-											<div class="col-md-3 mg-t-20 mg-md-t-0">
-												<div class="main-form-group ">
-													<label class="form-label">Référence</label> <input id="reversement_reference" name="reversement_reference" class="form-control" value="{{ reversement_article.reference }}" type="text" {% if reversement_article or article.etat_reversement is True %} readonly {% endif %}>
-												</div><!-- main-form-group -->
-											</div>
-										</div>
-										{% if reversement_article is None or article.etat_reversement is False %}
-											<button name="submit_new_reversement" value="submit_new_reversement" class="btn btn-main-primary pd-x-30 mg-r-5 mg-t-5  mt-3">Enregistrer</button>
-											<button onclick="closeReversement()" type="button" class="btn btn-dark pd-x-30 mg-t-5 mt-3">Annuler</button>
-										{% else %}
-											{% if peut_payer %}
-												{% if article.etat_reversement is True %}
-													<input type="hidden" value="{{article.get_last_reversement.pk}}" name="last_reversement" id="last_reversement">
-													<button value="submit_annuler_reversement" name="submit_annuler_reversement" type="submit" class="btn btn-dark pd-x-30 mg-t-5 mt-2">Annuler reversement</button>
-												{% endif %}
-											{% endif %}
-										{% endif %}
-									</div>
-								</form>
-								{% endif %}
-							</div>
-						</div>
-					</div>
-				</div>	
-
-    			{% endif %}
-
-				<!-- row closed -->
-
-    {% endblock %}
-
-	<!--  -->
-
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-			// recalculMontantPaiement();
-		});
-
-		function initArticleMouvement() {
-			$("#form-init-mouvement").addClass('d-none');
-			$("#div-mouvement").removeClass('d-none');
-		}
-		function closeArticleMouvement() {
-			$("#div-mouvement").addClass("d-none");
-			$("#form-init-mouvement").removeClass("d-none");
-		}
-
-		function initPaiement() {
-			$("#btn-init-paiement").addClass('d-none');
-			$("#div-paiement").removeClass('d-none');
-		}
-		function closePaiement() {
-			$("#div-paiement").addClass("d-none");
-			$("#btn-init-paiement").removeClass("d-none");
-		}
-		function recalculMontantPaiement() {
-			montant_total_frais = Number(String("{% if peut_payer %}{{ article.montant_total_frais|stringformat:'d' }}{% else %}0{% endif %}").replace(/\s/g, ''));
-			$("#paiement_montant").val(montant_total_frais - Number(String($("#paiement_reduction").val())));
-		}
-
-		function initReversement() {
-			$("#btn-init-reversement").addClass('d-none');
-			$("#div-reversement").removeClass('d-none');
-		}
-		function closeReversement() {
-			$("#div-reversement").addClass("d-none");
-			$("#btn-init-reversement").removeClass("d-none");
-		}
-		</script>
-
-    {% endblock %}
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('click', function (e) {
+	var m = e.target.closest('[data-montrer]'), c = e.target.closest('[data-cacher]');
+	if (m) { document.getElementById(m.dataset.montrer).hidden = false; m.hidden = true; }
+	if (c) { document.getElementById(c.dataset.cacher).hidden = true; var b = document.querySelector('[data-montrer="' + c.dataset.cacher + '"]'); if (b) b.hidden = false; }
+});
+(function () {
+	var r = document.getElementById('paiement_reduction'), p = document.getElementById('paiement_montant');
+	if (r && p && !r.readOnly) r.addEventListener('input', function () { p.value = {% if peut_payer %}{{ article.montant_total_frais|default:0|stringformat:'d' }}{% else %}0{% endif %} - (Number(r.value) || 0); });
+})();
+</script>
+{% endblock %}

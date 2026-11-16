@@ -454,6 +454,28 @@ def admin_liste_colis(request):
                     jours_historique = 60
                 articles = articles.filter(date_creation__gte=timezone.now() - timedelta(days=jours_historique))
 
+            # Shipping de la maquette : recherche, vendeur, ville, pages de 50 colis
+            from django.core.paginator import Paginator
+            q = request.GET.get('q', '').strip()
+            vendeur_filtre = request.GET.get('vendeur', '')
+            ville = request.GET.get('ville', '')
+            if q:
+                articles = articles.filter(Q(code__icontains=q) | Q(code_tracking__icontains=q) | Q(reference_externe__icontains=q)
+                                           | Q(nom_destinataire__icontains=q) | Q(prenom_destinataire__icontains=q)
+                                           | Q(numero_principal_destinataire__icontains=q))
+            if vendeur_filtre:
+                articles = articles.filter(vendeur__code=vendeur_filtre)
+            if ville:
+                articles = articles.filter(localite_arrivee__nom=ville)
+            vendeurs_liste = Vendeur.objects.filter(license=profil_staff.license, etat_suppression=False, etat_approbation=True).order_by('nom_store').values_list('code', 'nom_store')
+            villes = (Article.objects.filter(license=profil_staff.license, etat_suppression=False, localite_arrivee__isnull=False)
+                      .values_list('localite_arrivee__nom', flat=True).distinct().order_by('localite_arrivee__nom'))
+            articles = articles.select_related('zone_arrivee', 'agent_cod__user').order_by('-date_modification')
+            page = Paginator(articles, 50).get_page(request.GET.get('page'))
+            filtres = request.GET.copy()
+            filtres.pop('page', None)
+            filtres = filtres.urlencode()
+
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
     except Exception as e:
         raise Http404
@@ -662,6 +684,8 @@ def admin_detail_colis(request, code):
         # Ne jamais afficher le détail de l'erreur à l'écran (dd() exposait les données en production)
         logger.exception("admin_detail_colis %s", code)
         raise Http404
+    from management.espace_vendeur import ECHECS
+    statuts_echec = [str(x) for x in ECHECS] + [StatutTraitement.ANNULE]
     return render(request, 'management/admin_detail_colis.html', locals())
 
 def do_reglement(article, paiement_date, paiement_reference, paiement_montant, paiement_reduction):

@@ -1,120 +1,56 @@
 {% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Shipping · {{ suite_breadcrumb }} · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Shipping</li><li class="active" aria-current="page">{{ suite_breadcrumb }}</li>{% endblock %}
+{% block content %}
+<div class="card ml">
+	<div class="head">
+		<div>
+			<h1>{{ suite_breadcrumb|default:"Colis" }}</h1>
+			<div class="muted">{% if type_colis == 'a_sauver' %}Colis en route ou chez le client sans aucun mouvement depuis plus de 48 h : appelez, relancez ou réorientez.{% elif type_colis == 'revenu_abidjan' %}Colis revenus au bureau : le vendeur a jusqu’à J3 pour donner un nouveau client ; la garde démarre à J11.{% elif type_colis == 'livre' %}Livraisons des {{ jours_historique|default:60 }} derniers jours.{% else %}{{ page.paginator.count }} colis.{% endif %}</div>
+		</div>
+		<form method="get" class="tools">
+			<input type="hidden" name="type_colis" value="{{ type_colis }}">
+			{% if request.GET.jours %}<input type="hidden" name="jours" value="{{ request.GET.jours }}">{% endif %}
+			<label class="field"><select name="vendeur" aria-label="Vendeur"><option value="">Tous les vendeurs</option>{% for code, nom in vendeurs_liste %}<option value="{{ code }}" {% if code == vendeur_filtre %}selected{% endif %}>{{ nom }}</option>{% endfor %}</select></label>
+			<label class="field"><select name="ville" aria-label="Ville"><option value="">Toutes les villes</option>{% for v in villes %}<option {% if v == ville %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+			<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="N°, tracking, client, téléphone" aria-label="Rechercher" style="min-width:200px"></label>
+			<button class="btn">Filtrer</button>
+			{% if type_colis == 'livre' %}<a class="btn sm" href="?type_colis=livre&jours=180">180 jours</a>{% endif %}
+		</form>
+	</div>
+</div>
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Liste colis - {{ suite_breadcrumb }}{% endblock %}
+<div class="tablewrap">
+	<table>
+		<thead><tr><th>Commande</th><th>Vendeur</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th>{% if 'argent' in droits %}<th class="r">Frais</th>{% endif %}<th>Statut</th><th>{% if type_colis == 'a_sauver' %}Sans mouvement{% else %}Mis à jour{% endif %}</th></tr></thead>
+		<tbody>
+		{% for article in page %}
+			<tr>
+				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a><div class="muted" style="font-size:11px">{{ article.date_creation|date:"d/m/Y H:i" }}{% if article.code_tracking %} · {{ article.code_tracking }}{% endif %}</div></td>
+				<td>{% if article.vendeur %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store }}</a><div class="muted mono" style="font-size:11px">{{ article.vendeur.code }}</div>{% else %}—{% endif %}</td>
+				<td>{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}<div class="muted nw" style="font-size:11.5px">{{ article.numero_principal_destinataire|default:"" }}</div></td>
+				<td>{{ article.localite_arrivee.nom|default:"—" }}{% if article.zone_arrivee %}<div class="muted" style="font-size:11px">{{ article.zone_arrivee.nom }}</div>{% endif %}</td>
+				<td class="r num nw">{% if article.is_option_encaissement %}{{ article.valeur_totale|fcfa }}{% else %}<span class="muted">payé</span>{% endif %}<div class="muted" style="font-size:11px">{% if article.is_option_recuperation %}Ramassage{% elif article.produit_stock_id %}Stock{% else %}Dépôt{% endif %}</div></td>
+				{% if 'argent' in droits %}<td class="r num nw">{{ article.montant_total_frais|fcfa }}<div style="font-size:11px">{% if article.etat_reglement %}<span class="t-ok">réglés</span>{% else %}<span class="muted">non réglés</span>{% endif %}</div></td>{% endif %}
+				<td><span class="badge {{ article.statut_traitement|st_classe }}">{{ article.get_statut_traitement_display }}</span><div style="margin-top:3px;font-size:11px">{% if article.etat_confirmation == 'confirme' %}<span class="t-ok">✓ confirmé</span>{% elif article.etat_confirmation == 'injoignable' %}<span class="t-warn">injoignable</span>{% elif article.etat_confirmation == 'a_confirmer' %}<span class="muted">à confirmer</span>{% endif %}{% if article.agent_cod %} · {{ article.agent_cod.user.get_full_name|default:article.agent_cod.user.email }}{% endif %}</div></td>
+				<td class="nw {% if type_colis == 'a_sauver' %}t-bad{% else %}muted{% endif %}">{% if type_colis == 'a_sauver' %}{{ article.dernier_mouvement|timesince }}{% else %}{{ article.date_modification|date:"d/m/Y H:i" }}{% endif %}</td>
+			</tr>
+		{% empty %}
+			<tr><td colspan="8" class="muted" style="padding:18px">Aucun colis pour ces filtres.</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+</div>
 
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
-
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Colis</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{{ suite_breadcrumb }}</li>
-	{% endblock %}
-
-    {% block content %}
-
-				<!-- row -->
-				<div class="row">
-					<!--row-->
-					<div class="col-xl-12 col-lg-12">
-						<div class="card">
-							<div class="card-header">
-								<div class="card-title">Liste des colis - {{ suite_breadcrumb }}</div>
-								<div class="ms-auto d-none">
-									<div class="btn-list">
-										<a class="btn btn-primary btn-sm text-white" href="{% url 'management:management_vendeur_edit_colis' %}">
-											<span>
-												<i class="fe fe-plus-square"></i> Nouveau colis
-											</span>
-											<!-- <i class="fa fa-caret-down"></i> -->
-										</a>
-										<button class="btn ripple btn-sm btn-outline-light d-none"><i class="fe fe-download me-1"></i>Exporter Excel</button>
-									</div>
-								</div>
-							</div>
-							<div class="card-body mt-2">
-								<div class="table-responsive">
-									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
-										<thead>
-											<tr>
-												<th class="fw-bold">Date</th>
-												<th class="fw-bold">ID Colis</th>
-												<th class="fw-bold">Vendeur</th>
-												<th class="fw-bold">Tracking</th>
-												<th class="fw-bold">Valeur ({{ configuration.monnaie|default:'FCFA' }})</th>
-												<th class="fw-bold">Destination</th>
-												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
-												<th class="fw-bold">Options</th>
-												{% endif %}
-												{% if 'argent' in droits %}<th class="fw-bold">Coût Service ({{ configuration.monnaie|default:'FCFA' }})</th>{% endif %}
-												<th class="fw-bold">Statut</th>
-												{% if 'argent' in droits %}<th class="fw-bold">Paiement service</th>{% endif %}
-												<th class="fw-bold">Actions</th>
-											</tr>
-										</thead>
-										<tbody>
-										{% for article in articles %}
-											<tr>
-												<td data-order="{{ article.date_creation|date:'Y-m-d H:i:s' }}">{{ article.date_creation|date:'d-m-Y H:i:s' }}</td>
-												<td><a href="{% url 'management:management_admin_detail_colis' article.code %}">{{article.code}}</a></td>
-												<td><a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{article.vendeur.code}} - {{article.vendeur.nom_store}}</a></td>
-												<td>{{ article.code_tracking|default:"-" }}</td>
-												<td data-order="{{ article.valeur_totale }}" data-sort="{{ article.valeur_totale }}">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
-												<td>{{ article.localite_arrivee }}</td>
-												{% if configuration.enable_option_recuperation == True or configuration.enable_option_encaissement == True %}
-												<td>
-													{% if article.is_option_recuperation == True %}
-													<p>- Ramassage</p>
-													{% endif %}
-													{% if article.is_option_encaissement == True %}
-													<p>- Encaissement</p>
-													{% endif %}
-												</td>
-												{% endif %}
-												{% if 'argent' in droits %}<td data-order="{{ article.montant_total_frais }}" data-sort="{{ article.montant_total_frais }}">{{ article.montant_total_frais|floatformat:-2|intcomma }}</td>{% endif %}
-												<td><span class="badge badge-pill bg-{{ article.get_statut_traitement_couleur }}-transparent tx-{{ article.get_statut_traitement_couleur }} px-3 py-2 tx-10">{{ article.get_statut_traitement_display }}</span>
-												{% if 'argent' in droits %}<td>
-												{% if article.etat_reglement is True %}
-													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span>
-												{% else %}
-													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
-												{% endif %}
-												</td>{% endif %}
-												<td>
-													<div class="btn-list">
-														<a href="{% url 'management:management_admin_detail_colis' article.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
-
-													</div>
-												</td>
-											</tr>
-										{% endfor %}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
-					</div>
-					<!--row-->
-
-				</div>			
-				<!-- row closed -->
-
-    {% endblock %}
-
-	<!--  -->
-
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-			
-		});
-		</script>
-
-    {% endblock %}
+{% if page.paginator.num_pages > 1 %}
+<div class="pager">
+	<span class="muted">{{ page.start_index }} à {{ page.end_index }} sur {{ page.paginator.count }} colis</span>
+	<span class="tools">
+		{% if page.has_previous %}<a class="btn sm" href="?{{ filtres }}&page={{ page.previous_page_number }}">‹ Précédents</a>{% endif %}
+		<span class="muted">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+		{% if page.has_next %}<a class="btn sm" href="?{{ filtres }}&page={{ page.next_page_number }}">Suivants ›</a>{% endif %}
+	</span>
+</div>
+{% endif %}
+{% endblock %}
