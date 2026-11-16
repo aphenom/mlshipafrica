@@ -1,178 +1,70 @@
 {% extends "base_main.html" %}
+{% load static mlcod %}
+{% block title %}{% if article.statut_traitement == statut_traitement.BROUILLON %}Vérifier la commande{% else %}Facture {{ article.code }}{% endif %} · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li><a href="{% url 'management:management_vendeur_liste_colis' %}">Shipping</a></li><li class="active" aria-current="page">{% if article.statut_traitement == statut_traitement.BROUILLON %}Vérifier {{ article.code }}{% else %}Facture {{ article.code }}{% endif %}</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+{% with brouillon=article.statut_traitement|stringformat:'s' %}
+{% if brouillon == 'brouillon' %}
+<div class="card" style="border-color:var(--brand)">
+	<div class="head">
+		<div><h1>Vérifiez puis validez la commande</h1><div class="muted">Tant qu’elle n’est pas validée, elle reste en brouillon et ne part pas.</div></div>
+		<form method="post" class="tools">
+			{% csrf_token %}
+			<button type="submit" name="submit_modification" value="1" class="btn">Modifier</button>
+			<button type="submit" name="submit_validation" value="1" class="btn primary">Valider la commande</button>
+		</form>
+	</div>
+</div>
+{% endif %}
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Facture colis{% endblock %}
+<article class="card facture">
+	<div class="head" style="align-items:flex-start">
+		<div>
+			<img src="{% static 'mlcod/logo-cod.png' %}" alt="ML Africa COD Intérieur" style="height:46px;width:auto">
+			<div class="muted" style="font-size:12px;margin-top:6px">{% if configuration.adresse %}{{ configuration.adresse }}<br>{% endif %}{% if configuration.contact %}Tél. {{ configuration.contact }}{% endif %}{% if configuration.email %} · {{ configuration.email }}{% endif %}</div>
+		</div>
+		<div style="text-align:right">
+			<h1>{% if brouillon == 'brouillon' %}Récapitulatif{% else %}Facture{% endif %}</h1>
+			<div class="mono" style="font-weight:700">{{ article.code }}</div>
+			<div class="muted" style="font-size:12.5px">Créée le {{ article.date_creation|date:"d/m/Y à H:i" }}</div>
+			<span class="badge {{ article.statut_traitement|st_classe }}">{{ article.get_statut_traitement_display }}</span>
+		</div>
+	</div>
 
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
+	<div class="kvs">
+		<div><span class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Vendeur</span><br><b>{{ vendeur.nom_store }}</b>{% if vendeur.adresse %}<br>{{ vendeur.adresse }}{% endif %}{% if vendeur.numero_contact %}<br>{{ vendeur.numero_contact }}{% endif %}</div>
+		<div><span class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Client</span><br><b>{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}</b><br>{{ article.numero_principal_destinataire|default:"" }}{% if article.numero_secondaire_destinataire %} · {{ article.numero_secondaire_destinataire }}{% endif %}</div>
+		<div><span class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Livraison</span><br><b>{{ article.localite_arrivee.nom|default:"—" }}</b>{% if article.zone_arrivee %} · {{ article.zone_arrivee.nom }}{% endif %}<br>{{ article.adresse_destinataire|default:"" }}</div>
+	</div>
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Colis</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Facture</li>
-	{% endblock %}
+	<div class="tablewrap"><table>
+		<thead><tr><th>Produit</th><th>Format</th><th class="r">Prix</th><th class="r">Qté</th><th class="r">Total</th></tr></thead>
+		<tbody><tr>
+			<td><b>{% if article.produit_stock %}{{ article.produit_stock.designation }}{% else %}{{ article.designation|default:"—" }}{% endif %}</b><div class="muted" style="font-size:11.5px">{{ article.get_produits_display }}</div></td>
+			<td>{{ article.format_article.nom|default:"—" }}</td>
+			<td class="r num nw">{{ article.valeur|fcfa }}</td>
+			<td class="r num">× {{ article.quantite }}</td>
+			<td class="r num nw"><b>{{ article.valeur_totale|fcfa }}</b></td>
+		</tr></tbody>
+	</table></div>
 
-    {% block content %}
-				{% for message in messages %}
-					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
-				{% endfor %}
+	<div class="recap" style="max-width:420px;margin-left:auto;width:100%">
+		<div class="rl"><span>Frais de livraison</span><span class="num">{{ article.montant_frais|fcfa }}</span></div>
+		{% if article.is_option_recuperation and article.cout_option_recuperation %}<div class="rl"><span>Récupération chez vous</span><span class="num">{{ article.cout_option_recuperation|fcfa }}</span></div>{% endif %}
+		{% if article.is_option_encaissement and article.cout_option_encaissement %}<div class="rl"><span>Commission d’encaissement{% if article.taux_option_encaissement %} {{ article.taux_option_encaissement|floatformat:"-2" }} %{% endif %}</span><span class="num">{{ article.cout_option_encaissement|fcfa }}</span></div>{% endif %}
+		<div class="rl" style="border-top:1px solid var(--line);padding-top:8px"><b>Total des frais</b><b class="num t-bad">{{ article.montant_total_frais|fcfa }}</b></div>
+		{% if article.is_option_encaissement %}<div class="net"><b>Vous recevez</b><b class="num">{{ article.montant_a_reverser|fcfa }}</b></div>{% endif %}
+	</div>
 
-				<!-- row -->
-				<div class="row row-sm">
-					<div class="col-md-12 col-xl-12">
-						<div class=" main-content-body-invoice">
-							<div class="card card-invoice">
-								<div class="card-body">
-									<div class="invoice-header">
-										<h1 class="invoice-title">Facture</h1>
-										<div class="billed-from">
-											<h6>ML SHIP Africa</h6>
-											<p>{% if configuration.adresse %} {{ configuration.adresse }}<br> {% endif %}
-												{% if configuration.contact %} Tel No: {{ configuration.contact }}<br> {% endif %}
-												{% if configuration.email %} Email: {{ configuration.email }} {% endif %}</p>
-										</div><!-- billed-from -->
-									</div><!-- invoice-header -->
-									<div class="row mg-t-20">
-										<div class="col-md">
-											<label class="tx-gray-600">Facturé à</label>
-											<div class="billed-to">
-												<h6>{{ vendeur.nom_store }}</h6>
-												<p>{% if vendeur.adresse %} {{ vendeur.adresse }}<br> {% endif %}
-													{% if vendeur.numero_contact %} Tel No : {{ vendeur.numero_contact }}<br> {% endif %}
-													{% if vendeur.email %} Email : {{ vendeur.email }} {% endif %}</p>
-											</div>
-										</div>
-										<div class="col-md">
-											<label class="tx-gray-600">Informations Colis</label>
-											<p class="invoice-info-row"><span>Colis No</span> <span>{{ article.code }}</span>
-											</p>
-											<p class="invoice-info-row"><span>Créé le</span> <span>{{ article.date_creation|date:'d-m-Y H:i:s' }}</span>
-											</p>
-											<p class="invoice-info-row"><span>Format colis</span> <span>{{ article.format_article }}</span>
-											</p>
-											<p class="invoice-info-row"><span>Destinataire</span> <span>{{ article.nom_destinataire }} {{ article.prenom_destinataire|default_if_none:"" }}</span>
-											</p>
-											<p class="invoice-info-row"><span>Contact Destinataire</span> <span>{{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</span>
-											</p>
-											<p class="invoice-info-row"><span>Ville Destinatation</span> <span>{{ article.localite_arrivee }}</span>
-											</p>
-											<p class="invoice-info-row"><span>Adresse Destinatation</span> <span>{{ article.adresse_destinataire }}</span>
-											</p>
-											<p class="invoice-info-row"> 
-											{% if article.etat_validation == True %}<span>Date Validation :</span> <span>{{ article.date_validation|date:"d-m-Y" }}</span>{% else %}<span class="text-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span>{% endif %}</p>
-										</div>
-									</div>
-									<div class="table-responsive mg-t-40">
-										<table class="table table-invoice border text-md-nowrap mb-0">
-											<thead>
-												<tr>
-													<th class="wd-25p">Type</th>
-													<th class="wd-25p">Désignation</th>
-													<th class="tx-right text-center">Valeur unitaire ({{ configuration.monnaie|default:'FCFA' }})</th>
-													<th class="tx-center">Quantité</th>
-													<th class="tx-right text-center">Valeur Totale ({{ configuration.monnaie|default:'FCFA' }})</th>
-													<th class="tx-right text-center">Frais ({{ configuration.monnaie|default:'FCFA' }})</th>
-												</tr>
-											</thead>
-											<tbody>
+	<div class="muted" style="font-size:11.5px;text-align:center;border-top:1px dashed var(--line);padding-top:10px">ML COD Intérieur est un service de ML SHIP AFRICA · montants en francs CFA</div>
+</article>
 
-												<tr>
-													<td class="tx-12">
-													{{ article.get_produits_display }}
-													</td>
-													<td class="tx-12">
-													{{ article.designation }}
-													</td>
-													<td class="tx-right text-end">{{ article.valeur|floatformat:-2|intcomma }}</td>
-													<td class="tx-center">{{ article.quantite }}</td>
-													<td class="tx-right text-end">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
-													<td class="tx-right text-end">{{ article.montant_frais|floatformat:-2|intcomma }}</td>
-												</tr>
-												<tr>
-												<!--
-													<td class="valign-middle" colspan="2" rowspan="4">
-														<div class="invoice-notes">
-															<label class="main-content-label tx-13">Notes</label>
-															<p>Sed ut perspiciatis unde omnis iste natus error sit
-																voluptatem accusantium doloremque laudantium, totam rem
-																aperiam, eaque ipsa quae ab illo inventore veritatis et
-																quasi architecto beatae vitae dicta sunt explicabo.</p>
-														</div><!- invoice-notes ->
-													</td>
-													-->
-													<td class="tx-right text-end" colspan="3">Sous-Total Frais</td>
-													<td class="tx-right text-end" colspan="3">{{ article.montant_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% if article.is_option_recuperation == True %}
-												<tr>
-													<td class="tx-right text-end" colspan="3">Frais ramassage colis</td>
-													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% endif %}
-												{% if article.is_option_encaissement == True %}
-												<tr>
-													<td class="tx-right text-end" colspan="3">Frais collecte de fond {% if article.taux_option_encaissement %} ({{article.taux_option_encaissement|floatformat:-2}}%) {% endif %}</td>
-													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% endif %}
-												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="3">Total frais de service</td>
-													<td class="tx-right text-end" colspan="3">
-														<h5 class="tx-danger tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h5>
-													</td>
-												</tr>
-												{% if article.is_option_encaissement == True %}
-												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="3">Total à reverser</td>
-													<td class="tx-right text-end" colspan="3">
-														<h4 class="tx-primary tx-bold">{{ article.montant_a_reverser|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
-													</td>
-												</tr>
-												{% endif %}
-											</tbody>
-										</table>
-									</div>
-									<form method="POST" onsubmit="return confirm('Voulez-vous continuer ?')">
-										{% csrf_token %}
-										{% if article.statut_traitement != statut_traitement.BROUILLON %}
-										<a class="btn btn-purple float-end mt-3 ms-2" href="#"  onclick="javascript:window.print();">
-											<i class="mdi mdi-printer me-1"></i>Imprimer
-										</a>
-										<a class="btn btn-info float-end mt-3 ms-2" href="{% url 'management:management_vendeur_detail_colis' article.code %}">
-											<i class="mdi mdi-eye me-1"></i>Voir détail
-										</a>
-										{% endif %}
-										{% if article.statut_traitement == statut_traitement.BROUILLON %}
-										<button type="submit" name="submit_modification" value="submit_modification" class="btn btn-danger float-end mt-3 ms-2">
-											<i class="zmdi zmdi-edit me-1"></i>Modifier
-										</button>
-										<button type="submit" name="submit_validation" value="submit_validation" class="btn btn-success float-end mt-3">
-											<i class="zmdi zmdi-assignment-check me-1"></i>Valider
-										</button>
-										{% endif %}
-									</form>
-								</div>
-							</div>
-						</div>
-					</div><!-- COL-END -->
-				</div>
-				<!-- row closed -->
-
-    {% endblock %}
-
-	<!--  -->
-
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-			
-		});
-		</script>
-
-    {% endblock %}
+{% if brouillon != 'brouillon' %}
+<div class="tools no-print">
+	<button class="btn" type="button" onclick="window.print()">Imprimer</button>
+	<a class="btn" href="{% url 'management:management_vendeur_detail_colis' article.code %}">Voir le suivi</a>
+</div>
+{% endif %}
+{% endwith %}
+{% endblock %}

@@ -1,237 +1,99 @@
 {% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Commande {{ article.code }} · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li><a href="{% url 'management:management_vendeur_liste_colis' %}">Shipping</a></li><li class="active" aria-current="page">{{ article.code }}</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Détail colis{% endblock %}
+<div class="card">
+	<div class="head">
+		<div>
+			<div class="crumb">Commande créée le {{ article.date_creation|date:"d/m/Y à H:i" }}</div>
+			<h1 class="mono">{{ article.code }} <span class="badge {{ article.statut_traitement|st_classe }}" style="font-family:var(--font);vertical-align:4px">{{ article.get_statut_traitement_display }}</span></h1>
+			<div class="muted">{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }} · {{ article.numero_principal_destinataire|default:"" }}{% if article.numero_secondaire_destinataire %} · {{ article.numero_secondaire_destinataire }}{% endif %}</div>
+			<div class="muted">{{ article.localite_arrivee.nom|default:"—" }}{% if article.zone_arrivee %} · {{ article.zone_arrivee.nom }}{% endif %} — {{ article.adresse_destinataire|default:"" }}</div>
+		</div>
+		<div class="tools">
+			<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">‹ Mes commandes</a>
+			<a class="btn" href="{% url 'management:management_vendeur_facture_colis' article.code %}">Facture</a>
+		</div>
+	</div>
+</div>
 
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
+{% if article.statut_traitement == statut_traitement.REVENU_ABIDJAN %}
+<div class="card" style="border-color:var(--warn)">
+	<div class="head"><h2>Votre colis est revenu à Abidjan (J+{{ jours_retour }})</h2><span class="badge b-warn">À traiter</span></div>
+	<div class="muted">Frais de retour : <b>{{ article.frais_retour|fcfa }}</b>{% if not article.vendeur.option_stockage %} · garde à ce jour : <b>{{ article.frais_garde|fcfa }}</b>. Vous avez jusqu’à J3 pour donner un nouveau client ou venir le reprendre sans frais de garde ; la garde de 500 F par jour démarre à J11, plafonnée à 10 000 F, et le colis peut être déclaré abandonné après J30{% endif %}.</div>
+	<h3 style="font-size:14px;font-weight:700;margin:4px 0 0">Nouveau client</h3>
+	<form method="post" action="{% url 'management:management_vendeur_substituer_colis' article.code %}" onsubmit="return confirm('Envoyer ce colis à ce nouveau client ?')">
+		{% csrf_token %}
+		<div class="form">
+			<label class="field">Nom<input name="nom" maxlength="100"></label>
+			<label class="field">Prénom(s)<input name="prenom" maxlength="255"></label>
+			<label class="field">Téléphone du client *<input name="numero_principal" type="tel" inputmode="tel" required placeholder="+225 07 …"></label>
+			<label class="field">Autre numéro<input name="numero_secondaire" type="tel" inputmode="tel"></label>
+			<label class="field">Ville *<select name="localite" required><option value="">Choisir</option>{% for pk, libelle in localites_substitution %}<option value="{{ pk }}">{{ libelle }}</option>{% endfor %}</select></label>
+			<label class="field">Quartier et repère<input name="adresse" maxlength="255"></label>
+			<label class="field">Prix unitaire (F)<input name="valeur" type="number" min="0" value="{{ article.valeur|floatformat:'0u' }}"></label>
+			<div class="field" style="justify-content:flex-end"><button class="btn primary">Envoyer au nouveau client</button></div>
+		</div>
+	</form>
+</div>
+{% endif %}
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Colis</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{{ article.code }}</li>
-	{% endblock %}
+<div class="split">
+	<div class="grow">
+		<div class="card">
+			<h2>Contenu</h2>
+			<div class="tablewrap"><table>
+				<thead><tr><th>Produit</th><th>Type</th><th>Format</th><th class="r">Prix</th><th class="r">Qté</th><th class="r">Total</th></tr></thead>
+				<tbody><tr>
+					<td><b>{% if article.produit_stock %}{{ article.produit_stock.designation }}{% else %}{{ article.designation|default:"—" }}{% endif %}</b></td>
+					<td>{{ article.get_produits_display|default:"—" }}</td>
+					<td>{{ article.format_article.nom|default:"—" }}</td>
+					<td class="r num nw">{{ article.valeur|fcfa }}</td>
+					<td class="r num">× {{ article.quantite }}</td>
+					<td class="r num nw"><b>{{ article.valeur_totale|fcfa }}</b></td>
+				</tr></tbody>
+			</table></div>
+			<div class="muted" style="font-size:12.5px">Origine : {% if article.produit_stock_id %}sortie de votre stock ML COD Intérieur{% elif article.is_option_recuperation %}récupéré chez vous par ML COD Intérieur{% else %}déposé par vous{% endif %}.</div>
+		</div>
 
-    {% block content %}
-				{% for message in messages %}
-					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
-				{% endfor %}
-				{% if article.statut_traitement == statut_traitement.REVENU_ABIDJAN %}
-				<div class="card border-warning">
-					<div class="card-header"><h3 class="card-title">Votre colis est revenu à Abidjan (J+{{ jours_retour }})</h3></div>
-					<div class="card-body">
-						<p>Frais de retour : {{ article.frais_retour|floatformat:0 }} F{% if not article.vendeur.option_stockage %} · garde à ce jour : {{ article.frais_garde|floatformat:0 }} F. Vous avez 3 jours pour donner un nouveau client ou venir le récupérer ; à partir du 11e jour, une garde de 500 F par jour s'applique, et le colis est déclaré abandonné au 30e jour.{% endif %}</p>
-						<form method="post" action="{% url 'management:management_vendeur_substituer_colis' article.code %}" class="row g-2" onsubmit="return confirm('Envoyer ce colis à ce nouveau client ?')">
-							{% csrf_token %}
-							<div class="col-md-3"><label class="form-label">Nom</label><input name="nom" class="form-control" maxlength="100"></div>
-							<div class="col-md-3"><label class="form-label">Prénom(s)</label><input name="prenom" class="form-control" maxlength="255"></div>
-							<div class="col-md-3"><label class="form-label">Numéro du client *</label><input name="numero_principal" class="form-control" required placeholder="07 00 00 00 00"></div>
-							<div class="col-md-3"><label class="form-label">Autre numéro</label><input name="numero_secondaire" class="form-control"></div>
-							<div class="col-md-4"><label class="form-label">Localité *</label><select name="localite" class="form-control" required><option value="">Choisir</option>{% for pk, libelle in localites_substitution %}<option value="{{ pk }}">{{ libelle }}</option>{% endfor %}</select></div>
-							<div class="col-md-4"><label class="form-label">Adresse</label><input name="adresse" class="form-control" maxlength="255"></div>
-							<div class="col-md-2"><label class="form-label">Prix unitaire</label><input name="valeur" class="form-control" type="number" min="0" value="{{ article.valeur|floatformat:0 }}"></div>
-							<div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100">Nouveau client</button></div>
-						</form>
-					</div>
+		<div class="card">
+			<h2>Argent de la commande</h2>
+			<div class="recap">
+				<div class="rl"><span>{% if article.is_option_encaissement %}Montant payé par le client{% else %}Le client vous a déjà payé{% endif %}</span><b class="num">{% if article.is_option_encaissement %}{{ article.valeur_totale|fcfa }}{% else %}—{% endif %}</b></div>
+				<div class="rl"><span>Frais de livraison{% if article.localite_arrivee %} ({{ article.localite_arrivee.nom }}{% if article.format_article %} · {{ article.format_article.nom }}{% endif %}){% endif %}</span><span class="num t-bad">{{ article.montant_frais|fcfa }}</span></div>
+				{% if article.is_option_recuperation and article.cout_option_recuperation %}<div class="rl"><span>Récupération chez vous</span><span class="num t-bad">{{ article.cout_option_recuperation|fcfa }}</span></div>{% endif %}
+				{% if article.is_option_encaissement and article.cout_option_encaissement %}<div class="rl"><span>Commission d’encaissement{% if article.taux_option_encaissement %} {{ article.taux_option_encaissement|floatformat:"-2" }} %{% endif %}</span><span class="num t-bad">{{ article.cout_option_encaissement|fcfa }}</span></div>{% endif %}
+				{% if article.frais_retour %}<div class="rl"><span>Frais de retour</span><span class="num t-bad">{{ article.frais_retour|fcfa }}</span></div>{% endif %}
+				{% if article.frais_garde %}<div class="rl"><span>Garde</span><span class="num t-bad">{{ article.frais_garde|fcfa }}</span></div>{% endif %}
+				<div class="net"><b>{% if article.is_option_encaissement %}Vous recevez{% else %}Frais à votre charge{% endif %}</b><b class="num">{% if article.is_option_encaissement %}{{ article.montant_a_reverser|fcfa }}{% else %}{{ article.montant_total_frais|fcfa }}{% endif %}</b></div>
+			</div>
+			<div class="muted" style="font-size:12.5px">{% if article.statut_traitement == statut_traitement.REVERSE %}Versé sur votre relevé.{% elif article.is_option_encaissement %}Versé sur votre relevé du lundi ou du jeudi après la livraison.{% else %}Retenus sur votre relevé.{% endif %}</div>
+		</div>
+	</div>
+
+	<aside class="aside card">
+		<h2>Suivi</h2>
+		<div class="timeline">
+			{% for h in historique_articles %}
+			<div class="step {% if h.statut_traitement in statuts_echec %}fail{% else %}done{% endif %}">
+				<div class="rail"><span class="dot"></span>{% if not forloop.last or a_venir %}<span class="bar"></span>{% endif %}</div>
+				<div class="txt"><b>{{ h.get_statut_traitement_display }}</b><small>{{ h.date|default:h.date_creation|date:"d/m/Y H:i" }}</small>
+					{% if h.commentaire %}<div class="trace">{{ h.commentaire }}</div>{% endif %}
 				</div>
-				{% endif %}
-
-				<!-- row -->
-				<div class="row">
-					<div class="col-lg-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Produits -  Colis #{{ article.code }} - Créé le {{ article.date_creation|date:'d-m-Y H:i:s' }} - <span class="badge me-1 my-2 bg-{{ article.get_statut_traitement_couleur }}">{{ article.get_statut_traitement_display }}</span></h3>
-								<a href="{% url 'management:management_vendeur_facture_colis' article.code %}" class="btn ripple btn-sm btn-outline-light ms-auto"><i class="fe fe-file me-1"></i>Facture</a>
-							</div>
-							<div class="card-body">
-								<div class="table-responsive">
-									<table class="table table-bordered border text-nowrap mb-0" id="new-edit">
-										<thead>
-											<tr>
-												<th class="wd-25p">Type</th>
-												<th class="wd-25p">Désignation</th>
-												<th>Format</th>
-												<th>Valeur unitaire ({{ configuration.monnaie|default:'FCFA' }})</th>
-												<th>Quantité</th>
-												<th>Valeur Totale ({{ configuration.monnaie|default:'FCFA' }})</th>
-												<th>Frais ({{ configuration.monnaie|default:'FCFA' }})</th>
-										</tr></thead>
-										<tbody>
-											<tr>
-												<td>{{ article.get_produits_display }}</td>
-												<td>{{ article.designation }}</td>
-												<td>{{ article.format_article.nom }}</td>
-												<td class="tx-right text-end">{{ article.valeur|floatformat:-2|intcomma }}</td>
-												<td class="tx-center">{{ article.quantite }}</td>
-												<td class="tx-right text-end">{{ article.valeur_totale|floatformat:-2|intcomma }}</td>
-												<td class="tx-right text-end">{{ article.montant_frais|floatformat:-2|intcomma }}</td>
-											</tr>
-												<tr>
-												<!--
-													<td class="valign-middle" colspan="2" rowspan="4">
-														<div class="invoice-notes">
-															<label class="main-content-label tx-13">Notes</label>
-															<p>Sed ut perspiciatis unde omnis iste natus error sit
-																voluptatem accusantium doloremque laudantium, totam rem
-																aperiam, eaque ipsa quae ab illo inventore veritatis et
-																quasi architecto beatae vitae dicta sunt explicabo.</p>
-														</div><!- invoice-notes ->
-													</td>
-													-->
-													<td class="tx-right text-end" colspan="4">Sous-Total Frais</td>
-													<td class="tx-right text-end" colspan="3">{{ article.montant_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% if article.is_option_recuperation == True %}
-												<tr>
-													<td class="tx-right text-end" colspan="4">Frais ramassage colis</td>
-													<td class="tx-right text-end" colspan="3">{{ article.cout_option_recuperation|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% endif %}
-												{% if article.is_option_encaissement == True %}
-												<tr>
-													<td class="tx-right text-end" colspan="4">Frais collecte de fond {% if article.taux_option_encaissement %} ({{article.taux_option_encaissement|floatformat:-2}}%) {% endif %}</td>
-													<td class="tx-right text-end" colspan="3">{{ article.cout_option_encaissement|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</td>
-												</tr>
-												{% endif %}
-												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total frais de service</td>
-													<td class="tx-right text-end" colspan="3">
-														<h5 class="tx-danger tx-bold">{{ article.montant_total_frais|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h5>
-													</td>
-												</tr>
-												{% if article.is_option_encaissement == True %}
-												<tr>
-													<td class="tx-right text-end tx-uppercase tx-bold tx-inverse" colspan="4">Total à reverser</td>
-													<td class="tx-right text-end" colspan="3">
-														<h4 class="tx-primary tx-bold">{{ article.montant_a_reverser|floatformat:-2|intcomma }} {{ configuration.monnaie|default:'FCFA' }}</h4>
-													</td>
-												</tr>
-												{% endif %}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="row">
-					<div class="col-lg-12 col-md-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Livraison</h3>
-							</div>
-							<div class="card-body">
-
-								<div class="table-responsive ">
-									<table class="table row table-borderless">
-										<tbody class="col-lg-12 col-xl-6 p-0">
-											<tr>
-												<td><strong>Départ :</strong> {{ article.localite_depart }}</td>
-											</tr>
-											{% if article.is_option_recuperation == True or configuration.enable_option_recuperation == True %}
-											<tr>
-												<td><strong>Option ramassage colis :</strong> {% if article.is_option_recuperation == True %}Oui{% else %}Non{% endif %}</td>
-											</tr>
-											{% endif %}
-											{% if article.is_option_encaissement == True or configuration.enable_option_encaissement == True %}
-											<tr>
-												<td><strong>Option collecte de fond :</strong> {% if article.is_option_encaissement == True %}Oui{% else %}Non{% endif %}</td>
-											</tr>
-											{% endif %}
-											{% if article.is_option_encaissement == True %}
-											<tr>
-												<td><strong>Montant à reversé :</strong> {{ article.montant_a_reverser|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
-												{% if article.etat_reversement is True %}
-													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Reversé</span> 
-												{% else %}
-													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Non reversé</span>
-												{% endif %}
-												</td>
-											</tr>
-											{% endif %}
-										</tbody>
-										<tbody class="col-lg-12 col-xl-6 p-0">
-											<tr>
-												<td><strong>Destination :</strong> {{ article.localite_arrivee }}</td>
-											</tr>
-											<tr>
-												<td><strong>Destinataire :</strong> {{ article.nom_destinataire }} {{ article.prenom_destinataire }}</td>
-											</tr>
-											<tr>
-												<td><strong>Adresse destinataire :</strong> {{ article.adresse_destinataire }}</td>
-											</tr>
-											<tr>
-												<td><strong>Contact(s) destinataire :</strong> {{ article.numero_principal_destinataire }} {{ article.numero_secondaire_destinataire }}</td>
-											</tr>
-											<tr>
-												<td><strong>Coût du service :</strong> {{ article.montant_total_frais|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }} 
-												{% if article.etat_reglement is True %}
-													<span class="badge badge-pill bg-success-transparent tx-success px-3 py-2 tx-10">Payé</span> {% if article.get_last_reglement.montant_reduction and article.get_last_reglement.montant_reduction > 0 %} (Réduction = {{ article.get_last_reglement.montant_reduction|floatformat:-2|intcomma }}  {{ configuration.monnaie|default:'FCFA' }}) {% endif %}
-												{% else %}
-													<span class="badge badge-pill bg-danger-transparent tx-danger px-3 py-2 tx-10">Impayé</span>
-												{% endif %}
-												</td>
-											</tr>
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="row">
-					<div class="col-lg-12 col-md-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Suivi</h3>
-							</div>
-							<div class="card-body">
-								<div class="product-timeline">
-									<ul class="timeline-1">
-										{% for historique_article in historique_articles %}
-										<li class="mt-0">
-											<i class="fa fa-{{ historique_article.get_statut_traitement_icone }} text-{{ historique_article.get_statut_traitement_couleur }} bg-{{ historique_article.get_statut_traitement_couleur }}-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">{{ historique_article.get_statut_traitement_display }} <small>- {{ historique_article.date|date:"d-m-Y H:i:s" }}</small></span>
-											<p class="mb-0 text-muted tx-12"> {{ historique_article.get_statut_traitement_commentaire }} </p>
-											{% if historique_article.commentaire %}
-												<div class="alert alert-light tx-12 mb-0" role="alert">
-													{{ historique_article.commentaire }}
-												</div>
-											{% endif %}
-										</li>
-										{% if article.etat_suppression is True %} 
-										<li class="mt-0">
-											<i class="fa fa-trash text-danger bg-danger-transparent product-icon p-2 rounded-50"></i>
-											<span class="fw-semibold mb-4 tx-15">Supprimé <small>- {{ article.date_suppression|date:"d-m-Y H:i:s" }}</small></span>
-										</li>
-										{% endif %}
-										{% endfor %}
-									</ul>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>				
-				<!-- row closed -->
-
-    {% endblock %}
-
-	<!--  -->
-
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-			
-		});
-		</script>
-
-    {% endblock %}
+			</div>
+			{% endfor %}
+			{% for libelle in a_venir %}
+			<div class="step"><div class="rail"><span class="dot"></span>{% if not forloop.last %}<span class="bar"></span>{% endif %}</div><div class="txt"><b>{{ libelle }}</b><small>à venir</small></div></div>
+			{% endfor %}
+		</div>
+		{% if article.statut_traitement == statut_traitement.EN_ATTENTE_DEPOT or article.statut_traitement == statut_traitement.EN_ATTENTE_RAMASSAGE %}
+		<div class="muted" style="font-size:12px">Pas encore reçue par ML COD Intérieur.</div>
+		{% else %}
+		<div class="muted" style="font-size:12px">Commande prise en charge par ML COD Intérieur : elle n’est plus modifiable.</div>
+		{% endif %}
+	</aside>
+</div>
+{% endblock %}

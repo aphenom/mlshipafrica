@@ -219,3 +219,25 @@ def taux_par_ville(vendeur, jours=90):
                                                      e=Count('id', filter=Q(statut_traitement__in=ECHECS)))}
     return {'vendeur': calcul(colis_du_vendeur(vendeur)),
             'reseau': calcul(Article.objects.filter(license=vendeur.license, etat_suppression=False))}
+
+
+def etapes_a_venir(article):
+    """Étapes qui restent sur le parcours normal (attente → reçu → transit → arrivé → livraison → livré → versé)."""
+    parcours = [S.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation else S.EN_ATTENTE_DEPOT,
+                S.RAMASSE if article.is_option_recuperation else S.DEPOT,
+                S.EN_TRANSIT, S.ARRIVE, S.EN_COURS_LIVRAISON, S.LIVRE, S.LIVRE_PAYE, S.REVERSE]
+    if article.statut_traitement not in parcours:
+        return []
+    return [S(s).label for s in parcours[parcours.index(article.statut_traitement) + 1:]]
+
+
+def prochain_releve(maintenant=None):
+    """Prochain relevé : lundi ou jeudi à 6 h (tâche releves_vendeurs)."""
+    maintenant = timezone.localtime(maintenant or timezone.now())
+    for j in range(0, 8):
+        jour = (maintenant + timedelta(days=j)).date()
+        if jour.weekday() in (0, 3):
+            moment = timezone.make_aware(datetime.combine(jour, time(6, 0)))
+            if moment > maintenant:
+                return moment
+    return None

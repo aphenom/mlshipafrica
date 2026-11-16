@@ -192,7 +192,12 @@ def vendeur_detail_colis(request, code):
         # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
         # statut_traitement = StatutTraitement
         # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
-        historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).order_by("date_creation")
+        historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(
+            statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
+        # Frise de la maquette : étapes passées (rouges si échec ou retour), puis celles qui restent sur le parcours normal
+        from management.espace_vendeur import ECHECS, etapes_a_venir
+        statuts_echec = [str(x) for x in ECHECS] + [StatutTraitement.ANNULE]
+        a_venir = etapes_a_venir(article)
         if article.statut_traitement == StatutTraitement.REVENU_ABIDJAN:
             from management.forms import libelle_localite_avec_delai
             from management.retours import jours_a_abidjan
@@ -1156,8 +1161,15 @@ def vendeur_releves(request):
     releve_detail = releves.filter(code=request.GET.get('releve')).first() if request.GET.get('releve') else None
     if releve_detail:
         lignes_detail = releve_detail.ecritures.select_related('article').order_by('date')
-    en_cours = totaux(Ecriture.objects.filter(vendeur=vendeur, releve__isnull=True).exclude(type='cout_prestataire'))
+    non_releve = Ecriture.objects.filter(vendeur=vendeur, releve__isnull=True).exclude(type='cout_prestataire')
+    en_cours = totaux(non_releve)
+    lignes_en_cours = non_releve.select_related('article').order_by('-date')[:200]
     moyens = MoyenVersement.choices
+    # Mon argent de la maquette : à recevoir, dernier versement, prochain relevé (lundi ou jeudi, 6 h)
+    from management.espace_vendeur import a_recevoir, prochain_releve
+    total_a_recevoir = a_recevoir(vendeur)
+    dernier_verse = releves.filter(statut='verse').order_by('-date_versement').first()
+    date_prochain_releve = prochain_releve()
     return render(request, 'management/vendeur_releves.html', locals())
 
 
