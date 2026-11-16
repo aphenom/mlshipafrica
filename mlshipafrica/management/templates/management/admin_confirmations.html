@@ -1,75 +1,98 @@
 {% extends "base_main.html" %}
-{% block title %}ML COD Intérieur - Confirmations{% endblock %}
-{% load static %}
-{% load humanize %}
+{% load mlcod humanize %}
+{% block title %}Commandes à appeler · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Commandes à appeler</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card ml">
+	<div class="head">
+		<div>
+			<h1>{% if profil_staff.role_profil == type_profil_staff.AGENT %}Mes commandes à appeler{% else %}Commandes à appeler{% endif %}</h1>
+			<div class="muted">Appelez le client dès la création de la commande. Il confirme et a payé l’acompte de {{ montant_acompte|fcfa }} : <b>« ✓ Acompte reçu »</b> (réseau et référence). Il paiera tout à la livraison : <b>« Non payé »</b>. Dans les deux cas la commande est confirmée et sort de la liste. Sinon : <b>« Autre résultat… »</b> (injoignable ou annulé avec motif). L’acompte reste interne : le vendeur ne le voit jamais.</div>
+		</div>
+		{% if profil_staff.role_profil != type_profil_staff.AGENT %}
+		<form method="get" class="tools">
+			<input type="hidden" name="vue" value="{{ vue }}">
+			<label class="field" style="flex-direction:row;align-items:center;gap:8px">Agent
+				<select name="agent" onchange="if (event.isTrusted) this.form.submit()">
+					<option value="">Tous les agents</option>
+					<option value="aucun" {% if agent_selected == 'aucun' %}selected{% endif %}>Sans agent</option>
+					{% for agent in agents %}<option value="{{ agent.code }}" {% if agent_selected == agent.code %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.user.email|default:agent.code }}</option>{% endfor %}
+				</select>
+			</label>
+		</form>
+		{% endif %}
+	</div>
+	<div class="kpis">
+		<a class="kpi" href="?vue=appel&filtre=a_confirmer{% if agent_selected %}&agent={{ agent_selected }}{% endif %}"><span class="l">À appeler</span><span class="v {% if nb_jamais %}t-bad{% else %}t-ok{% endif %}">{{ nb_jamais }}</span><span class="n">jamais appelées</span></a>
+		<a class="kpi" href="?vue=appel&filtre=injoignable{% if agent_selected %}&agent={{ agent_selected }}{% endif %}"><span class="l">À rappeler</span><span class="v">{{ nb_rappeler }}</span><span class="n">injoignables</span></a>
+		<div class="kpi"><span class="l">Confirmées aujourd’hui</span><span class="v t-ok">{{ nb_confirmees_jour }}</span><span class="n">passent dans Shipping à leur réception</span></div>
+	</div>
+	<div class="chips" role="group" aria-label="Vue">
+		<a class="chip" href="?vue=appel{% if agent_selected %}&agent={{ agent_selected }}{% endif %}" {% if vue == 'appel' %}aria-current="page"{% endif %}>À appeler <span class="c">{{ nb_jamais|add:nb_rappeler }}</span></a>
+		<a class="chip" href="?vue=attente{% if agent_selected %}&agent={{ agent_selected }}{% endif %}" {% if vue == 'attente' %}aria-current="page"{% endif %}>Confirmées · en attente de réception <span class="c">{{ en_attente.count }}</span></a>
+		{% if vue == 'appel' and filtre != 'tous' %}<a class="chip" href="?vue=appel{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">Retirer le filtre « {% if filtre == 'injoignable' %}à rappeler{% else %}jamais appelées{% endif %} »</a>{% endif %}
+	</div>
+</div>
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Colis</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Confirmations</li>
-	{% endblock %}
-
-    {% block content %}
-				<div class="row">
-					<div class="col-xl-12 col-lg-12">
-						{% for message in messages %}
-							<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
-						{% endfor %}
-						<div class="card">
-							<div class="card-header d-flex flex-wrap align-items-center gap-2">
-								<div class="card-title mb-0">Commandes à confirmer ({{ articles|length }})</div>
-								<div class="ms-auto d-flex flex-wrap gap-2">
-									<a class="btn btn-sm {% if filtre == 'tous' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?filtre=tous{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">Toutes</a>
-									<a class="btn btn-sm {% if filtre == 'a_confirmer' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?filtre=a_confirmer{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">Jamais appelées</a>
-									<a class="btn btn-sm {% if filtre == 'injoignable' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?filtre=injoignable{% if agent_selected %}&agent={{ agent_selected }}{% endif %}">À rappeler</a>
-									{% if profil_staff.role_profil != type_profil_staff.AGENT %}
-									<form method="get" class="d-flex gap-1">
-										<input type="hidden" name="filtre" value="{{ filtre }}">
-										<select name="agent" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()">
-											<option value="">Tous les agents</option>
-											<option value="aucun" {% if agent_selected == 'aucun' %}selected{% endif %}>Sans agent</option>
-											{% for agent in agents %}<option value="{{ agent.code }}" {% if agent_selected == agent.code %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.email|default:agent.code }}</option>{% endfor %}
-										</select>
-									</form>
-									{% endif %}
-								</div>
-							</div>
-							<div class="card-body">
-								<p class="text-muted mb-3">Appelez le client, vérifiez la commande et l'adresse. Acompte de {{ montant_acompte|floatformat:0|intcomma }} F : notez le réseau et la référence du dépôt. Un client qui annule : indiquez le motif, la commande passe « Annulée avant expédition » et le vendeur est prévenu.</p>
-								{% for article in articles %}
-								<div class="border rounded p-3 mb-3">
-									<div class="d-flex flex-wrap justify-content-between gap-2">
-										<div>
-											<div class="fw-bold"><a href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a> · {{ article.vendeur.nom_store }}</div>
-											<div>{{ article.prenom_destinataire|default:"" }} {{ article.nom_destinataire|default:"" }} · <a href="tel:{{ article.numero_principal_destinataire }}">{{ article.numero_principal_destinataire }}</a>{% if article.numero_secondaire_destinataire %} · {{ article.numero_secondaire_destinataire }}{% endif %}</div>
-											<div class="text-muted">{{ article.localite_arrivee }}{% if article.localite_arrivee.zone %} · {{ article.localite_arrivee.zone.nom }} {{ article.localite_arrivee.zone.get_delai_display }}{% endif %} · {{ article.adresse_destinataire|default:"" }}</div>
-											<div>{{ article.designation|default:"" }} × {{ article.quantite }} · à encaisser : <b>{% if article.is_option_encaissement %}{{ article.valeur_totale|floatformat:0|intcomma }} F{% else %}rien (déjà payé){% endif %}</b></div>
-										</div>
-										<div class="text-end">
-											<span class="badge {% if article.etat_confirmation == 'injoignable' %}bg-warning{% else %}bg-info{% endif %}">{{ article.get_etat_confirmation_display }}</span>
-											<div class="small text-muted mt-1">{{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }} · créé {{ article.date_creation|naturaltime }}</div>
-											<div class="small text-muted">Agent : {% if article.agent_cod %}{{ article.agent_cod.user.get_full_name|default:article.agent_cod.email|default:article.agent_cod.code }}{% else %}aucun{% endif %}</div>
-										</div>
-									</div>
-									<form method="post" class="row g-2 mt-2 align-items-end">
-										{% csrf_token %}
-										<input type="hidden" name="article" value="{{ article.code }}">
-										<div class="col-md-2"><label class="form-label small mb-0">Réseau acompte</label>
-											<select name="acompte_reseau" class="form-select form-select-sm"><option value="">Pas d'acompte</option>{% for v, l in reseaux %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
-										<div class="col-md-2"><label class="form-label small mb-0">Référence du dépôt</label><input name="acompte_reference" class="form-control form-control-sm" maxlength="100"></div>
-										<div class="col-md-2"><label class="form-label small mb-0">Numéro qui a payé</label><input name="acompte_numero" class="form-control form-control-sm" maxlength="30"></div>
-										<div class="col-md-3"><label class="form-label small mb-0">Commentaire / motif d'annulation</label><input name="commentaire" class="form-control form-control-sm" maxlength="500"></div>
-										<div class="col-md-3 d-flex flex-wrap gap-1">
-											<button name="resultat" value="{{ resultat_appel.CONFIRME }}" class="btn btn-sm btn-success">Confirmé</button>
-											<button name="resultat" value="{{ resultat_appel.INJOIGNABLE }}" class="btn btn-sm btn-warning">Injoignable</button>
-											<button name="resultat" value="{{ resultat_appel.ANNULE }}" class="btn btn-sm btn-danger" onclick="return confirm('Annuler cette commande avant expédition ?')">Annulé</button>
-										</div>
-									</form>
-								</div>
-								{% empty %}
-								<p class="text-center text-muted my-4">Aucune commande à confirmer.</p>
-								{% endfor %}
-							</div>
-						</div>
+<div class="tablewrap">
+	<table>
+		<thead><tr><th>Commande</th><th>Client</th><th>Ville · statut colis</th><th class="r">À encaisser</th><th>Closing</th>{% if vue == 'appel' %}<th>Actions</th>{% endif %}</tr></thead>
+		<tbody>
+		{% for article in articles %}
+			<tr>
+				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a><div class="muted" style="font-size:11px">créée {{ article.date_creation|naturaltime }}</div><div class="muted" style="font-size:11px">{{ article.vendeur.nom_store|default:"" }}</div></td>
+				<td>{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}<div class="nw"><a href="tel:{{ article.numero_principal_destinataire }}">{{ article.numero_principal_destinataire|default:"" }}</a></div>{% if article.numero_secondaire_destinataire %}<div class="muted nw" style="font-size:11.5px">{{ article.numero_secondaire_destinataire }}</div>{% endif %}</td>
+				<td>{{ article.localite_arrivee.nom|default:"—" }}{% if article.localite_arrivee.zone %} <span class="muted" style="font-size:11.5px">· {{ article.localite_arrivee.zone.nom }}</span>{% endif %}<div class="muted" style="font-size:11.5px">{{ article.adresse_destinataire|default:"" }}</div><div style="margin-top:3px"><span class="badge {{ article.statut_traitement|st_classe }}">{{ article.get_statut_traitement_display }}</span></div></td>
+				<td class="r num nw">{% if article.is_option_encaissement %}<b>{{ article.valeur_totale|fcfa }}</b>{% else %}<span class="muted">déjà payé</span>{% endif %}<div class="muted" style="font-size:11.5px">{{ article.designation|default:"" }} × {{ article.quantite }}</div></td>
+				<td><span class="badge {% if article.etat_confirmation == 'confirme' %}st-livre{% elif article.etat_confirmation == 'injoignable' %}st-livraison{% else %}b-mute{% endif %}">{{ article.get_etat_confirmation_display }}</span><div class="muted" style="font-size:11px;margin-top:3px">{{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }} · {% if article.agent_cod %}{{ article.agent_cod.user.get_full_name|default:article.agent_cod.user.email|default:article.agent_cod.code }}{% else %}sans agent{% endif %}</div></td>
+				{% if vue == 'appel' %}
+				<td><div style="display:flex;flex-direction:column;gap:6px;min-width:200px">
+					<div style="display:flex;gap:6px">
+						<button type="button" class="btn sm" style="flex:1;background:#16a34a;border-color:#16a34a;color:#fff;font-weight:700" data-ouvrir="acompte-{{ article.code }}" title="Le client confirme et a payé l’acompte">✓ Acompte reçu</button>
+						<form method="post" style="flex:1;display:flex" onsubmit="return confirm('Confirmer {{ article.code }} : le client paiera tout à la livraison ?')">{% csrf_token %}<input type="hidden" name="article" value="{{ article.code }}"><button name="resultat" value="{{ resultat_appel.CONFIRME }}" class="btn sm" style="flex:1;background:#dc2626;border-color:#dc2626;color:#fff;font-weight:700" title="Le client confirme, paiera à la livraison">Non payé</button></form>
 					</div>
-				</div>
-    {% endblock %}
+					<button type="button" class="btn sm" data-ouvrir="autre-{{ article.code }}">Autre résultat…</button>
+				</div></td>
+				{% endif %}
+			</tr>
+			{% if vue == 'appel' %}
+			<tr class="sel" id="acompte-{{ article.code }}" hidden><td colspan="6">
+				<form method="post" class="form" style="align-items:end">{% csrf_token %}<input type="hidden" name="article" value="{{ article.code }}">
+					<label class="field">Réseau *<select name="acompte_reseau" required>{% for v, l in reseaux %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></label>
+					<label class="field">Référence du dépôt *<input name="acompte_reference" maxlength="100" required placeholder="ex. WV-8F3K21"></label>
+					<label class="field">Numéro qui a payé<input name="acompte_numero" maxlength="30" inputmode="tel"></label>
+					<label class="field">Commentaire<input name="commentaire" maxlength="500" placeholder="ex. client joint au 1er appel"></label>
+					<div class="tools full"><button name="resultat" value="{{ resultat_appel.CONFIRME }}" class="btn primary">Enregistrer l’acompte et confirmer</button><button type="button" class="btn" data-fermer="acompte-{{ article.code }}">Annuler</button><span class="muted" style="font-size:12px">Enregistré dans l’historique ML COD Intérieur. Le vendeur ne le voit pas.</span></div>
+				</form>
+			</td></tr>
+			<tr class="sel" id="autre-{{ article.code }}" hidden><td colspan="6">
+				<form method="post" class="form" style="align-items:end">{% csrf_token %}<input type="hidden" name="article" value="{{ article.code }}">
+					<label class="field">Motif d’annulation<select name="motif"><option value="">—</option>{% for m in motifs %}<option>{{ m }}</option>{% endfor %}</select><span class="hint">obligatoire pour annuler</span></label>
+					<label class="field full">Commentaire<input name="commentaire" maxlength="500" placeholder="ex. 3 appels sans réponse, rappeler à 16 h"></label>
+					<div class="tools full">
+						<button name="resultat" value="{{ resultat_appel.INJOIGNABLE }}" class="btn">Injoignable · à rappeler</button>
+						<button name="resultat" value="{{ resultat_appel.ANNULE }}" class="btn danger" onclick="return confirm('Annuler {{ article.code }} avant expédition ? Le vendeur est prévenu par SMS.')">Annuler la commande</button>
+						<button type="button" class="btn" data-fermer="autre-{{ article.code }}">Fermer</button>
+					</div>
+				</form>
+			</td></tr>
+			{% endif %}
+		{% empty %}
+			<tr><td colspan="6" class="muted" style="padding:18px">{% if vue == 'attente' %}Aucune commande confirmée en attente de réception.{% else %}Aucune commande à appeler : tout est confirmé.{% endif %}</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('click', function (e) {
+	var o = e.target.closest('[data-ouvrir]'), f = e.target.closest('[data-fermer]');
+	if (o) { document.querySelectorAll('tr.sel').forEach(function (tr) { if (tr.id !== o.dataset.ouvrir) tr.hidden = true; }); var tr = document.getElementById(o.dataset.ouvrir); tr.hidden = !tr.hidden; if (!tr.hidden) { var i = tr.querySelector('input:not([type=hidden]), select'); if (i) i.focus(); } }
+	if (f) document.getElementById(f.dataset.fermer).hidden = true;
+});
+</script>
+{% endblock %}

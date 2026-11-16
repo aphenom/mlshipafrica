@@ -26,6 +26,7 @@ from django.utils import timezone
 
 from django.db.models import Q, Count, Sum, F, ExpressionWrapper, DecimalField, Value
 from datetime import timedelta
+import datetime
 import logging
 from django.db.models.functions import Coalesce
 from decimal import Decimal
@@ -917,10 +918,12 @@ def admin_confirmations(request):
                 acompte = {'montant': montant_acompte, 'reseau': request.POST.get('acompte_reseau'),
                            'reference_depot': request.POST.get('acompte_reference'),
                            'numero_depot': request.POST.get('acompte_numero', '')}
+            # Motif d'annulation choisi dans la liste de la maquette, précisé par le commentaire
+            commentaire = ' · '.join(x for x in (request.POST.get('motif', '').strip(), request.POST.get('commentaire', '').strip()) if x)
             try:
                 if resultat not in ResultatAppel.values:
                     raise ValidationError("Résultat d'appel inconnu.")
-                enregistrer_appel(article, user, resultat, request.POST.get('commentaire', ''), acompte)
+                enregistrer_appel(article, user, resultat, commentaire, acompte)
                 django_messages.success(request, "Colis %s : %s." % (article.code, ResultatAppel(resultat).label.lower()))
             except ValidationError as erreur:
                 django_messages.error(request, "Colis %s : %s" % (article.code, ' '.join(erreur.messages)))
@@ -937,6 +940,21 @@ def admin_confirmations(request):
                                         etat_suppression=False).select_related('user')
     reseaux = ReseauPaiement.choices
     resultat_appel = ResultatAppel
+    # Écran de la maquette : à appeler / confirmées en attente de réception, et les compteurs du jour
+    from management.confirmation import MOTIFS_ANNULATION, confirmees_en_attente
+    file_complete = file_de_confirmation(profil_staff)
+    nb_jamais = file_complete.filter(etat_confirmation='a_confirmer').count()
+    nb_rappeler = file_complete.filter(etat_confirmation='injoignable').count()
+    en_attente = confirmees_en_attente(profil_staff)
+    debut_jour = timezone.make_aware(datetime.datetime.combine(timezone.localdate(), datetime.time.min))
+    confirmees_jour = Article.objects.filter(license=profil_staff.license, etat_confirmation='confirme', date_confirmation__gte=debut_jour)
+    if profil_staff.role_profil == TypeProfilStaffChoice.AGENT:
+        confirmees_jour = confirmees_jour.filter(Q(agent_cod=profil_staff) | Q(confirme_par=user))
+    nb_confirmees_jour = confirmees_jour.count()
+    vue = 'attente' if request.GET.get('vue') == 'attente' else 'appel'
+    if vue == 'attente':
+        articles = en_attente
+    motifs = MOTIFS_ANNULATION
     suite_breadcrumb = "Confirmations"
     return render(request, 'management/admin_confirmations.html', locals())
 

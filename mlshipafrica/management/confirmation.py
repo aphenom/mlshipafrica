@@ -129,3 +129,19 @@ def acompte_selon_mouvement(sender, instance, created, **kwargs):
             # Le client revient sur sa décision : on le rappelle pour reconfirmer
             Article.objects.filter(pk=article.pk).update(etat_confirmation=EtatConfirmation.A_CONFIRMER,
                                                          date_confirmation=None)
+
+
+# Motifs d'annulation proposés à l'agent (maquette) ; le commentaire précise
+MOTIFS_ANNULATION = ['Client injoignable', 'Refuse le colis', 'Adresse introuvable', 'Pas d’argent pour payer',
+                     'Produit ou prix contesté', 'Commande en double', 'Numéro erroné', 'Autre']
+
+
+def confirmees_en_attente(profil_staff):
+    """Commandes confirmées mais pas encore reçues par ML COD Intérieur (en attente de dépôt ou de ramassage)."""
+    from mlshipafrica.enums import StatutTraitement as S, TypeProfilStaffChoice as R
+    qs = (Article.objects.filter(license=profil_staff.license, etat_suppression=False, etat_confirmation=EtatConfirmation.CONFIRME,
+                                 statut_traitement__in=(S.EN_ATTENTE_DEPOT, S.EN_ATTENTE_RAMASSAGE))
+          .select_related('vendeur', 'localite_arrivee', 'localite_arrivee__zone', 'agent_cod__user').order_by('date_creation'))
+    if profil_staff.role_profil == R.AGENT:
+        qs = qs.filter(Q(agent_cod=profil_staff) | Q(confirme_par=profil_staff.user))
+    return qs
