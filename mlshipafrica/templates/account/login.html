@@ -3,15 +3,13 @@
 {% load allauth account %}
 {% load static %}
 {% load humanize %}
-{% block head_title %}
-    {% trans "Sign In" %}
-{% endblock head_title %}
+{% block head_title %}Connexion{% endblock head_title %}
 
 {% block content %}
 <div class="card-sigin">
     <div class="main-signup-header">
         <h2>Connexion</h2>
-        <h5 class="fw-semibold mb-4">Veuillez vous connecter pour continuer.</h5>
+        <h5>Entrez votre email et votre mot de passe.</h5>
         
         {% if not SOCIALACCOUNT_ONLY %}
             {% setvar link %}
@@ -48,7 +46,7 @@
 
             <div class="form-group">
                 <label for="id_password" class="form-label">{% trans "Password" %}</label>
-                <input type="password" name="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}" id="id_password" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
+                <input type="password" autocomplete="current-password" name="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}" id="id_password" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
                 {% if form.errors and form.password.errors %}
                     <div class="alert alert-danger">
                         {{ form.password.errors }}

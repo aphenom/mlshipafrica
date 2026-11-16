@@ -8,7 +8,9 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from datetime import timedelta
 from django.utils import timezone
+from django.utils.functional import SimpleLazyObject
 from mlshipafrica.droits import droits_de
+from mlshipafrica.menu import menu_de
 
 
 def context(request):
@@ -66,4 +68,6 @@ def context(request):
             'notification_messages': notification_messages,
             # Droits de l'utilisateur (mlshipafrica/droits.py) : {% if 'argent' in droits %}
             'droits': droits_de(user),
+            # Menu latéral du rôle (mlshipafrica/menu.py), calculé seulement si la page l'affiche
+            'menu': SimpleLazyObject(lambda: menu_de(request)),
             }      
