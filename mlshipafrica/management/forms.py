@@ -76,7 +76,7 @@ class VendeurForm(forms.ModelForm):
     )
 
     collecte_par_mlship = forms.TypedChoiceField(
-        label="Souhaitez-vous que ML SHIP Africa collecte l’argent et vous le reverse ?",
+        label="Souhaitez-vous que ML COD Intérieur encaisse l’argent auprès de vos clients et vous le reverse ?",
         choices=BOOLEAN_CHOICES,
         coerce=lambda x: x == 'True',
         widget=forms.RadioSelect,

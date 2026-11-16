@@ -1031,6 +1031,9 @@ def vendeur_stock(request):
     mouvements = MouvementStock.objects.filter(produit__vendeur=vendeur).select_related('produit', 'article')[:50]
     debut_mois = timezone.localdate().replace(day=1)
     stockage_mois = FacturationStockage.objects.filter(vendeur=vendeur, jour__gte=debut_mois).aggregate(t=Sum('montant'))['t'] or 0
+    pieces = sum(max(p.quantite_disponible, 0) for p in produits)
+    epuises = sum(1 for p in produits if p.quantite_disponible <= 0)
+    de_cote = sum(p.quantite_de_cote for p in produits)
     return render(request, 'management/vendeur_stock.html', locals())
 
 

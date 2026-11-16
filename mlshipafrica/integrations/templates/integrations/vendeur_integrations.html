@@ -1,53 +1,71 @@
 {% extends "base_main.html" %}
-{% block title %}ML COD Intérieur - Intégrations{% endblock %}
-	{% block breadcrumb-li %}<li class="breadcrumb-item active">Intégrations</li>{% endblock %}
-    {% block content %}
-				{% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>{% endfor %}
-				<div class="row">
-					<div class="col-lg-6">
-						<div class="card">
-							<div class="card-header"><div class="card-title">Woura</div></div>
-							<div class="card-body">
-								<p class="small text-muted">Les commandes que vous nous assignez dans Woura arrivent toutes seules ici, et chaque étape de livraison remonte dans Woura.</p>
-								<form method="post">{% csrf_token %}<input type="hidden" name="action" value="woura">
-									<label class="d-block mb-2"><input type="checkbox" name="woura_actif" value="1" {% if integration.woura_actif %}checked{% endif %}> Activer Woura</label>
-									<label class="form-label">Identifiant de votre boutique Woura</label>
-									<input name="woura_boutique_id" class="form-control mb-2" value="{{ integration.woura_boutique_id }}" maxlength="80">
-									<button class="btn btn-primary btn-sm">Enregistrer</button>
-								</form>
-							</div>
-						</div>
-						<div class="card">
-							<div class="card-header"><div class="card-title">API et webhook (WooCommerce, Shopify, Google Sheets, votre site)</div></div>
-							<div class="card-body">
-								<form method="post">{% csrf_token %}<input type="hidden" name="action" value="api">
-									<label class="d-block mb-2"><input type="checkbox" name="api_actif" value="1" {% if integration.api_actif %}checked{% endif %}> Activer l'API</label>
-									<div class="small mb-1">Clé de test (les commandes ne partent jamais) : <code>{{ integration.cle_test }}</code></div>
-									<div class="small mb-2">Clé de production : <code>{{ integration.cle_live }}</code></div>
-									<label class="form-label">URL de votre webhook (https)</label>
-									<input name="webhook_url" class="form-control mb-2" value="{{ integration.webhook_url }}" placeholder="https://monsite.ci/webhook-mlcod">
-									<div class="small mb-1">Secret de signature (en-tête X-MLCOD-Signature) : <code>{{ integration.webhook_secret }}</code></div>
-									<div class="small mb-1">Statuts envoyés (aucun coché = tous) :</div>
-									<div class="d-flex flex-wrap gap-2 small mb-2">{% for v, l in statuts %}<label><input type="checkbox" name="evenements" value="{{ v }}" {% if v in integration.webhook_evenements %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
-									<button class="btn btn-primary btn-sm">Enregistrer</button>
-								</form>
-								<form method="post" class="mt-2" onsubmit="return confirm('Les anciennes clés cesseront de fonctionner immédiatement. Continuer ?')">{% csrf_token %}<input type="hidden" name="action" value="regenerer"><button class="btn btn-outline-danger btn-sm">Régénérer les clés</button></form>
-								<hr>
-								<div class="small"><b>Documentation rapide</b> (en-tête <code>Authorization: Bearer &lt;clé&gt;</code>) :<br>
-								<code>POST /integrations/api/v1/colis/</code> : reference, nom, telephone, ville, adresse, montant, designation, taille (petit ou moyen)<br>
-								<code>GET /integrations/api/v1/colis/</code> · <code>GET /integrations/api/v1/colis/&lt;code&gt;/</code> · <code>GET /integrations/api/v1/tarifs/</code></div>
-							</div>
-						</div>
-					</div>
-					<div class="col-lg-6">
-						<div class="card">
-							<div class="card-header"><div class="card-title">Journal des appels</div></div>
-							<div class="card-body table-responsive">
-								<table class="table table-sm mb-0"><thead><tr><th>Date</th><th>Sens</th><th>Type</th><th>Statut</th><th>Colis</th></tr></thead>
-								<tbody>{% for e in journal %}<tr><td>{{ e.date|date:"d/m H:i" }}</td><td>{{ e.get_sens_display }} · {{ e.get_canal_display }}</td><td>{{ e.type }}</td><td>{{ e.get_statut_display }}</td><td>{{ e.article.code|default:"" }}</td></tr>
-								{% empty %}<tr><td colspan="5" class="text-muted text-center">Aucun appel.</td></tr>{% endfor %}</tbody></table>
-							</div>
-						</div>
-					</div>
+{% block title %}Intégrations · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Intégrations</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card">
+	<div class="head"><div><h1>Intégrations</h1><div class="muted">Recevez vos commandes automatiquement depuis Woura, votre boutique WooCommerce ou Shopify, un Google Sheets ou votre site, et suivez chaque étape de livraison sans ressaisie.</div></div></div>
+</div>
+
+<div class="split">
+	<div class="grow">
+		<div class="card">
+			<div class="head" style="align-items:center"><h2>Woura</h2><span class="badge {% if integration.woura_actif %}b-ok{% else %}b-mute{% endif %}">{% if integration.woura_actif %}Activé{% else %}Désactivé{% endif %}</span></div>
+			<div class="muted" style="font-size:12.5px">Les commandes que vous nous assignez dans Woura arrivent ici toutes seules, et chaque étape de livraison remonte dans Woura. Le livreur affiché à vos clients est toujours « ML COD Intérieur ».</div>
+			<form method="post" class="form">{% csrf_token %}<input type="hidden" name="action" value="woura">
+				<label class="check full"><input type="checkbox" name="woura_actif" value="1" {% if integration.woura_actif %}checked{% endif %}><span><b>Recevoir mes commandes Woura</b></span></label>
+				<label class="field">Identifiant de votre boutique Woura<input name="woura_boutique_id" value="{{ integration.woura_boutique_id }}" maxlength="80"></label>
+				<div class="field" style="justify-content:flex-end;align-items:flex-start"><button class="btn primary">Enregistrer</button></div>
+			</form>
+		</div>
+
+		<div class="card">
+			<div class="head" style="align-items:center"><h2>API et webhook</h2><span class="badge {% if integration.api_actif %}b-ok{% else %}b-mute{% endif %}">{% if integration.api_actif %}Activée{% else %}Désactivée{% endif %}</span></div>
+			<div class="muted" style="font-size:12.5px">Pour WooCommerce, Shopify, Google Sheets ou votre site, directement ou avec n8n ou Make.</div>
+			<form method="post" style="display:flex;flex-direction:column;gap:12px">{% csrf_token %}<input type="hidden" name="action" value="api">
+				<label class="check"><input type="checkbox" name="api_actif" value="1" {% if integration.api_actif %}checked{% endif %}><span><b>Activer l’API</b></span></label>
+				<div class="kvs">
+					<div><b>Clé de test</b> <span class="muted">(les commandes ne partent jamais)</span><br><code class="mono" style="overflow-wrap:anywhere">{{ integration.cle_test }}</code></div>
+					<div><b>Clé de production</b><br><code class="mono" id="cle-live" data-cle="{{ integration.cle_live }}" style="overflow-wrap:anywhere">{{ integration.cle_live|slice:":8" }}••••••••••••</code>
+						<span class="tools" style="margin-top:4px"><button type="button" class="btn sm" id="voir-cle">Afficher</button><button type="button" class="btn sm" id="copier-cle">Copier</button></span></div>
 				</div>
-    {% endblock %}
+				<label class="field">URL de votre webhook (https)<input name="webhook_url" value="{{ integration.webhook_url }}" placeholder="https://monsite.ci/webhook-mlcod"></label>
+				<div class="muted" style="font-size:12.5px">Secret de signature (en-tête <code>X-MLCOD-Signature</code>) : <code class="mono">{{ integration.webhook_secret }}</code></div>
+				<div class="field">Statuts envoyés à votre webhook <span class="hint">aucun coché = tous</span>
+					<div class="chkgrid" style="flex-direction:row;flex-wrap:wrap;gap:6px 14px">{% for v, l in statuts %}<label class="chk"><input type="checkbox" name="evenements" value="{{ v }}" {% if v in integration.webhook_evenements %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+				</div>
+				<div><button class="btn primary">Enregistrer</button></div>
+			</form>
+			<form method="post" onsubmit="return confirm('Les anciennes clés cesseront de fonctionner immédiatement. Continuer ?')">{% csrf_token %}<input type="hidden" name="action" value="regenerer"><button class="btn danger sm">Régénérer les clés</button></form>
+			<details class="note ml">
+				<summary style="cursor:pointer;font-weight:700">Documentation rapide</summary>
+				<div style="margin-top:8px;line-height:1.7">En-tête <code>Authorization: Bearer &lt;clé&gt;</code><br>
+				<code>POST /integrations/api/v1/colis/</code> : reference, nom, telephone, ville, adresse, montant, designation, taille (petit ou moyen)<br>
+				<code>GET /integrations/api/v1/colis/</code> · <code>GET /integrations/api/v1/colis/&lt;code&gt;/</code> · <code>GET /integrations/api/v1/tarifs/</code><br>
+				Une même référence ne crée qu’une seule commande.</div>
+			</details>
+		</div>
+	</div>
+
+	<aside class="aside card">
+		<h2>Journal des appels</h2>
+		<div class="tablewrap"><table>
+			<thead><tr><th>Date</th><th>Appel</th><th>Statut</th></tr></thead>
+			<tbody>{% for e in journal %}<tr><td class="nw">{{ e.date|date:"d/m H:i" }}</td><td>{{ e.get_sens_display }} · {{ e.get_canal_display }}<div class="muted" style="font-size:11.5px">{{ e.type }}{% if e.article %} · {{ e.article.code }}{% endif %}</div></td><td>{{ e.get_statut_display }}</td></tr>
+			{% empty %}<tr><td colspan="3" class="muted" style="padding:18px">Aucun appel.</td></tr>{% endfor %}</tbody>
+		</table></div>
+	</aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+(function () {
+	var c = document.getElementById('cle-live'); if (!c) return;
+	var masque = c.textContent;
+	document.getElementById('voir-cle').addEventListener('click', function () { var v = c.textContent === masque; c.textContent = v ? c.dataset.cle : masque; this.textContent = v ? 'Masquer' : 'Afficher'; });
+	document.getElementById('copier-cle').addEventListener('click', function () { var b = this; if (navigator.clipboard) navigator.clipboard.writeText(c.dataset.cle).then(function () { b.textContent = 'Copiée'; setTimeout(function () { b.textContent = 'Copier'; }, 1500); }); });
+})();
+</script>
+{% endblock %}

@@ -131,7 +131,7 @@ def _menu_vendeur(vendeur):
         groupes.append(('Stock', [_r('Mon stock', [_p('Mon stock', M + 'vendeur_stock')])]))
     groupes += [
         ('Argent', [_r('Mon argent', [_p('Mes relevés', M + 'vendeur_releves'),
-                                      _p('Reversements', M + 'vendeur_liste_colis_reversement')])]),
+                                      _p('Anciens reversements', M + 'vendeur_liste_colis_reversement')])]),
         ('Compte', [_r('Intégrations', [_p('Intégrations', 'integrations:vendeur_integrations')]),
                     _r('Mon profil', [_p('Mon profil', M + 'vendeur_profil')], (M + 'vendeur_edit_profil',))]),
     ]

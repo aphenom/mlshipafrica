@@ -75,6 +75,7 @@ body.mlcod .ctabs a[aria-selected="true"] { border-bottom-color: var(--ink); col
 
 /* ------------------------------------------------------------------ Composants de la maquette */
 .mono { font-family: var(--mono); letter-spacing: 0.2px; }
+body.mlcod code { font-family: var(--mono); color: var(--ink); background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
 .num { font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .head { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; justify-content: space-between; }
@@ -163,6 +164,14 @@ body.mlcod .qty .btn { width: 40px; padding: 0; font-size: 17px; }
 .dplier .dinfo { font-size: 13px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .dplier .dchev { display: inline-block; transition: transform .15s; }
 .dplier[open] .dchev { transform: rotate(180deg); }
+.prof { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .prof { grid-template-columns: 1fr; } }
+.prof .avatar { width: 112px; height: 112px; border-radius: 50%; background: #111827; color: #22c55e; display: grid; place-items: center; font-size: 34px; font-weight: 800; letter-spacing: 1px; }
+.prof .ident { display: flex; flex-direction: column; gap: 4px; }
+.prof .ident .muted { font-size: 13px; overflow-wrap: anywhere; }
+body.mlcod .prof h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 8px; }
+body.mlcod .prof h3:first-child { margin-top: 0; }
+.kvs b { font-weight: 700; }
 .note { font-size: 12.5px; padding: 10px 12px; border-radius: 8px; background: var(--brand-soft); }
 .note.ml { background: var(--ml-soft); } .note.bad { background: var(--bad-soft); color: var(--bad); }
 .errs { color: var(--bad); font-size: 13px; font-weight: 600; }

@@ -35,7 +35,7 @@
 			<label class="field">Ville *<select name="localite" required><option value="">Choisir</option>{% for pk, libelle in localites_substitution %}<option value="{{ pk }}">{{ libelle }}</option>{% endfor %}</select></label>
 			<label class="field">Quartier et repère<input name="adresse" maxlength="255"></label>
 			<label class="field">Prix unitaire (F)<input name="valeur" type="number" min="0" value="{{ article.valeur|floatformat:'0u' }}"></label>
-			<div class="field" style="justify-content:flex-end"><button class="btn primary">Envoyer au nouveau client</button></div>
+			<div class="field" style="justify-content:flex-end;align-items:flex-start"><button class="btn primary">Envoyer au nouveau client</button></div>
 		</div>
 	</form>
 </div>

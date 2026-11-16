@@ -90,3 +90,16 @@ class EspaceVendeur(tests_pages.RecettePages):
         self.assertIn('class="step fail"', page)
         page = self.client.get('/management/vendeur_detail_colis/%s/' % self.articles[-1].code).content.decode()  # en transit
         self.assertIn('à venir', page)
+
+    def test_autres_ecrans_vendeur(self):
+        for url in ('/management/vendeur_stock/', '/management/vendeur_profil/', '/management/vendeur_edit_profil/',
+                    '/integrations/mes-integrations/', '/management/vendeur_liste_colis_reversement/', '/management/vendeur_releves/'):
+            reponse = self.client.get(url)
+            self.assertEqual(reponse.status_code, 200, url)
+            page = reponse.content.decode()
+            self.assertNotIn('acompte', page.lower(), url)
+            self.assertNotIn('ML SHIP Africa', page, url)          # la marque vue par le vendeur est ML COD Intérieur
+        page = self.client.get('/integrations/mes-integrations/').content.decode()
+        from integrations.models import IntegrationVendeur
+        cle = IntegrationVendeur.objects.get(vendeur=self.vendeur).cle_live
+        self.assertIn(cle[:8] + '••••', page)                       # clé de production masquée à l'affichage

@@ -1,0 +1,16 @@
+{% comment %}Un champ de formulaire au style de la maquette. {% include "management/_champ.html" with champ=form.nom obligatoire=True classe="full" %}{% endcomment %}
+{% with type=champ.field.widget.input_type %}
+{% if type == 'checkbox' or type == 'radio' %}
+<div class="field {{ classe }}" data-champ="{{ champ.name }}">{{ champ.label }}{% if obligatoire %} *{% endif %}
+	<div class="chkgrid" style="flex-direction:row;flex-wrap:wrap;gap:8px 16px">{% for c in champ %}<label class="chk">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div>
+	{% if champ.help_text %}<span class="hint">{{ champ.help_text }}</span>{% endif %}
+	<span class="errs">{{ champ.errors|striptags }}</span>
+</div>
+{% else %}
+<label class="field {{ classe }}" data-champ="{{ champ.name }}">{{ champ.label }}{% if obligatoire %} *{% endif %}{{ champ }}
+	{% if type == 'file' and champ.value %}<span class="hint">Fichier actuel : <a href="{{ champ.value.url }}" target="_blank" rel="noopener">voir</a> · choisissez un fichier pour le remplacer</span>{% endif %}
+	{% if champ.help_text %}<span class="hint">{{ champ.help_text }}</span>{% endif %}
+	<span class="errs">{{ champ.errors|striptags }}</span>
+</label>
+{% endif %}
+{% endwith %}
