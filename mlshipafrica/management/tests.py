@@ -519,7 +519,8 @@ class RetoursTests(TestCase):
         from django.utils import timezone
         from management.retours import traiter_retours
         from sms.models import SmsMessage
-        depart = timezone.now() - timedelta(days=40)
+        # 8 h fixe : avec « maintenant », un test lancé après 22 h passait minuit à +2 h et décalait les jours
+        depart = (timezone.now() - timedelta(days=40)).replace(hour=8, minute=0, second=0, microsecond=0)
         self.mouvement(S.REVENU_ABIDJAN)
         Article.objects.filter(pk=self.article.pk).update(date_revenu_abidjan=depart)
         self.assertTrue(SmsMessage.objects.filter(modele_cle='retour').exists())               # J0
