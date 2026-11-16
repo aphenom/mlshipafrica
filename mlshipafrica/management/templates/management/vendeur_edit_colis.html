@@ -1,261 +1,162 @@
 {% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Nouvelle commande · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Commandes</li><li class="active" aria-current="page">{% if current_article %}Brouillon {{ current_article }}{% else %}Nouvelle commande{% endif %}</li>{% endblock %}
+{% block content %}
+{% with rec=form.is_option_recuperation.value|stringformat:'s' enc=form.is_option_encaissement.value|stringformat:'s' fmt=form.format_article.value|stringformat:'s' %}
+<div class="card">
+	<div class="head">
+		<h1>{% if current_article %}Terminer la commande {{ current_article }}{% else %}Ajouter une commande{% endif %}</h1>
+		<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Voir mes commandes</a>
+	</div>
+	<details class="note">
+		<summary style="cursor:pointer;font-weight:700">Méthode ML COD : valider son client avant d’ajouter une commande</summary>
+		<ol style="margin:8px 0 0 18px;padding:0;line-height:1.6;font-size:13px">
+			<li><b>Joignable</b> : appelez le client, vérifiez que son numéro répond ; prenez un 2e numéro si possible.</li>
+			<li><b>Commande claire</b> : produit, quantité et prix total confirmés, sans ambiguïté.</li>
+			<li><b>Adresse précise</b> : ville, quartier et un repère connu (mosquée, pharmacie, carrefour…).</li>
+			<li><b>Disponibilité</b> : le client sera présent et aura l’argent à la livraison.</li>
+			<li><b>Annoncez notre appel</b> : un conseiller ML COD Intérieur va l’appeler pour confirmer la livraison.</li>
+			<li><b>Dans le doute, n’ajoutez pas</b> : un client qui hésite, c’est un colis qui revient, et un retour vous coûte.</li>
+		</ol>
+	</details>
+</div>
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Edition colis{% endblock %}
+<form method="post" enctype="multipart/form-data" id="f-cmd" novalidate>
+{% csrf_token %}
+<div class="split">
+	<div class="grow">
+		{% if form.non_field_errors %}<div class="note bad">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
 
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
+		<div class="card">
+			<h2>1 · Le client</h2>
+			<div class="form">
+				<label class="field">Nom *{{ form.nom_destinataire }}<span class="errs">{{ form.nom_destinataire.errors|striptags }}</span></label>
+				<label class="field">Prénom(s){{ form.prenom_destinataire }}<span class="errs">{{ form.prenom_destinataire.errors|striptags }}</span></label>
+				<label class="field">Téléphone principal *<input type="tel" inputmode="tel" name="numero_principal_destinataire" value="{{ form.numero_principal_destinataire.value|default_if_none:'' }}" placeholder="+225 07 …" required><span class="errs">{{ form.numero_principal_destinataire.errors|striptags }}</span></label>
+				<label class="field">Téléphone secondaire<input type="tel" inputmode="tel" name="numero_secondaire_destinataire" value="{{ form.numero_secondaire_destinataire.value|default_if_none:'' }}" placeholder="+225 05 …"><span class="errs">{{ form.numero_secondaire_destinataire.errors|striptags }}</span></label>
+				<label class="field">Ville *{{ form.localite_arrivee }}<span class="errs">{{ form.localite_arrivee.errors|striptags }}</span></label>
+				<label class="field full">Quartier et repère *{{ form.adresse_destinataire }}<span class="hint">ex. Commerce, près de la pharmacie du marché</span><span class="errs">{{ form.adresse_destinataire.errors|striptags }}</span></label>
+			</div>
+			<div class="note" id="note-ville">Choisissez la ville : sa zone, son délai et vos frais s’affichent ici.</div>
+		</div>
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Colis</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Edition</li>
-	{% endblock %}
-
-    {% block content %}
-
-				<!-- row -->
-				<div class="row row-sm">
-					<!-- Col -->
-					<div class="col-lg-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Edition Colis</h3>
-							</div>
-							<form class="form-horizontal" method="POST" enctype="multipart/form-data"  onsubmit="return confirm('Voulez-vous continuer ?')">
-								<div class="card-body">
-									{% csrf_token %}
-									{% if form.errors and form.non_field_errors %}
-										<div class="alert alert-danger">
-											{{ form.non_field_errors }}
-										</div>
-									{% endif %}
-									<div class="mb-4 main-content-label">Général</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.designation.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.designation }}
-                                                <div class="text-danger">
-                                                    {{ form.designation.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.valeur.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.valeur }}
-                                                <div class="text-danger">
-                                                    {{ form.valeur.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.quantite.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.quantite }}
-                                                <div class="text-danger">
-                                                    {{ form.quantite.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.format_article.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.format_article }}
-                                                <div class="text-danger">
-                                                    {{ form.format_article.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.produits.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-4">
-												{{ form.produits }}
-                                                <div class="text-danger">
-                                                    {{ form.produits.errors }}
-                                                </div>
-											</div>
-											<div class="col-md-5">
-												{{ form.produits_autre }}
-                                                <div class="text-danger">
-                                                    {{ form.produits_autre.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Destinataire</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_destinataire.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_destinataire }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_destinataire.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.prenom_destinataire.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.prenom_destinataire }}
-                                                <div class="text-danger">
-                                                    {{ form.prenom_destinataire.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.adresse_destinataire.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.adresse_destinataire }}
-                                                <div class="text-danger">
-                                                    {{ form.adresse_destinataire.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.numero_principal_destinataire.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.numero_principal_destinataire }}
-                                                <div class="text-danger">
-                                                    {{ form.numero_principal_destinataire.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.numero_secondaire_destinataire.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.numero_secondaire_destinataire }}
-                                                <div class="text-danger">
-                                                    {{ form.numero_secondaire_destinataire.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											{% if form.produit_stock %}
-											<div class="col-md-6 mg-t-20 mg-md-t-0 mb-2">
-												<div class="main-form-group">
-													<label class="form-label">{{ form.produit_stock.label }}</label>
-													{{ form.produit_stock }}
-													<small class="text-muted">La quantité est sortie de votre stock quand vous validez la commande.</small>
-													<div class="text-danger">{{ form.produit_stock.errors }}</div>
-												</div>
-											</div>
-											{% endif %}
-											<div class="col-md-3">
-												<label class="form-label">{{form.localite_arrivee.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.localite_arrivee }}
-                                                <div class="text-danger">
-                                                    {{ form.localite_arrivee.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label {% if configuration.enable_option_recuperation is False and configuration.enable_option_encaissement is False %}d-none{% endif %}">Options</div>
-									<div class="form-group {% if configuration.enable_option_recuperation is False %}d-none{% endif %}">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.is_option_recuperation.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.is_option_recuperation }}
-                                                <div class="text-danger">
-                                                    {{ form.is_option_recuperation.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group {% if configuration.enable_option_encaissement is False %}d-none{% endif %}">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.is_option_encaissement.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.is_option_encaissement }}
-                                                <div class="text-danger">
-                                                    {{ form.is_option_encaissement.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="clearfix"></div>
-									<div class="mt-3">                         
-										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
-										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
-										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
-									</div>
-								</div>
-								<div class="card-footer">
-									<button type="submit" class="btn btn-primary waves-effect waves-light">Enregistrer colis</button>
-									{% if article.statut_traitement == statut_traitement.BROUILLON %}
-										<button type="submit" name="submit_suppression" value="submit_suppression" class="btn btn-danger waves-effect waves-light">Supprimer colis</button>
-									{% endif %}
-								</div>
-							</form>
-
-						</div>
-					</div>
-					<!-- /Col -->
+		<div class="card">
+			<div class="head">
+				<h2>2 · Le colis</h2>
+				{% if configuration.enable_option_recuperation %}
+				<div class="seg" role="radiogroup" aria-label="Origine du colis">
+					<label><input type="radio" name="is_option_recuperation" value="False" {% if rec != 'True' %}checked{% endif %}> Je dépose le colis</label>
+					<label><input type="radio" name="is_option_recuperation" value="True" {% if rec == 'True' %}checked{% endif %}> ML COD Intérieur vient le récupérer</label>
 				</div>
-				<!-- row closed -->
+				{% else %}<input type="hidden" name="is_option_recuperation" value="False">{% endif %}
+			</div>
+			<div class="form">
+				{% if form.produit_stock %}
+				<label class="field full">Depuis mon stock ML COD Intérieur{{ form.produit_stock }}<span class="hint">Facultatif. La quantité sort de votre stock quand vous validez la commande.</span><span class="errs">{{ form.produit_stock.errors|striptags }}</span></label>
+				{% endif %}
+				<label class="field full">Désignation *{{ form.designation }}<span class="errs">{{ form.designation.errors|striptags }}</span></label>
+				<label class="field">Prix unitaire (F) *<input class="num" inputmode="numeric" name="valeur" id="c-valeur" value="{{ form.valeur.value|default_if_none:''|floatformat:0 }}" required><span class="errs">{{ form.valeur.errors|striptags }}</span></label>
+				<div class="field">Quantité *
+					<div class="qty"><button type="button" class="btn" data-qte="-1" aria-label="Retirer un">−</button><input class="num" inputmode="numeric" name="quantite" id="c-qte" value="{{ form.quantite.value|default:1 }}" style="width:70px;text-align:center" required><button type="button" class="btn" data-qte="1" aria-label="Ajouter un">+</button></div>
+					<span class="errs">{{ form.quantite.errors|striptags }}</span>
+				</div>
+				<div class="field">Total<b class="num" id="c-total" style="min-height:42px;display:flex;align-items:center;font-size:16px">0 F</b></div>
+			</div>
+			<div class="field">Format du colis *
+				<div class="seg" role="radiogroup" aria-label="Format" id="c-formats" style="align-self:flex-start">
+					{% for f in form.fields.format_article.queryset %}<label><input type="radio" name="format_article" value="{{ f.pk }}" {% if fmt == f.pk|stringformat:'s' %}checked{% elif forloop.first and fmt == 'None' %}checked{% elif forloop.first and fmt == '' %}checked{% endif %}> {{ f.nom }}</label>{% endfor %}
+				</div>
+				<span class="hint">Petit : moins de 3 kg · 40 × 20 × 13 cm. Moyen : 3 à 7 kg · 70 × 30 × 20 cm. Le tarif dépend de la zone de la ville.</span>
+				<span class="errs">{{ form.format_article.errors|striptags }}</span>
+			</div>
+			<div class="field">Type de produits *
+				<div class="chkgrid" style="flex-direction:row;flex-wrap:wrap;gap:8px 16px">{% for c in form.produits %}<label class="chk">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div>
+				<span class="errs">{{ form.produits.errors|striptags }}</span>
+			</div>
+			<label class="field">Autre type de produit{{ form.produits_autre }}</label>
+		</div>
 
-    {% endblock %}
+		<div class="card"{% if not configuration.enable_option_encaissement %} hidden{% endif %}>
+			<h2>3 · L’encaissement</h2>
+			<label class="check"><input type="radio" name="is_option_encaissement" value="True" {% if enc != 'False' %}checked{% endif %}><span><b>ML COD Intérieur encaisse l’argent auprès du client et me le reverse</b><br><span class="muted" style="font-size:12.5px" id="txt-commission">Une commission s’applique sur le montant encaissé.</span></span></label>
+			<label class="check"><input type="radio" name="is_option_encaissement" value="False" {% if enc == 'False' %}checked{% endif %}><span><b>Le client m’a déjà payé</b><br><span class="muted" style="font-size:12.5px">Rien à encaisser à la livraison : pas de commission, seuls les frais de livraison sont à votre charge.</span></span></label>
+			<span class="errs">{{ form.is_option_encaissement.errors|striptags }}</span>
+		</div>
+	</div>
 
-	<!--  -->
+	<aside class="aside card" style="position:sticky;top:12px">
+		<h2>Récapitulatif</h2>
+		<div class="recap">
+			<div class="rl"><span>Montant payé par le client</span><b class="num" id="r-total">0 F</b></div>
+			<div class="rl"><span id="r-frais-lib">Frais de livraison</span><span class="num t-bad" id="r-frais">—</span></div>
+			<div class="rl" id="r-rec-l" hidden><span>Récupération chez vous</span><span class="num t-bad" id="r-rec"></span></div>
+			<div class="rl" id="r-enc-l" hidden><span id="r-enc-lib">Commission d’encaissement</span><span class="num t-bad" id="r-enc"></span></div>
+			<div class="net"><span><b id="r-net-lib">Vous recevez</b></span><b class="num" id="r-net">—</b></div>
+		</div>
+		<div class="muted" style="font-size:12.5px" id="r-explique">Versé sur votre relevé du lundi ou du jeudi une fois la commande livrée.</div>
+		<div class="errs" id="r-sans-tarif" hidden>Pas encore de tarif pour cette ville et ce format : choisissez un autre format ou contactez le support.</div>
+		<div class="note"><b>Deux filtres, un seul discours.</b> Vous validez d’abord votre client selon la méthode ML COD, puis l’équipe ML COD Intérieur filtre chaque commande avant l’envoi. Un client bien préparé, c’est un colis livré.</div>
+		<button type="submit" class="btn primary">Enregistrer la commande</button>
+		{% if article.statut_traitement == statut_traitement.BROUILLON and article.pk %}
+		<button type="submit" name="submit_suppression" value="1" class="btn danger" onclick="return confirm('Supprimer ce brouillon ?')">Supprimer ce brouillon</button>
+		{% endif %}
+		<div class="muted" style="font-size:12px">Vous vérifiez la commande à l’étape suivante avant de l’envoyer.</div>
+	</aside>
+</div>
+</form>
+{{ grille|json_script:"grille" }}
+{{ taux_villes|json_script:"taux-villes" }}
+{% endwith %}
+{% endblock %}
 
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-			
-
-
-		});
-		</script>
-
-    {% endblock %}
+{% block scripts %}
+{{ block.super }}
+<script>
+// Récapitulatif en direct : même calcul que le serveur (Article.save), avec les tarifs ML du vendeur.
+(function () {
+	var G = JSON.parse(document.getElementById('grille').textContent);
+	var T = JSON.parse(document.getElementById('taux-villes').textContent);
+	var f = document.getElementById('f-cmd');
+	function fcfa(n) { n = Math.round(Number(n) || 0); return (n < 0 ? '− ' : '') + Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F'; }
+	function val(name) { var el = f.querySelector('[name="' + name + '"]:checked') || f.querySelector('[name="' + name + '"]'); return el ? el.value : ''; }
+	function nombre(id) { return Number(String(document.getElementById(id).value).replace(/[^\d]/g, '')) || 0; }
+	function calc() {
+		var total = nombre('c-valeur') * Math.max(nombre('c-qte'), 1);
+		var loc = G[val('localite_arrivee')], t = loc ? loc.formats[val('format_article')] : null;
+		var rec = val('is_option_recuperation') === 'True', enc = val('is_option_encaissement') !== 'False';
+		// Formats sans tarif pour cette ville : grisés
+		f.querySelectorAll('#c-formats input').forEach(function (i) { var ok = !loc || loc.formats[i.value]; i.disabled = !ok; i.parentNode.title = ok ? '' : 'Pas encore disponible pour cette ville'; });
+		document.getElementById('c-total').textContent = fcfa(total);
+		document.getElementById('r-total').textContent = fcfa(enc ? total : 0);
+		document.getElementById('r-sans-tarif').hidden = !(loc && !t);
+		var note = document.getElementById('note-ville');
+		if (loc) {
+			var tv = T.vendeur[val('localite_arrivee')], tr = T.reseau[val('localite_arrivee')];
+			note.textContent = loc.nom + (loc.zone ? ' · ' + loc.zone : '') + (loc.delai ? ' · livraison ' + loc.delai + ' après l’expédition' : '') +
+				' · ' + (tv == null ? 'pas encore de livraison terminée pour vous' : tv + ' % de vos commandes y sont livrées') +
+				(tr == null ? '' : ' · moyenne ML COD Intérieur ' + tr + ' %') + (t ? ' · frais de livraison ' + fcfa(t.frais) : '') + '.';
+		}
+		if (!t) { ['r-frais', 'r-net'].forEach(function (id) { document.getElementById(id).textContent = '—'; }); return; }
+		var cRec = rec ? (t.rec_cout || Math.round(total * t.rec_taux / 100)) : 0;
+		var cEnc = enc ? (t.enc_cout || Math.round(total * t.enc_taux / 100)) : 0;
+		var tous = t.frais + cRec + cEnc;
+		document.getElementById('r-frais-lib').textContent = 'Frais de livraison (' + loc.nom + (loc.zone ? ' · ' + loc.zone : '') + ')';
+		document.getElementById('r-frais').textContent = fcfa(-t.frais);
+		document.getElementById('r-rec-l').hidden = !cRec; document.getElementById('r-rec').textContent = fcfa(-cRec);
+		document.getElementById('r-enc-l').hidden = !enc;
+		document.getElementById('r-enc-lib').textContent = 'Commission d’encaissement' + (t.enc_cout ? '' : ' ' + String(t.enc_taux).replace('.', ',') + ' %');
+		document.getElementById('r-enc').textContent = fcfa(-cEnc);
+		document.getElementById('txt-commission').textContent = t.enc_cout ? 'Commission de ' + fcfa(t.enc_cout) + ' par colis encaissé.' : 'Commission de ' + String(t.enc_taux).replace('.', ',') + ' % sur le montant encaissé.';
+		document.getElementById('r-net-lib').textContent = enc ? 'Vous recevez' : 'Frais à votre charge';
+		document.getElementById('r-net').textContent = fcfa(enc ? total - tous : tous);
+		document.getElementById('r-explique').textContent = enc ? 'Versé sur votre relevé du lundi ou du jeudi une fois la commande livrée.' : 'Le client vous paie directement : les frais sont retenus sur votre relevé.';
+	}
+	f.addEventListener('input', calc);
+	f.addEventListener('change', calc);
+	if (window.jQuery) jQuery(f).find('select').on('change', calc);  // select2 de la ville
+	f.querySelectorAll('[data-qte]').forEach(function (b) { b.addEventListener('click', function () { var q = document.getElementById('c-qte'); q.value = Math.max(1, nombre('c-qte') + Number(b.dataset.qte)); calc(); }); });
+	calc();
+})();
+</script>
+{% endblock %}

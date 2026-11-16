@@ -145,7 +145,7 @@ class VendeurColisForm(forms.ModelForm):
     )
 
     is_option_recuperation = forms.TypedChoiceField(
-        label="Souhaitez-vous que ML SHIP Africa vienne récuperer directement avec vous ?",
+        label="ML COD Intérieur vient récupérer le colis chez vous",
         choices=BOOLEAN_CHOICES,
         coerce=lambda x: x == 'True',
         widget=forms.RadioSelect,
@@ -153,7 +153,7 @@ class VendeurColisForm(forms.ModelForm):
     )
 
     is_option_encaissement = forms.TypedChoiceField(
-        label="Souhaitez-vous que ML SHIP Africa collecte l’argent auprès du client et vous le reverse ?",
+        label="ML COD Intérieur encaisse l’argent auprès du client et vous le reverse",
         choices=BOOLEAN_CHOICES,
         coerce=lambda x: x == 'True',
         widget=forms.RadioSelect,

@@ -71,6 +71,12 @@ def index(request):
             try:
                 vendeur = Vendeur.objects.get(user=request.user)
                 vendeur_pk = vendeur.pk
+                if vendeur.etat_approbation:
+                    # Tableau de bord du vendeur, comme dans la maquette ML COD Plateforme
+                    from management.espace_vendeur import periode, tableau_de_bord
+                    du, au, debut, fin = periode(request)
+                    tb = tableau_de_bord(vendeur, debut, fin, request.GET.get('villes', 'all'))
+                    return render(request, 'management/vendeur_tableau.html', locals())
                 stats_articles = get_global_article_stats(request, vendeur.code)
             except Vendeur.DoesNotExist:
                 member_pk = None

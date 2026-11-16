@@ -1,0 +1,72 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Tableau de bord · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
+{% block content %}
+<div class="card">
+	<div class="head">
+		<h1>Bonjour {{ vendeur.nom_store|default:"et bienvenue" }}</h1>
+		<form method="get" class="tools">
+			<label class="field" style="flex-direction:row;align-items:center;gap:6px">Du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+			<label class="field" style="flex-direction:row;align-items:center;gap:6px">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
+			{% if tb.filtre_villes != 'all' %}<input type="hidden" name="villes" value="{{ tb.filtre_villes }}">{% endif %}
+			<button class="btn">Afficher</button>
+			<a class="btn primary" href="{% url 'management:management_vendeur_edit_colis' %}">+ Nouvelle commande</a>
+		</form>
+	</div>
+</div>
+
+<div class="kpis">
+	<div class="kpi"><span class="l">Taux de livraison</span><span class="v">{% if tb.taux is None %}—{% else %}{{ tb.taux }} %{% endif %}</span><span class="n {{ tb.taux_classe }}">Objectif ML COD Intérieur : 80 %</span></div>
+	<div class="kpi"><span class="l">Commandes</span><span class="v">{{ tb.commandes }}</span><span class="n">{{ tb.en_cours }} en cours · {{ tb.livres }} livrée{{ tb.livres|pluralize }}</span></div>
+	<a class="kpi" href="{% url 'management:management_vendeur_releves' %}"><span class="l">À recevoir</span><span class="v">{{ tb.a_recevoir|fcfa }}</span><span class="n t-ok">versement lundi ou jeudi</span></a>
+	{% if tb.stock %}
+	<a class="kpi" href="{% url 'management:management_vendeur_stock' %}"><span class="l">Stock</span><span class="v">{{ tb.stock.pieces }} pièce{{ tb.stock.pieces|pluralize }}</span><span class="n {% if tb.stock.epuises %}t-bad{% else %}t-ok{% endif %}">{{ tb.stock.epuises|length }} produit{{ tb.stock.epuises|length|pluralize }} épuisé{{ tb.stock.epuises|length|pluralize }}</span></a>
+	{% endif %}
+</div>
+
+<div class="card">
+	<h2>À faire</h2>
+	{% for classe, titre, detail, destination, etape, bouton in tb.a_faire %}
+	<div class="head" style="align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:8px">
+		<div><b class="{{ classe }}">{% if titre %}{{ titre }}{% else %}{{ tb.a_recevoir|fcfa }} à recevoir{% endif %}</b><div class="muted" style="font-size:12.5px">{{ detail }}</div></div>
+		<a class="btn sm" href="{% if destination == 'shipping' %}{% url 'management:management_vendeur_liste_colis' %}?etape={{ etape }}{% elif destination == 'stock' %}{% url 'management:management_vendeur_stock' %}{% else %}{% url 'management:management_vendeur_releves' %}{% endif %}">{{ bouton }}</a>
+	</div>
+	{% empty %}
+	<div class="muted">Rien d’urgent.</div>
+	{% endfor %}
+</div>
+
+<div class="card">
+	<div class="head">
+		<div><h2>Taux de livraison par ville</h2><div class="muted" style="font-size:12.5px">Vos commandes comparées à la moyenne ML COD Intérieur dans la même ville, sur la période</div></div>
+		<form method="get" class="tools">
+			<input type="hidden" name="du" value="{{ du|date:'Y-m-d' }}"><input type="hidden" name="au" value="{{ au|date:'Y-m-d' }}">
+			<label class="field" style="flex-direction:row;align-items:center;gap:8px">Afficher
+				<select name="villes" onchange="if (event.isTrusted) this.form.submit()">
+					<option value="all" {% if tb.filtre_villes == 'all' %}selected{% endif %}>Toutes les villes</option>
+					<option value="good" {% if tb.filtre_villes == 'good' %}selected{% endif %}>Bonnes (80 % et plus)</option>
+					<option value="watch" {% if tb.filtre_villes == 'watch' %}selected{% endif %}>À surveiller (75 à 79 %)</option>
+					<option value="low" {% if tb.filtre_villes == 'low' %}selected{% endif %}>Faibles (sous 75 %)</option>
+				</select>
+			</label>
+			<noscript><button class="btn sm">OK</button></noscript>
+		</form>
+	</div>
+	<div class="bars">
+		<div class="rowb muted" style="font-size:11.5px;font-weight:700;text-transform:uppercase"><span>Ville</span><span>Cmd.</span><span>Votre taux</span><span>Moy. ML</span><span>Niveau</span></div>
+		{% for v in tb.villes %}
+		<div class="rowb">
+			<b>{{ v.nom }}</b>
+			<span class="num">{{ v.n }}</span>
+			<span style="display:flex;gap:8px;align-items:center"><span class="track" style="flex:1"><i style="width:{{ v.taux|default:0 }}%;background:{{ v.taux|couleur_taux }}"></i></span><b class="num" style="min-width:42px;text-align:right">{% if v.taux is None %}—{% else %}{{ v.taux }} %{% endif %}</b></span>
+			<span class="muted num">{% if v.reseau is None %}—{% else %}{{ v.reseau }} %{% endif %}</span>
+			<span><span class="badge {{ v.classe }}">{{ v.niveau }}</span></span>
+		</div>
+		{% empty %}
+		<div class="muted" style="padding:10px 0">Aucune ville dans cette catégorie sur la période.</div>
+		{% endfor %}
+	</div>
+	<div class="muted" style="font-size:12px">Taux = livrés ÷ (livrés + échecs et retours). Vert à partir de 80 %, orange de 75 à 79 %, rouge sous 75 %.</div>
+</div>
+{% endblock %}

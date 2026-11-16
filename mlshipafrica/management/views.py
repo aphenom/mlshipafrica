@@ -130,13 +130,25 @@ def vendeur_edit_colis(request):
                     except ValidationError as erreur:
                         # Pas de tarif pour cette destination / ce format : on le dit au vendeur
                         form.add_error(None, erreur.messages)
-                        return render(request, 'management/vendeur_edit_colis.html', locals())
+                        contexte = locals()
+                        _ecran_commande(form, vendeur, localite_depart, contexte)
+                        return render(request, 'management/vendeur_edit_colis.html', contexte)
                     return redirect('management:management_vendeur_facture_colis', article.code)
                     # Tu peux aussi faire : return redirect('management:vendeur_profil')
         else:
             form = VendeurColisForm(instance=article)
-        return render(request, 'management/vendeur_edit_colis.html', locals())
+        contexte = locals()
+        _ecran_commande(form, vendeur, localite_depart, contexte)
+        return render(request, 'management/vendeur_edit_colis.html', contexte)
     return redirect('index')
+
+
+def _ecran_commande(form, vendeur, localite_depart, contexte):
+    """Données du récapitulatif en direct de la maquette : frais par destination et format, taux par ville."""
+    from management.espace_vendeur import grille_vendeur, taux_par_ville
+    contexte['grille'] = grille_vendeur(vendeur, localite_depart, form.fields['localite_arrivee'].queryset,
+                                        form.fields['format_article'].queryset)
+    contexte['taux_villes'] = taux_par_ville(vendeur)
 
 
 @login_required
@@ -197,12 +209,24 @@ def vendeur_liste_colis(request):
     try:
         user = request.user
         vendeur = Vendeur.objects.get(user=user)
-        articles = Article.objects.filter(vendeur=vendeur, etat_suppression=False).select_related('localite_arrivee')
-        # configuration = Configuration.objects.filter(license=vendeur.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
-        # statut_traitement = StatutTraitement
-        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
-    except Exception as e:
+    except Vendeur.DoesNotExist:
         raise Http404
+    # Shipping de la maquette : puces par statut, ville, recherche, période facultative, pages de 50 colis
+    from django.core.paginator import Paginator
+    from management.espace_vendeur import periode, shipping
+    etape = request.GET.get('etape', '')
+    ville = request.GET.get('ville', '')
+    q = request.GET.get('q', '').strip()
+    debut = fin = None
+    if request.GET.get('du') or request.GET.get('au'):
+        du, au, debut, fin = periode(request)
+    colis, puces = shipping(vendeur, etape, ville, q, debut, fin)
+    villes = (Article.objects.filter(vendeur=vendeur, etat_suppression=False, localite_arrivee__isnull=False)
+              .values_list('localite_arrivee__nom', flat=True).distinct().order_by('localite_arrivee__nom'))
+    page = Paginator(colis, 50).get_page(request.GET.get('page'))
+    filtres = request.GET.copy()
+    filtres.pop('page', None)
+    filtres = filtres.urlencode()
     return render(request, 'management/vendeur_liste_colis.html', locals())
 
 

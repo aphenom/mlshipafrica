@@ -51,6 +51,31 @@ STATUT_TRAITEMENT_COULEURS = {
 }
 
 
+# Couleur du badge de chaque statut dans la maquette ML COD Plateforme (classes .st-* de static/mlcod/app.css)
+STATUT_TRAITEMENT_CLASSES = {
+    'brouillon': 'b-mute',
+    'en_attente_ramassage': 'st-attente',
+    'en_attente_depot': 'st-attente',
+    'ramasse': 'st-depose',
+    'depot': 'st-depose',
+    'en_transit': 'st-transit',
+    'arrive': 'st-arrive',
+    'en_cours_livraison': 'st-livraison',
+    'reconduit': 'st-reconduit',
+    'echec_livraison': 'st-echec',
+    'livre': 'st-livre',
+    'livre_paye': 'st-unpaid',
+    'reverse': 'st-verse',
+    'en_retour': 'st-retour',
+    'revenu_abidjan': 'st-retourne',
+    'substitue': 'st-substitue',
+    'retourne': 'st-retour',
+    'remis_en_stock': 'st-retour',
+    'mis_de_cote': 'st-retour',
+    'abandonne': 'st-annule',
+    'annule': 'st-annule',
+}
+
 STATUT_TRAITEMENT_ICONES = {
     'brouillon': 'dark',
     'en_attente_ramassage': 'hourglass-half',
