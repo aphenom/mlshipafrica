@@ -24,7 +24,7 @@ from mlshipafrica.droits import a_le_droit, droit_requis, droits_de
 
 from django.utils import timezone
 
-from django.db.models import Q, Count, Sum, F, ExpressionWrapper, DecimalField, Value
+from django.db.models import Q, Count, Max, Sum, F, ExpressionWrapper, DecimalField, Value
 from datetime import timedelta
 import datetime
 import logging
@@ -274,10 +274,20 @@ def admin_liste_vendeurs(request):
             if type_vendeur == StatutVendeur.SUPPRIME:
                 suite_breadcrumb = "Supprimés" 
                 vendeurs = vendeurs.filter(etat_suppression=True)
-            #configuration = Configuration.objects.filter(license=profil_staff.license, etat_validation=True, etat_suppression=False).order_by("-pk").first()  
             type_profil_staff = TypeProfilStaffChoice
-            # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
-   
+            # Vendeurs de la maquette : recherche, équipe qui suit, volumes sur 30 jours (jamais de montant)
+            q = request.GET.get('q', '').strip()
+            if q:
+                vendeurs = vendeurs.filter(Q(code__icontains=q) | Q(nom_store__icontains=q) | Q(nom_contact__icontains=q)
+                                           | Q(numero_contact__icontains=q) | Q(email__icontains=q))
+            depuis = timezone.now() - timedelta(days=30)
+            vendeurs = (vendeurs.select_related('commercial__user', 'agent_cod__user')
+                        .annotate(commandes_30=Count('vendeur_article', filter=Q(vendeur_article__date_creation__gte=depuis,
+                                                                                vendeur_article__etat_suppression=False)
+                                                     & ~Q(vendeur_article__statut_traitement=StatutTraitement.BROUILLON)),
+                                  derniere_commande=Max('vendeur_article__date_creation', filter=~Q(vendeur_article__statut_traitement=StatutTraitement.BROUILLON)))
+                        .order_by('-date_creation'))
+
     except Exception as e:
         raise Http404
     return render(request, 'management/admin_liste_vendeurs.html', locals())
@@ -329,10 +339,14 @@ def admin_vendeur_edit_profil(request, code):
                     if profil_staff.role_profil != TypeProfilStaffChoice.COMMERCIAL:
                         vendeur.commercial = commerciaux.filter(code=request.POST.get("commercial")).first()
                     vendeur.save()
+                django_messages.success(request, "Vendeur %s mis à jour." % (vendeur.nom_store or vendeur.code))
                 return redirect('management:management_admin_vendeur_edit_profil', vendeur.code)
 
             else:
                 form = VendeurForm(instance=vendeur)
+            from management.espace_vendeur import volumes_vendeur
+            vol = volumes_vendeur(vendeur)
+            type_vendeur = TypeVendeurChoice
 
     except PermissionDenied:
         raise
@@ -350,13 +364,11 @@ def admin_vendeur_profil(request, code):
         profil_staff = user.account_profil_staff
 
         if user.is_authenticated and user.is_staff:
-
             vendeur = vendeurs_visibles(user).get(code=code)
-            type_vendeur = TypeVendeurChoice
-        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
     except Exception as e:
         raise Http404
-    return render(request, 'management/admin_vendeur_profil.html', locals())
+    # Une seule fiche vendeur (maquette) : informations, volumes, suivi par l'équipe et actions selon les droits
+    return admin_vendeur_edit_profil(request, vendeur.code)
 
 
 @login_required

@@ -75,3 +75,30 @@ class TableauxDeBord(tests_pages.RecettePages):
     def test_agent_arrive_sur_sa_file(self):
         self.client.force_login(self.comptes[R.AGENT])
         self.assertRedirects(self.client.get('/'), '/management/admin_confirmations/', fetch_redirect_response=False)
+
+
+class FicheVendeur(tests_pages.RecettePages):
+    test_toutes_les_pages = None
+
+    def test_suivi_par_l_equipe_garde_l_agent_et_le_stockage(self):
+        from management.models import ProfilStaff
+        self.client.force_login(self.comptes[R.SUPER])
+        url = '/management/admin_vendeur_edit_profil/%s/' % self.vendeur.code
+        page = self.client.get(url).content.decode()
+        self.assertNotIn("attr('disabled'", page)                   # l'ancien script désactivait les champs du suivi
+        self.assertIn('name="agent_cod"', page)
+        agent = ProfilStaff.objects.get(role_profil=R.AGENT)
+        self.client.post(url, {'submit_affectation': '1', 'agent_cod': agent.code, 'option_stockage': '1'})
+        self.vendeur.refresh_from_db()
+        self.assertEqual(self.vendeur.agent_cod, agent)
+        self.assertTrue(self.vendeur.option_stockage)
+
+    def test_fiche_sans_argent_pour_le_commercial(self):
+        from management.models import Vendeur
+        Vendeur.objects.filter(pk=self.vendeur.pk).update(commercial=self.comptes[R.COMMERCIAL].account_profil_staff)
+        self.client.force_login(self.comptes[R.COMMERCIAL])
+        page = self.client.get('/management/admin_vendeur_profil/%s/' % self.vendeur.code).content.decode()
+        self.assertIn('30 derniers jours', page)
+        self.assertNotIn(' F', page)
+        liste = self.client.get('/management/admin_liste_vendeurs/?type_vendeur=actif').content.decode()
+        self.assertIn(self.vendeur.nom_store, liste)

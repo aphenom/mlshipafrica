@@ -1,571 +1,118 @@
 {% extends "base_main.html" %}
+{% block title %}{{ vendeur.nom_store|default:vendeur.code }} · Vendeur · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Vendeurs</li><li class="active" aria-current="page">{{ vendeur.nom_store|default:vendeur.code }}</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+{% with statut=vendeur.get_statut_vendeur %}
+<div class="prof">
+	<div style="display:flex;flex-direction:column;gap:14px">
+		<div class="card" style="align-items:flex-start">
+			{% if vendeur.logo %}<img src="{{ vendeur.logo.url }}" alt="Logo de {{ vendeur.nom_store }}" class="avatar" style="object-fit:cover">{% else %}<div class="avatar">{{ vendeur.nom_store|default:"?"|slice:":2"|upper }}</div>{% endif %}
+			<div class="ident">
+				<h1 style="font-size:21px;font-weight:800">{{ vendeur.nom_store|default:"(sans nom)" }}</h1>
+				<div class="muted mono">{{ vendeur.code }}</div>
+				<div class="muted">{{ vendeur.nom_contact|default:"" }} {{ vendeur.prenom_contact|default:"" }}{% if vendeur.fonction_contact %} · {{ vendeur.fonction_contact }}{% endif %}</div>
+				<div class="muted">{% if vendeur.numero_contact %}<a href="tel:{{ vendeur.numero_contact }}">{{ vendeur.numero_contact }}</a>{% endif %}{% if vendeur.email %} · {{ vendeur.email }}{% endif %}</div>
+			</div>
+			<span class="badge {% if statut == 'actif' %}b-ok{% elif statut == 'attente_approbation' %}b-warn{% elif statut == 'inactif' %}b-mute{% else %}b-bad{% endif %}">{{ statut.label }}</span>
+			<a class="btn sm" href="{% url 'management:management_admin_liste_colis' %}?type_colis=en_cours&vendeur={{ vendeur.code }}">Voir ses colis en cours</a>
+		</div>
+		<div class="card">
+			<h2>30 derniers jours</h2>
+			<div class="kvs" style="grid-template-columns:1fr 1fr">
+				<div><b>Commandes :</b> {{ vol.total }}</div>
+				<div><b>En cours :</b> {{ vol.en_cours }}</div>
+				<div><b>Livrées :</b> {{ vol.livres }}</div>
+				<div><b>Échecs et retours :</b> {{ vol.echecs }}</div>
+			</div>
+			<div><b>Taux de livraison :</b> {% if vol.taux is None %}—{% else %}{{ vol.taux }} %{% endif %} <span class="badge {{ vol.classe }}">{{ vol.niveau }}</span></div>
+			<div class="muted" style="font-size:12.5px">Dernière commande : {% if vol.derniere %}il y a {{ vol.derniere|timesince }}{% else %}jamais{% endif %}</div>
+		</div>
+		<div class="card">
+			<h2>Dates</h2>
+			<div class="muted" style="font-size:13px;line-height:1.7">Inscrit le {{ vendeur.date_creation|date:"d/m/Y H:i" }}
+				{% if vendeur.etat_approbation and vendeur.date_approbation %}<br>Approuvé le {{ vendeur.date_approbation|date:"d/m/Y H:i" }}{% if vendeur.approbation_par %} par {{ vendeur.approbation_par.get_full_name|default:vendeur.approbation_par.email }}{% endif %}{% endif %}
+				<br>Modifié le {{ vendeur.date_modification|date:"d/m/Y H:i" }}
+				{% if vendeur.etat_suppression %}<br>Supprimé le {{ vendeur.date_suppression|date:"d/m/Y H:i" }}{% endif %}</div>
+		</div>
+	</div>
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Fiche vendeur{% endblock %}
+	<div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+		{% if peut_approuver or peut_supprimer %}
+		<div class="card" style="border-color:var(--brand)">
+			<div class="head" style="align-items:center"><h2>Décision</h2>
+				<form method="post" class="tools" onsubmit="return confirm('Confirmer cette action sur {{ vendeur.nom_store|default:vendeur.code|escapejs }} ?')">
+					{% csrf_token %}
+					{% if peut_approuver %}
+						{% if not vendeur.etat_approbation and vendeur.etat_validation and not vendeur.etat_suppression %}<button type="submit" name="submit_approbation" value="1" class="btn primary">Approuver le vendeur</button>{% endif %}
+						{% if not vendeur.etat_validation %}<button type="submit" name="submit_activation" value="1" class="btn primary">Activer</button>{% endif %}
+						{% if vendeur.etat_approbation and vendeur.etat_validation and not vendeur.etat_suppression %}<button type="submit" name="submit_desactivation" value="1" class="btn">Désactiver</button>{% endif %}
+					{% endif %}
+					{% if peut_supprimer and not vendeur.etat_suppression %}<button type="submit" name="submit_suppression" value="1" class="btn danger">Supprimer</button>{% endif %}
+				</form>
+			</div>
+			{% if not vendeur.etat_approbation %}<div class="muted" style="font-size:12.5px">Avant d’approuver : appelez le vendeur, vérifiez sa pièce d’identité et son activité. Le commercial qui approuve devient son commercial.</div>{% endif %}
+		</div>
 
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
+		{% if peut_approuver %}
+		<form method="post" class="card" onsubmit="return confirm('Enregistrer le suivi de ce vendeur ?')">
+			{% csrf_token %}
+			<h2>Suivi par l’équipe</h2>
+			<div class="form">
+				<label class="field">Agent COD (confirme ses commandes)<select name="agent_cod"><option value="">— Non affecté —</option>{% for agent in agents_cod %}<option value="{{ agent.code }}" {% if vendeur.agent_cod_id == agent.pk %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.user.email|default:agent.code }}</option>{% endfor %}</select></label>
+				{% if profil_staff.role_profil != type_profil_staff.COMMERCIAL %}
+				<label class="field">Commercial<select name="commercial"><option value="">— Non affecté —</option>{% for c in commerciaux %}<option value="{{ c.code }}" {% if vendeur.commercial_id == c.pk %}selected{% endif %}>{{ c.user.get_full_name|default:c.user.email|default:c.code }}</option>{% endfor %}</select></label>
+				{% else %}
+				<div class="field">Commercial<span class="muted" style="font-weight:400;min-height:42px;display:flex;align-items:center">{% if vendeur.commercial %}{{ vendeur.commercial.user.get_full_name|default:vendeur.commercial.user.email }}{% else %}vous, à l’approbation{% endif %}</span></div>
+				{% endif %}
+				<label class="check full"><input type="checkbox" name="option_stockage" value="1" {% if vendeur.option_stockage %}checked{% endif %}><span><b>Vendeur en stockage</b><br><span class="muted" style="font-size:12.5px">Ses produits sont gardés chez ML COD Intérieur ; stockage facturé chaque jour, pas de garde sur ses retours.</span></span></label>
+			</div>
+			<div><button type="submit" name="submit_affectation" value="1" class="btn primary">Enregistrer le suivi</button></div>
+		</form>
+		{% endif %}
+		{% else %}
+		<div class="card"><h2>Suivi par l’équipe</h2><div class="kvs">
+			<div><b>Agent COD :</b> {% if vendeur.agent_cod %}{{ vendeur.agent_cod.user.get_full_name|default:vendeur.agent_cod.user.email }}{% else %}non affecté{% endif %}</div>
+			<div><b>Commercial :</b> {% if vendeur.commercial %}{{ vendeur.commercial.user.get_full_name|default:vendeur.commercial.user.email }}{% else %}non affecté{% endif %}</div>
+			<div><b>Stockage :</b> {% if vendeur.option_stockage %}oui{% else %}non{% endif %}</div>
+		</div></div>
+		{% endif %}
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Vendeurs</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Fiche</li>
-	{% endblock %}
-
-    {% block content %}
-
-				<!-- row -->
-				<div class="row row-sm">
-					<!-- Col -->
-					<div class="col-lg-12">
-						<div class="alert alert-primary" role="alert">
-							<button aria-label="Close" class="close" data-bs-dismiss="alert" type="button">
-								<span aria-hidden="true">×</span>
-							</button>
-							<strong>Informations :</strong> 
-
-							<p>Date création : {{ vendeur.date_creation|date:'d-m-Y H:i:s' }}
-							
-							{% if vendeur.etat_approbation == True %}
-								<br/>Date approbation :  {{ vendeur.date_approbation|date:'d-m-Y H:i:s' }}
-								<br/>Approuvé par :  {{ vendeur.approbation_par.account_profil_staff.code }}
-							{% endif %}
-
-							{% if vendeur.date_validation and vendeur.etat_validation == True %}
-								<br/>Date activation : {{ vendeur.date_validation|date:'d-m-Y H:i:s' }}
-							{% endif %}
-							
-							<br/>Date dernière modification : {{ vendeur.date_modification|date:'d-m-Y H:i:s' }}
-
-							{% if vendeur.etat_suppression == True %}
-								<br/>Date suppression : {{ vendeur.date_suppression|date:'d-m-Y H:i:s' }}
-							{% endif %}
-							</p>
-							
-						</div>
-					</div>
-
-					<div class="col-lg-12">
-						<div class="card">
-							<div class="card-header">
-								<h3 class="card-title">Edition Profil Vendeur</h3>
-							</div>
-							<form class="form-horizontal" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
-								<div class="card-body">
-									{% csrf_token %}
-									{% if form.errors and form.non_field_errors %}
-										<div class="alert alert-danger">
-											{{ form.non_field_errors }}
-										</div>
-									{% endif %}
-									<div class="mb-4 main-content-label">Identification</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.type_vendeur.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.type_vendeur }}
-                                                <div class="text-danger">
-                                                    {{ form.type_vendeur.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise-required">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_entreprise.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_entreprise }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_entreprise.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise-required">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.immatriculation.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.immatriculation }}
-                                                <div class="text-danger">
-                                                    {{ form.immatriculation.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise-required">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_gerant.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_gerant }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_gerant.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_store.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_store }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_store.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.email.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.email }}
-                                                <div class="text-danger">
-                                                    {{ form.email.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.adresse.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.adresse }}
-                                                <div class="text-danger">
-                                                    {{ form.adresse.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.logo.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{% if form.logo.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.logo.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.logo }}
-                                                <div class="text-danger">
-                                                    {{ form.logo.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Vos informations</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nom_contact.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nom_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.nom_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.prenom_contact.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.prenom_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.prenom_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.fonction_contact.label}}</label>
-											</div>
-											<div class="col-md-9">
-												{{ form.fonction_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.fonction_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.numero_contact.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.numero_contact }}
-                                                <div class="text-danger">
-                                                    {{ form.numero_contact.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Activité commerciale</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.duree_activite.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.duree_activite }}
-                                                <div class="text-danger">
-                                                    {{ form.duree_activite.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.plateformes.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.plateformes }}
-                                                <div class="text-danger">
-                                                    {{ form.plateformes.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.plateformes_autre.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{{ form.plateformes_autre }}
-                                                <div class="text-danger">
-                                                    {{ form.plateformes_autre.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.type_produits_vendus.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.type_produits_vendus }}
-                                                <div class="text-danger">
-                                                    {{ form.type_produits_vendus.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.produits.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.produits }}
-                                                <div class="text-danger">
-                                                    {{ form.produits.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.produits_autre.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{{ form.produits_autre }}
-                                                <div class="text-danger">
-                                                    {{ form.produits_autre.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nature_colis.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nature_colis }}
-                                                <div class="text-danger">
-                                                    {{ form.nature_colis.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.frequence_envoi.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.frequence_envoi }}
-                                                <div class="text-danger">
-                                                    {{ form.frequence_envoi.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.nombre_colis_semaine.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.nombre_colis_semaine }}
-                                                <div class="text-danger">
-                                                    {{ form.nombre_colis_semaine.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.cod_actif.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.cod_actif }}
-                                                <div class="text-danger">
-                                                    {{ form.cod_actif.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.collecte_par_mlship.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.collecte_par_mlship }}
-                                                <div class="text-danger">
-                                                    {{ form.collecte_par_mlship.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Notification</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.numero_sms.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.numero_sms }}
-                                                <div class="text-danger">
-                                                    {{ form.numero_sms.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.email_notification.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-9">
-												{{ form.email_notification }}
-                                                <div class="text-danger">
-                                                    {{ form.email_notification.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="mb-4 main-content-label">Documents à fournir</div>
-									<div class="form-group ">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.piece_identite.label}} <span class="text-danger">*</span></label>
-											</div>
-											<div class="col-md-4">
-												{{ form.type_piece_identite }}
-                                                <div class="text-danger">
-                                                    {{ form.type_piece_identite.errors }}
-                                                </div>
-											</div>
-											<div class="col-md-5">
-												{% if form.piece_identite.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.piece_identite.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.piece_identite }}
-                                                <div class="text-danger">
-                                                    {{ form.piece_identite.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.dfe.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{% if form.dfe.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.dfe.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.dfe }}
-                                                <div class="text-danger">
-                                                    {{ form.dfe.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="form-group div-entreprise">
-										<div class="row">
-											<div class="col-md-3">
-												<label class="form-label">{{form.rccm.label}} </label>
-											</div>
-											<div class="col-md-9">
-												{% if form.rccm.value %}
-												<div>
-													<p>Fichier actuel : <a href="{{ form.rccm.value.url }}" target="_blank">Télécharger le fichier</a></p>
-												</div>
-												{% endif %}
-												{{ form.rccm }}
-                                                <div class="text-danger">
-                                                    {{ form.rccm.errors }}
-                                                </div>
-											</div>
-										</div>
-									</div>
-									<div class="clearfix"></div>
-									<div class="mt-3">                         
-										<div class="alert alert-secondary align-items-center justify-content-left d-flex flex-row" role="alert">
-										<div class=""><i class="fa fa-info-circle h2 p-1"></i></div>
-										<div class="iq-alert-text">Les champs marqués par (*) doivent être obligatoirement remplis.</div>
-									</div>
-								</div>
-								{% if peut_approuver %}
-								<div class="card-body border-top">
-									<div class="main-content-label mb-3">Suivi par l'équipe</div>
-									<div class="row row-xs">
-										<div class="col-md-4 mb-2">
-											<label class="form-label">Agent COD (confirme ses commandes)</label>
-											<select class="form-control" name="agent_cod">
-												<option value="">— Non affecté —</option>
-												{% for agent in agents_cod %}
-													<option value="{{ agent.code }}" {% if vendeur.agent_cod_id == agent.pk %}selected{% endif %}>{{ agent.user.get_full_name|default:agent.email|default:agent.code }}</option>
-												{% endfor %}
-											</select>
-										</div>
-										{% if profil_staff.role_profil != type_profil_staff.COMMERCIAL %}
-										<div class="col-md-4 mb-2">
-											<label class="form-label">Commercial</label>
-											<select class="form-control" name="commercial">
-												<option value="">— Non affecté —</option>
-												{% for commercial in commerciaux %}
-													<option value="{{ commercial.code }}" {% if vendeur.commercial_id == commercial.pk %}selected{% endif %}>{{ commercial.user.get_full_name|default:commercial.email|default:commercial.code }}</option>
-												{% endfor %}
-											</select>
-										</div>
-										{% endif %}
-										<div class="col-md-4 mb-2">
-											<label class="form-label d-block">Stock chez nous</label>
-											<label><input type="checkbox" name="option_stockage" value="1" {% if vendeur.option_stockage %}checked{% endif %}> Vendeur en stockage</label>
-										</div>
-										<div class="col-md-4 mb-2 d-flex align-items-end">
-											<button type="submit" name="submit_affectation" value="submit_affectation" class="btn btn-primary">Enregistrer l'affectation</button>
-										</div>
-									</div>
-								</div>
-								{% endif %}
-								<div class="card-footer">
-									{% if peut_approuver %}
-									{% if vendeur.etat_approbation == False and vendeur.etat_validation == True and vendeur.etat_suppression == False %}
-										<button type="submit" name="submit_approbation" value="submit_approbation" class="btn btn-success waves-effect waves-light">
-										<i class="zmdi zmdi-badge-check me-1"></i>Approuver</button>
-									{% endif %}
-									{% if vendeur.etat_validation == False %}
-										<button type="submit" name="submit_activation" value="submit_activation" class="btn btn-success waves-effect waves-light">
-										<i class="zmdi zmdi-badge-check me-1"></i>Activer</button>
-									{% endif %}
-									{% if vendeur.etat_approbation == True and vendeur.etat_validation == True and vendeur.etat_suppression == False %}
-										<button type="submit" name="submit_desactivation" value="submit_desactivation" class="btn btn-warning waves-effect waves-light">
-										<i class="zmdi zmdi-minus-circle me-1"></i>Désactiver</button>
-									{% endif %}
-									{% endif %}
-									{% if peut_supprimer and vendeur.etat_suppression == False %}
-										<button type="submit" name="submit_suppression" value="submit_suppression" class="btn btn-danger waves-effect waves-light">
-										<i class="zmdi zmdi-delete me-1"></i>Supprimer</button>
-									{% endif %}
-								</div>
-							</form>
-
-						</div>
-					</div>
-					<!-- /Col -->
-				</div>
-				<!-- row closed -->
-
-    {% endblock %}
-
-	<!--  -->
-
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-			
-			function updateSwitchType() {
-
-				const valeur = $('#id_type_vendeur').val();
-
-				if (valeur === 'societe') {
-					$('.div-entreprise-required input').attr('required', true);
-					$('.div-entreprise-required').fadeIn('slow');
-					$('.div-entreprise').fadeIn('slow');
-				} else {
-					$('.div-entreprise-required input').val('');
-					$('.div-entreprise-required file').val('');
-					$('.div-entreprise input').val('');
-					$('.div-entreprise file').val('');
-					$('.div-entreprise-required input').removeAttr('required');
-					$('.div-entreprise-required').fadeOut('slow');
-					$('.div-entreprise').fadeOut('slow');
-				}
-			}
-
-			// Exécute la fonction au changement du select
-			$('#id_type_vendeur').on('change', updateSwitchType);
-
-			// Exécute la fonction immédiatement à l’ouverture de la page
-			updateSwitchType();
-
-			$(':input').attr('disabled','disabled');
-			$(':button').removeAttr('disabled');
-			$(':input[type="hidden"]').removeAttr('disabled');
-
-		});
-		</script>
-
-    {% endblock %}
+		<div class="card">
+			<h3>Boutique</h3>
+			<div class="kvs">
+				<div><b>Type :</b> {{ vendeur.get_type_vendeur_display|default:"—" }}</div>
+				{% if vendeur.type_vendeur == type_vendeur.SOCIETE %}
+				<div><b>Entreprise :</b> {{ vendeur.nom_entreprise|default:"—" }}</div>
+				<div><b>Immatriculation :</b> {{ vendeur.immatriculation|default:"—" }}</div>
+				<div><b>Gérant :</b> {{ vendeur.nom_gerant|default:"—" }}</div>
+				{% endif %}
+				<div><b>Adresse :</b> {{ vendeur.adresse|default:"—" }}</div>
+			</div>
+			<h3>Contact et notifications</h3>
+			<div class="kvs">
+				<div><b>Numéro SMS :</b> {{ vendeur.numero_sms|default:"—" }}</div>
+				<div><b>Email des notifications :</b> {{ vendeur.email_notification|default:"—" }}</div>
+			</div>
+			<h3>Activité</h3>
+			<div class="kvs">
+				<div><b>Vend en ligne depuis :</b> {{ vendeur.get_duree_activite_display|default:"—" }}</div>
+				<div><b>Produits :</b> {{ vendeur.type_produits_vendus|default:"—" }}</div>
+				<div><b>Envois :</b> {{ vendeur.get_frequence_envoi_display|default:"—" }}</div>
+				<div><b>Colis par semaine :</b> {{ vendeur.get_nombre_colis_semaine_display|default:"—" }}</div>
+				<div><b>Plateformes :</b> {{ vendeur.plateformes|join:", "|default:"—" }}{% if vendeur.plateformes_autre %}, {{ vendeur.plateformes_autre }}{% endif %}</div>
+				<div><b>Encaissement par ML COD :</b> {{ vendeur.collecte_par_mlship|yesno:"oui,non,—" }}</div>
+			</div>
+			<h3>Pièces fournies</h3>
+			<div class="kvs">
+				<div><b>{{ vendeur.get_type_piece_identite_display|default:"Pièce d’identité" }} :</b> {% if vendeur.piece_identite %}<a href="{{ vendeur.piece_identite.url }}" target="_blank" rel="noopener">ouvrir</a>{% else %}<span class="t-warn">non fournie</span>{% endif %}</div>
+				{% if vendeur.type_vendeur == type_vendeur.SOCIETE %}
+				<div><b>RCCM :</b> {% if vendeur.rccm %}<a href="{{ vendeur.rccm.url }}" target="_blank" rel="noopener">ouvrir</a>{% else %}—{% endif %}</div>
+				<div><b>DFE :</b> {% if vendeur.dfe %}<a href="{{ vendeur.dfe.url }}" target="_blank" rel="noopener">ouvrir</a>{% else %}—{% endif %}</div>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+</div>
+{% endwith %}
+{% endblock %}

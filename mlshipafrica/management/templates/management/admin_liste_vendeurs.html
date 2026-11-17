@@ -1,86 +1,39 @@
 {% extends "base_main.html" %}
+{% block title %}Vendeurs · {{ suite_breadcrumb }} · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Vendeurs</li><li class="active" aria-current="page">{{ suite_breadcrumb }}</li>{% endblock %}
+{% block content %}
+<div class="card ml">
+	<div class="head">
+		<div>
+			<h1>{% if type_vendeur == statut_vendeur.ATTENTE_APPROBATION %}Demandes de collaboration{% else %}Vendeurs {{ suite_breadcrumb|lower }}{% endif %}</h1>
+			<div class="muted">{% if type_vendeur == statut_vendeur.ATTENTE_APPROBATION %}Appelez chaque demandeur sous 48 h, vérifiez sa pièce et son activité, puis approuvez-le et affectez-lui un agent COD.{% else %}{{ vendeurs|length }} vendeur{{ vendeurs|length|pluralize }}. Les volumes sont ceux des 30 derniers jours.{% endif %}</div>
+		</div>
+		<form method="get" class="tools">
+			<input type="hidden" name="type_vendeur" value="{{ type_vendeur }}">
+			<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="Boutique, code, contact, téléphone" aria-label="Rechercher" style="min-width:220px"></label>
+			<button class="btn">Chercher</button>
+		</form>
+	</div>
+</div>
 
-<!-- titre -->
-{% block title %}ML SHIP AFRICA - Liste vendeurs - {{ suite_breadcrumb }}{% endblock %}
-
-<!-- load static -->
-{% load static %}
-<!---->
-{% load humanize %}
-<!-- MainContent -->
-
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Vendeurs</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{{ suite_breadcrumb }}</li>
-	{% endblock %}
-
-    {% block content %}
-
-				<!-- row -->
-				<div class="row">
-					<!--row-->
-					<div class="col-xl-12 col-lg-12">
-						<div class="card">
-							<div class="card-header">
-								<div class="card-title">Liste des vendeurs - {{ suite_breadcrumb }}</div>
-							</div>
-							<div class="card-body mt-2">
-								<div class="table-responsive">
-									<table class="table table-bordered text-nowrap mb-0" id="productSummary">
-										<thead>
-											<tr>
-												<th class="fw-bold">Date inscription</th>
-												<th class="fw-bold">Code</th>
-												<th class="fw-bold">Boutique</th>
-												<th class="fw-bold">Type</th>
-												<th class="fw-bold">Contact</th>
-												<th class="fw-bold">Email</th>
-												<th class="fw-bold">Adresse</th>
-												<th class="fw-bold">Actions</th>
-											</tr>
-										</thead>
-										<tbody>
-										{% for vendeur in vendeurs %}
-											<tr>
-												<td data-order="{{ vendeur.date_creation|date:'Y-m-d H:i:s' }}">{{ vendeur.date_creation|date:'d-m-Y H:i:s' }}</td>
-												<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a></td>
-												<td>{{ vendeur.nom_store|default_if_none:"" }}</td>
-												<td>{{ vendeur.get_type_vendeur_display|default_if_none:"" }}</td>
-												<td>{{ vendeur.numero_contact|default_if_none:"" }}</td>
-												<td>{{ vendeur.email|default_if_none:"" }}</td>
-												<td>{{ vendeur.adresse|default_if_none:"" }}</td>
-												<td>
-													<div class="btn-list">
-														<a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14 me-1"><i class="fe fe-eye"></i></a>
-														<a href="{% url 'management:management_admin_vendeur_edit_profil' vendeur.code %}" class="btn btn-sm  rounded-5 border text-muted tx-14"><i class="fe fe-file"></i></a>
-													</div>
-												</td>
-											</tr>
-										{% endfor %}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
-					</div>
-					<!--row-->
-
-				</div>			
-				<!-- row closed -->
-
-    {% endblock %}
-
-	<!--  -->
-
-    <!-- javascript -->
-    {% block scripts %}
-    <!-- parent -->
-        {{ block.super }}
-
-		<script>
-		$(document).ready(function () {
-
-		});
-		</script>
-
-    {% endblock %}
+<div class="tablewrap">
+	<table>
+		<thead><tr><th>Boutique</th><th>Contact</th><th>Suivi par</th><th class="r">Commandes 30 j</th><th>Dernière commande</th><th>Statut</th><th></th></tr></thead>
+		<tbody>
+		{% for vendeur in vendeurs %}
+			<tr>
+				<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}"><b>{{ vendeur.nom_store|default:"(sans nom)" }}</b></a><div class="muted mono" style="font-size:11px">{{ vendeur.code }} · inscrit le {{ vendeur.date_creation|date:"d/m/Y" }}</div></td>
+				<td>{{ vendeur.nom_contact|default:"" }} {{ vendeur.prenom_contact|default:"" }}<div class="muted nw" style="font-size:11.5px">{% if vendeur.numero_contact %}<a href="tel:{{ vendeur.numero_contact }}">{{ vendeur.numero_contact }}</a>{% endif %}{% if vendeur.email %} · {{ vendeur.email }}{% endif %}</div></td>
+				<td style="font-size:12.5px">{% if vendeur.commercial %}Commercial : {{ vendeur.commercial.user.get_full_name|default:vendeur.commercial.user.email }}{% else %}<span class="muted">sans commercial</span>{% endif %}<br>{% if vendeur.agent_cod %}Agent : {{ vendeur.agent_cod.user.get_full_name|default:vendeur.agent_cod.user.email }}{% else %}<span class="t-warn">sans agent COD</span>{% endif %}{% if vendeur.option_stockage %} · <span class="badge b-info">stockage</span>{% endif %}</td>
+				<td class="r num">{{ vendeur.commandes_30 }}</td>
+				<td class="nw muted">{% if vendeur.derniere_commande %}{{ vendeur.derniere_commande|timesince }}{% else %}jamais{% endif %}</td>
+				<td>{% with st=vendeur.get_statut_vendeur %}<span class="badge {% if st == 'actif' %}b-ok{% elif st == 'attente_approbation' %}b-warn{% elif st == 'inactif' %}b-mute{% else %}b-bad{% endif %}">{{ st.label }}</span>{% endwith %}</td>
+				<td class="nw"><a class="btn sm{% if type_vendeur == statut_vendeur.ATTENTE_APPROBATION %} primary{% endif %}" href="{% url 'management:management_admin_vendeur_edit_profil' vendeur.code %}">{% if type_vendeur == statut_vendeur.ATTENTE_APPROBATION %}Examiner{% else %}Gérer{% endif %}</a></td>
+			</tr>
+		{% empty %}
+			<tr><td colspan="7" class="muted" style="padding:18px">Aucun vendeur ici.</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}

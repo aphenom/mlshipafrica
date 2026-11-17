@@ -241,3 +241,17 @@ def prochain_releve(maintenant=None):
             if moment > maintenant:
                 return moment
     return None
+
+
+def volumes_vendeur(vendeur, jours=30):
+    """Fiche vendeur vue par l'équipe : volumes des 30 derniers jours, jamais de montant."""
+    depuis = timezone.now() - timedelta(days=jours)
+    qs = colis_du_vendeur(vendeur).exclude(statut_traitement=S.BROUILLON)
+    c = qs.filter(date_creation__gte=depuis).aggregate(
+        total=Count('id'), livres=Count('id', filter=Q(statut_traitement__in=LIVRES)),
+        echecs=Count('id', filter=Q(statut_traitement__in=ECHECS)))
+    c['taux'] = taux(c['livres'], c['echecs'])
+    c['niveau'], c['classe'] = niveau(c['taux'])
+    c['en_cours'] = qs.exclude(statut_traitement__in=LIVRES + ECHECS + [S.ANNULE]).count()
+    c['derniere'] = qs.order_by('-date_creation').values_list('date_creation', flat=True).first()
+    return c
