@@ -311,6 +311,17 @@ body.mlcod .jour .jt { font-size: 28px; font-weight: 800; }
 .calj2.warn { background: var(--warn-soft); } .calj2.info { background: var(--info-soft); } .calj2.ok { background: var(--ok-soft); }
 @media (max-width: 760px) { .chero { grid-template-columns: 1fr; } .zb { grid-template-columns: 90px 1fr; } .zb .zv { grid-column: 1 / -1; text-align: left; } .ctop { grid-template-columns: 22px 1fr 50px; } .ctop .ftrack { display: none; } .tache { flex-wrap: wrap; } }
 
+/* Zones et tarifs (CEO) */
+.zgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 12px; }
+.zcard { gap: 12px; }
+.zcard .zlab { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.vchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vchip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 12.5px; }
+.vchip small { font-weight: 600; color: var(--muted); font-size: 11px; } .vchip.off { opacity: .55; text-decoration: line-through; }
+.ztab td, .ztab th { padding: 8px; } .ztab td:last-child { white-space: nowrap; }
+.zin { width: 96px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); text-align: right; }
+.zlock td { opacity: .7; }
+
 /* Impression : seule la page utile (facture, relevé) */
 @media print {
   body.mlcod { background: #ffffff; padding: 0; }

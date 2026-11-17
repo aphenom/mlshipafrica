@@ -1456,6 +1456,7 @@ def admin_commissions(request):
     lignes = tableau(profil_staff.license, debut, fin)
     total = sum((l['montant'] for l in lignes), Decimal('0'))
     departements, types, indicateurs = DepartementCommission.choices, TypeCommission.choices, IndicateurCommission.choices
+    nb_actives = sum(1 for c in configs if c.actif)
     return render(request, 'management/admin_commissions.html', locals())
 
 

@@ -1,0 +1,78 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Zones et tarifs · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Paramètres</li><li class="active" aria-current="page">Zones et tarifs</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<form method="post" id="f-zt">
+{% csrf_token %}
+<div class="card ml">
+	<div class="head"><div><h1>Zones et tarifs</h1><div class="muted">Les zones et leurs villes suivent la numérotation du réseau du prestataire. Pour chaque zone et chaque format, saisissez son coût et votre prix vendeur : la marge ML par colis se calcule aussitôt. Réservé au CEO : les vendeurs ne voient que le prix vendeur, la comptable les totaux et les marges.</div></div></div>
+	<div class="tools" style="align-items:flex-end">
+		<label class="field">Appliquer la même marge partout (F)<input type="number" step="50" id="zt-mg" placeholder="ex. 500" style="width:150px"></label>
+		<button type="button" class="btn" id="zt-appliquer">Appliquer à toutes les zones</button>
+		<span class="muted" style="font-size:12px">Calcule prix vendeur = coût partenaire + cette marge ; vérifiez puis enregistrez.</span>
+	</div>
+</div>
+
+<div class="zgrid">
+	{% for z in zones %}
+	<div class="card zcard">
+		<div class="head" style="align-items:center">
+			<h2>{{ z.zone.nom }} <span class="muted" style="font-weight:400;font-size:13px">· {{ z.actives }} ville{{ z.actives|pluralize }} active{{ z.actives|pluralize }}{% if z.zone.get_delai_display %} · délai {{ z.zone.get_delai_display }}{% endif %}</span></h2>
+			{% if z.ouverte %}<span class="badge b-ok">Ouverte aux commandes</span>{% else %}<span class="badge b-warn">Pas de tarif : fermée</span>{% endif %}
+		</div>
+		<details class="dplier"{% if z.villes|length <= 20 %} open{% endif %}><summary class="dsum"><span class="zlab" style="margin:0">Villes de la zone</span><span class="dinfo">{{ z.villes|length }} ville{{ z.villes|length|pluralize }} <span class="dchev">▾</span></span></summary><div class="vchips">{% for v in z.villes %}<span class="vchip{% if not v.etat_validation %} off{% endif %}">{{ v.nom }} <small>{{ v.nb_commandes }}</small></span>{% endfor %}</div></details>
+		<div><div class="zlab">Tarif par format de colis</div>
+			<div class="tablewrap"><table class="ztab">
+				<thead><tr><th>Format</th><th class="r">Coût partenaire</th><th class="r">Prix vendeur</th><th class="r">Marge ML</th></tr></thead>
+				<tbody>
+				{% for l in z.lignes %}
+					{% if l.tarif %}
+					<tr data-ligne>
+						<td><b>{{ l.format.nom }}</b></td>
+						<td class="r"><input type="number" min="0" step="1" class="num zin" name="cout_{{ l.tarif.pk }}" value="{{ l.tarif.cout_partenaire|default_if_none:''|floatformat:'0u' }}" placeholder="à saisir" aria-label="Coût partenaire {{ z.zone.nom }} {{ l.format.nom }}" data-cout></td>
+						<td class="r"><input type="number" min="0" step="1" class="num zin" name="prix_{{ l.tarif.pk }}" value="{{ l.tarif.montant_frais|default_if_none:''|floatformat:'0u' }}" aria-label="Prix vendeur {{ z.zone.nom }} {{ l.format.nom }}" data-prix></td>
+						<td class="r" data-marge></td>
+					</tr>
+					{% else %}
+					<tr class="zlock"><td><b>{{ l.format.nom }}</b></td><td class="r muted">—</td><td class="r muted">—</td><td class="r"><span class="badge b-mute">Pas encore proposé</span></td></tr>
+					{% endif %}
+				{% endfor %}
+				</tbody>
+			</table></div>
+		</div>
+	</div>
+	{% empty %}
+	<div class="card"><div class="muted">Aucune zone : lancez « python manage.py appliquer_grille_ml_cod ».</div></div>
+	{% endfor %}
+</div>
+
+<div class="tools">
+	<button class="btn primary" onclick="return confirm('Enregistrer les tarifs ? Ils s’appliquent aux commandes créées ensuite.')">Enregistrer les tarifs</button>
+	<span class="muted" style="font-size:12.5px">Chaque colis garde le prix en vigueur le jour de sa création. Chaque changement est inscrit au journal d’audit. Pour ajouter un format ou un tarif propre à un vendeur : <a href="{% url 'core:core_liste' %}?param=tarifications">liste des tarifs</a>.</span>
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+(function () {
+	function fcfa(n) { n = Math.round(Number(n) || 0); return (n < 0 ? '− ' : '') + Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F'; }
+	function maj(tr) {
+		var c = Number(tr.querySelector('[data-cout]').value || 0), p = tr.querySelector('[data-prix]').value, cell = tr.querySelector('[data-marge]');
+		if (!p) { cell.innerHTML = '<span class="t-bad" style="font-size:12px;font-weight:700">prix à fixer</span>'; return; }
+		p = Number(p); var m = p - c, cls = m < 0 ? 'b-bad' : m < 1000 ? 'b-warn' : 'b-ok';
+		cell.innerHTML = '<span class="badge ' + cls + '" style="font-size:13px">' + (m > 0 ? '+' : '') + fcfa(m) + '</span><div class="muted" style="font-size:11px;margin-top:2px;white-space:nowrap">' + Math.round(m / p * 100) + ' %' + (m < 0 ? ' · <b class="t-bad">à perte</b>' : '') + (c ? '' : ' · coût à saisir') + '</div>';
+	}
+	var lignes = document.querySelectorAll('[data-ligne]');
+	lignes.forEach(function (tr) { maj(tr); tr.addEventListener('input', function () { maj(tr); }); });
+	document.getElementById('zt-appliquer').addEventListener('click', function () {
+		var mg = Number(document.getElementById('zt-mg').value);
+		if (!mg) return;
+		lignes.forEach(function (tr) { var c = Number(tr.querySelector('[data-cout]').value || 0); if (c) { tr.querySelector('[data-prix]').value = c + mg; maj(tr); } });
+	});
+})();
+</script>
+{% endblock %}

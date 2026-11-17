@@ -538,3 +538,68 @@ def _edit(request, code):
 
     return redirect('index')
 
+
+
+# ---------------------------------------------------------------------------------------------------
+# Zones et tarifs (maquette, CEO) : une carte par zone, ses villes, et pour chaque format le coût
+# partenaire, le prix vendeur et la marge. Chaque modification passe par save() : journal d'audit.
+# ---------------------------------------------------------------------------------------------------
+
+@login_required
+def zones_tarifs(request):
+    from decimal import Decimal, InvalidOperation
+    from django.contrib import messages as django_messages
+    from django.db.models import Count
+    verifier(request.user, 'parametres_tarifs')
+    profil = request.user.account_profil_staff
+    grille = (Tarification.objects.filter(license=profil.license, etat_validation=True, etat_suppression=False,
+                                          vendeur__isnull=True, localite_arrivee__isnull=True, zone_arrivee__isnull=False)
+              .select_related('zone_arrivee', 'format_article'))
+
+    if request.method == 'POST':
+        changes = 0
+        with transaction.atomic():
+            for tarif in grille:
+                modif = False
+                for champ, cle in (('montant_frais', 'prix_%d'), ('cout_partenaire', 'cout_%d')):
+                    brut = (request.POST.get(cle % tarif.pk) or '').replace(' ', '').replace(' ', '')
+                    if cle % tarif.pk not in request.POST:
+                        continue
+                    try:
+                        valeur = Decimal(brut) if brut else None
+                    except InvalidOperation:
+                        django_messages.error(request, "Montant invalide pour %s · %s." % (tarif.zone_arrivee.nom, tarif.format_article))
+                        continue
+                    if valeur is not None and valeur < 0:
+                        continue
+                    if champ == 'montant_frais' and valeur is None:
+                        continue  # un prix vendeur ne se vide pas ici : on désactive le tarif dans la liste
+                    if getattr(tarif, champ) != valeur:
+                        setattr(tarif, champ, valeur)
+                        modif = True
+                if modif:
+                    tarif.save()
+                    changes += 1
+        django_messages.success(request, "%d tarif(s) enregistré(s). Les nouveaux prix s’appliquent aux commandes créées ensuite." % changes)
+        return redirect('core:core_zones_tarifs')
+
+    formats = list(FormatArticle.objects.filter(license=profil.license, etat_validation=True, etat_suppression=False).order_by('pk'))
+    commandes_par_ville = dict(Article.objects.filter(license=profil.license, etat_suppression=False)
+                               .values_list('localite_arrivee').annotate(n=Count('id')))
+    zones = []
+    # Zones de livraison numérotées comme le réseau (2 à 6) ; la zone de départ (Abidjan) n'a pas de tarif ici
+    for zone in Zone.objects.filter(license=profil.license, etat_validation=True, etat_suppression=False,
+                                    is_arrivee=True, numero__isnull=False).order_by('numero', 'nom'):
+        villes = list(Localite.objects.filter(zone=zone, etat_suppression=False).order_by('nom'))
+        if not villes:
+            continue
+        for v in villes:
+            v.nb_commandes = commandes_par_ville.get(v.pk, 0)
+        lignes = []
+        for fmt in formats:
+            tarif = next((t for t in grille if t.zone_arrivee_id == zone.pk and t.format_article_id == fmt.pk), None)
+            lignes.append({'format': fmt, 'tarif': tarif,
+                           'marge': (tarif.montant_frais - (tarif.cout_partenaire or 0)) if tarif and tarif.montant_frais is not None else None})
+        zones.append({'zone': zone, 'villes': villes, 'actives': sum(1 for v in villes if v.etat_validation), 'lignes': lignes,
+                      'ouverte': any(l['tarif'] for l in lignes)})
+    return render(request, 'core/zones_tarifs.html', locals())

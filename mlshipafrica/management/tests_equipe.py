@@ -124,3 +124,25 @@ class CommercialEtStock(tests_pages.RecettePages):
         page = self.client.get('/management/admin_stock/').content.decode()
         self.assertIn('Envois à réceptionner', page)
         self.assertIn('Derniers mouvements', page)
+
+
+class ZonesEtTarifs(tests_pages.RecettePages):
+    test_toutes_les_pages = None
+
+    def test_le_ceo_modifie_prix_et_cout_avec_trace(self):
+        from core.models import JournalAudit
+        from management.models import Tarification
+        tarif = Tarification.objects.filter(vendeur__isnull=True, localite_arrivee__isnull=True, zone_arrivee__isnull=False,
+                                            etat_validation=True, etat_suppression=False).first()
+        self.client.force_login(self.comptes[R.SUPER])
+        page = self.client.get('/core/zones_tarifs/').content.decode()
+        self.assertIn('name="prix_%d"' % tarif.pk, page)
+        self.client.post('/core/zones_tarifs/', {'prix_%d' % tarif.pk: '3600', 'cout_%d' % tarif.pk: '2700'})
+        tarif.refresh_from_db()
+        self.assertEqual((int(tarif.montant_frais), int(tarif.cout_partenaire)), (3600, 2700))
+        self.assertTrue(JournalAudit.objects.filter(modele='Tarification', objet_id=str(tarif.pk)).exists())
+
+    def test_reserve_au_ceo(self):
+        for role in (R.COMPTABLE, R.MANAGER, R.ADMINISTRATEUR):
+            self.client.force_login(self.comptes[role])
+            self.assertEqual(self.client.get('/core/zones_tarifs/').status_code, 403, role)

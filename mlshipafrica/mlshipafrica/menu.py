@@ -59,7 +59,8 @@ BENEFICE = [_p('Journal et bénéfice', M + 'admin_benefice', 'benefice')]
 COMMISSIONS = [_p('Commissions', M + 'admin_commissions', 'commissions_voir')]
 JOURNAUX_ARGENT = [_p('Journal des paiements', M + 'admin_activites_paiements', 'activites_argent'),
                    _p('Journal des reversements', M + 'admin_activites_reversements', 'activites_argent')]
-PARAMETRES = [_p('Tarifs', 'core:core_liste', 'parametres_tarifs', param='tarifications'),
+PARAMETRES = [_p('Zones et tarifs', 'core:core_zones_tarifs', 'parametres_tarifs'),
+              _p('Tarifs', 'core:core_liste', 'parametres_tarifs', param='tarifications'),
               _p('Zones', 'core:core_liste', 'parametres', param='zones'),
               _p('Localités', 'core:core_liste', 'parametres', param='localites'),
               _p('Formats', 'core:core_liste', 'parametres', param='formats_articles'),
