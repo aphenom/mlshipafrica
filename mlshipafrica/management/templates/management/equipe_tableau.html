@@ -1,0 +1,89 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Pilotage · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
+{% block content %}
+<div class="ceo">
+	<div class="chead">
+		<div>
+			<div class="crumb">{% now "l j F Y" %} · du {{ du|date:"d/m/Y" }} au {{ au|date:"d/m/Y" }}{% if argent %}, comparé à la période précédente de même durée{% endif %}</div>
+			<h1>{% if argent %}Pilotage{% else %}Pilotage de l’activité{% endif %}</h1>
+			{% if not argent %}<div class="muted">Performance des livraisons, par période et par zone. Aucun montant ici : l’argent est suivi par la comptable et le CEO.</div>{% endif %}
+		</div>
+		<form method="get" class="tools" style="align-items:flex-end;justify-content:flex-end">
+			<div class="chips">{% for v, l in periodes %}<a class="chip" href="?p={{ v }}"{% if p == v %} aria-current="page"{% endif %}>{{ l }}</a>{% endfor %}</div>
+			<label class="field">Du<input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+			<label class="field">au<input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
+			<button class="btn{% if not p %} primary{% endif %}">Filtrer</button>
+		</form>
+	</div>
+
+	{% if argent %}
+	<div class="chero">
+		<div class="chmain">
+			<span class="cl">Bénéfice ML COD Intérieur</span>
+			<span class="cbig">{{ argent.journal.benefice|fcfa }}</span>
+			<span class="cs">{% if argent.variation is not None %}<span class="cdelta {% if argent.variation >= 0 %}up{% else %}down{% endif %}">{% if argent.variation >= 0 %}+{% endif %}{{ argent.variation }} %</span> vs {% endif %}{{ argent.precedent.benefice|fcfa }} sur la période précédente</span>
+			<span class="cs" style="opacity:.75">{% for lib, montant in argent.journal.par_type %}{% if montant %}{{ lib }} {{ montant|fcfa }} · {% endif %}{% endfor %}coût prestataire − {{ argent.journal.cout_prestataire|fcfa }}</span>
+		</div>
+		<div class="chcash">
+			<span class="cl">Trésorerie à venir</span>
+			<div class="crow"><span>À verser aux vendeurs ({{ argent.releves_a_verser }} relevé{{ argent.releves_a_verser|pluralize }})</span><b>− {{ argent.a_verser|fcfa }}</b></div>
+			<div class="crow"><span>Acomptes à rembourser ({{ argent.acomptes_a_rembourser }})</span><b>− {{ argent.a_rembourser|fcfa }}</b></div>
+			<div class="crow"><span>Encaissé pour les vendeurs sur la période</span><b>{{ argent.journal.collecte|fcfa }}</b></div>
+			<div class="crow tot"><span>Colis engagés (en route)</span><b>{{ argent.journal.engages }}</b></div>
+		</div>
+	</div>
+	{% endif %}
+
+	<div class="ctiles">
+		<div class="ctile"><span class="cl">Taux de livraison</span><span class="cv {{ pil.taux_classe }}">{% if pil.taux is None %}—{% else %}{{ pil.taux }} %{% endif %}</span><span class="cs">minimum 75 % · objectif 80 %</span></div>
+		<div class="ctile"><span class="cl">Commandes</span><span class="cv">{{ pil.commandes }}</span><span class="cs">{{ pil.confirmees }} confirmées · {{ pil.annules }} annulées</span></div>
+		<div class="ctile"><span class="cl">Livrés</span><span class="cv">{{ pil.livres }}</span><span class="cs">{{ pil.echecs }} échecs ou retours</span></div>
+		{% if argent %}<div class="ctile"><span class="cl">Marge par colis livré</span><span class="cv">{{ argent.marge_colis|fcfa }}</span><span class="cs">tout compris</span></div>{% endif %}
+		<a class="ctile" href="{% url 'management:management_admin_confirmations' %}?filtre=a_confirmer" style="text-decoration:none{% if pil.non_traitees %};border-color:var(--bad){% endif %}"><span class="cl">Non traitées + {{ pil.heures_sans_appel }} h</span><span class="cv {% if pil.non_traitees %}t-bad{% else %}t-ok{% endif %}">{{ pil.non_traitees }}</span><span class="cs">aucun appel · voir la file</span></a>
+		<a class="ctile" href="{% url 'management:management_admin_liste_colis' %}?type_colis=a_sauver" style="text-decoration:none{% if pil.bloques %};border-color:var(--bad){% endif %}"><span class="cl">Colis bloqués + 48 h</span><span class="cv {% if pil.bloques %}t-bad{% else %}t-ok{% endif %}">{{ pil.bloques }}</span><span class="cs">en route sans mouvement</span></a>
+		<div class="ctile"><span class="cl">Acomptes reçus</span><span class="cv">{{ pil.acomptes }}</span><span class="cs">sur la période</span></div>
+		<a class="ctile" href="{% url 'management:management_admin_liste_vendeurs' %}?type_vendeur=attente_approbation" style="text-decoration:none"><span class="cl">Vendeurs actifs</span><span class="cv">{{ pil.vendeurs_actifs }}</span><span class="cs">{{ pil.demandes }} demande{{ pil.demandes|pluralize }} en attente</span></a>
+	</div>
+
+	{% include "management/_cartes_resultats.html" %}
+
+	<div class="cgridm">
+		<div class="card cpanel">
+			<h2>Colis en circulation</h2>
+			<div class="cstack">{% for s in pil.circulation %}{% if s.n %}<span class="cseg s{{ s.i }}" style="flex:{{ s.n }}" title="{{ s.libelle }} : {{ s.n }}"></span>{% endif %}{% endfor %}</div>
+			<div class="clegend">{% for s in pil.circulation %}<div><span class="cdot s{{ s.i }}"></span>{{ s.libelle }}<b>{{ s.n }}</b></div>{% endfor %}</div>
+			<div class="muted" style="font-size:12px">{{ pil.total_circulation }} colis en circulation en ce moment.</div>
+		</div>
+		<div class="card cpanel">
+			<h2>Par statut</h2>
+			<div class="chips">{% for s in pil.par_statut %}{% if s.lien %}<a class="chip" href="{% url 'management:management_admin_liste_colis' %}?type_colis={{ s.cle }}"><span class="stdot {{ s.cle|st_classe }}"></span>{{ s.libelle }} <span class="c">{{ s.n }}</span></a>{% else %}<span class="chip" style="cursor:default"><span class="stdot {{ s.cle|st_classe }}"></span>{{ s.libelle }} <span class="c">{{ s.n }}</span></span>{% endif %}{% empty %}<span class="muted">Aucun colis.</span>{% endfor %}</div>
+			<div class="muted" style="font-size:12px">Tous les colis, quelle que soit la période. Un clic ouvre la liste.</div>
+		</div>
+	</div>
+
+	<div class="cgridm">
+		<div class="card cpanel">
+			<h2>Taux de livraison par zone</h2>
+			<div class="zbars">{% for z in pil.zones %}<div class="zb"><span class="zl">{{ z.nom }}<small>{{ z.n }} commande{{ z.n|pluralize }}</small></span><span class="ztrack"><span class="zfill" style="width:{{ z.taux|default:0 }}%;background:{{ z.taux|couleur_taux }}"></span></span><span class="zv">{% if z.taux is None %}—{% else %}{{ z.taux }} %{% endif %}</span></div>{% empty %}<div class="muted">Aucune commande sur la période.</div>{% endfor %}</div>
+		</div>
+		<div class="card cpanel">
+			<h2>Villes à surveiller</h2>
+			<div class="muted" style="font-size:12px;margin-top:-6px">Les plus faibles d’abord, sur la période</div>
+			<div class="zbars">{% for v in pil.villes %}<div class="zb"><span class="zl">{{ v.nom }}<small>{{ v.n }} commande{{ v.n|pluralize }}</small></span><span class="ztrack"><span class="zfill" style="width:{{ v.taux|default:0 }}%;background:{{ v.taux|couleur_taux }}"></span></span><span class="zv">{% if v.taux is None %}—{% else %}{{ v.taux }} %{% endif %}<small><span class="badge {{ v.classe }}">{{ v.niveau }}</span></small></span></div>{% empty %}<div class="muted">Aucune commande sur la période.</div>{% endfor %}</div>
+		</div>
+	</div>
+
+	<div class="cgridm">
+		<div class="card cpanel">
+			<h2>Top vendeurs · commandes</h2>
+			{% for t in pil.top %}<div class="ctop"><span class="cr">{{ forloop.counter }}</span><span class="cn">{% if t.code %}<a href="{% url 'management:management_admin_vendeur_profil' t.code %}">{{ t.nom }}</a>{% else %}{{ t.nom }}{% endif %}<small>{{ t.livres }} livré{{ t.livres|pluralize }}{% if t.taux is not None %} · {{ t.taux }} %{% endif %}</small></span><span class="ftrack"><span class="ffill" style="width:{% widthratio t.n pil.top_max 100 %}%"></span></span><b>{{ t.n }}</b></div>{% empty %}<div class="muted">Aucune commande sur la période.</div>{% endfor %}
+		</div>
+		<div class="card cpanel">
+			<h2>Pourquoi les commandes sont annulées</h2>
+			{% for m in pil.motifs %}<div style="display:flex;flex-direction:column;gap:4px"><div class="head" style="align-items:center"><span>{{ m.motif }}</span><b class="num">{{ m.pct }} % <span class="muted" style="font-weight:500">({{ m.n }})</span></b></div><span class="track"><i style="width:{{ m.pct }}%;background:var(--info)"></i></span></div>{% empty %}<div class="muted">Aucune annulation sur la période.</div>{% endfor %}
+		</div>
+	</div>
+</div>
+{% endblock %}

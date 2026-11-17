@@ -1,0 +1,7 @@
+{% if cartes_resultats %}
+<div class="kpis">
+	{% for c in cartes_resultats %}
+	<div class="kpi" style="border-color:var(--brand)"><span class="l">{{ c.nom }} · ce mois</span><span class="v">{{ c.valeur }}</span><span class="n">{{ c.indicateur }}{% if c.taux is not None %} · taux de livraison {{ c.taux }} %{% if c.taux_min %} (minimum {{ c.taux_min }} %){% endif %}{% endif %}{% if c.prochain_seuil %} · prochain palier : {{ c.prochain_seuil }}{% endif %}</span></div>
+	{% endfor %}
+</div>
+{% endif %}

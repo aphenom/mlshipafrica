@@ -4,6 +4,7 @@
 {% block breadcrumb-li %}<li class="active" aria-current="page">Commandes à appeler</li>{% endblock %}
 {% block content %}
 {% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+{% include "management/_cartes_resultats.html" %}
 <div class="card ml">
 	<div class="head">
 		<div>

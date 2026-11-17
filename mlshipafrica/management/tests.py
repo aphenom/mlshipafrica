@@ -330,10 +330,12 @@ class RolesEtDroitsTests(TestCase):
     def test_tableau_de_bord_sans_argent_hors_direction(self):
         for role in self.comptes:
             self.client.force_login(self.comptes[role])
-            page = self.client.get('/').content.decode()
+            page = self.client.get('/', follow=True).content.decode()
+            argent_societe = 'Bénéfice ML COD Intérieur' in page or 'Résultat du jour' in page
             if role in ('super', 'comptable'):
-                self.assertIn('Paiements (', page)
+                self.assertTrue(argent_societe, role)            # bénéfice (CEO) ou résultat du jour (comptable)
             else:
+                self.assertFalse(argent_societe, role)
                 self.assertNotIn('Paiements (', page, role)
                 self.assertNotIn('Reversements (', page, role)
 
@@ -845,7 +847,7 @@ class CommissionsTests(TestCase):
 
     def page(self, nom, url='/'):
         self.client.force_login(self.comptes[nom])
-        return self.client.get(url).content.decode()
+        return self.client.get(url, follow=True).content.decode()  # l'agent arrive sur sa file d'appels
 
     def test_desactivee_rien_ne_s_affiche(self):
         self.assertNotIn('Prime confirmation', self.page('a1'))

@@ -1,0 +1,45 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Aujourd’hui · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Aujourd’hui</li>{% endblock %}
+{% block content %}
+<div class="jour">
+	<div class="head"><div><div class="crumb">{% now "l j F Y" %}</div><h1 class="jt">Bonjour{% if user.first_name %} {{ user.first_name }}{% endif %}, voici votre journée</h1></div></div>
+
+	<div class="chero">
+		<div class="chmain">
+			<span class="cl">Résultat du jour, en temps réel</span>
+			<span class="cbig">{{ journee.jour.benefice|fcfa }}</span>
+			<span class="cs">{{ journee.jour.livres }} colis livré{{ journee.jour.livres|pluralize }} · {{ journee.jour.departs }} départ{{ journee.jour.departs|pluralize }} · {{ journee.jour.acomptes_n }} acompte{{ journee.jour.acomptes_n|pluralize }} reçu{{ journee.jour.acomptes_n|pluralize }}</span>
+		</div>
+		<div class="chcash">
+			<span class="cl">Détail du jour</span>
+			{% for lib, montant in journee.jour.par_type %}<div class="crow"><span>{{ lib }}</span><b>{{ montant|fcfa }}</b></div>{% endfor %}
+			<div class="crow"><span>Coût prestataire (départs)</span><b>− {{ journee.jour.cout_prestataire|fcfa }}</b></div>
+			<div class="crow tot"><span>Encaissé pour les vendeurs</span><b>{{ journee.jour.collecte|fcfa }}</b></div>
+		</div>
+	</div>
+
+	{% include "management/_cartes_resultats.html" %}
+
+	<div class="jgrid">
+		<div class="card">
+			<div class="head" style="align-items:baseline"><h2>À faire</h2><span class="muted" style="font-size:13px">{{ journee.a_faire|length }} tâche{{ journee.a_faire|length|pluralize }} · par urgence</span></div>
+			{% for niveau, titre, montant, detail, url, bouton in journee.a_faire %}
+			<div class="tache"><span class="pt {% if niveau == 'bad' %}bad{% endif %}"></span><div class="tx"><b>{{ titre }}{% if montant %} · {{ montant|fcfa }}{% endif %}</b><span class="muted">{{ detail }}</span></div><a class="btn sm {% if niveau == 'bad' %}dark{% endif %}" href="{% url url %}{% if url == 'management:management_admin_liste_colis' %}?type_colis=livre{% endif %}">{{ bouton }}</a></div>
+			{% empty %}<div class="muted">Rien à faire pour l’instant.</div>{% endfor %}
+		</div>
+		<div class="card">
+			<div class="head" style="align-items:baseline"><h2>Calendrier financier</h2><span class="muted" style="font-size:13px">7 prochains jours</span></div>
+			<div class="cal7">{% for j in journee.calendrier %}<div class="calj2 {% if j.evenements %}{{ j.evenements.0.1 }}{% endif %}"><span class="d">{{ j.date|date:"D j"|upper }}</span>{% for lib, cls in j.evenements %}<span class="e t-{{ cls }}">{{ lib }}</span>{% endfor %}</div>{% endfor %}</div>
+			<div class="muted" style="font-size:12px;display:flex;gap:12px;flex-wrap:wrap"><span><b class="t-warn">●</b> Relevés des vendeurs (lundi et jeudi, 6 h)</span><span><b class="t-info">●</b> Fichier du prestataire</span><span><b class="t-ok">●</b> Stockage du mois</span></div>
+		</div>
+	</div>
+
+	<div class="tools">
+		<a class="btn" href="{% url 'management:management_admin_benefice' %}">Journal et bénéfice</a>
+		<a class="btn" href="{% url 'management:management_admin_fichier_prestataire' %}">Fichier du prestataire</a>
+		<a class="btn" href="{% url 'management:management_admin_releves' %}">Relevés vendeurs</a>
+	</div>
+</div>
+{% endblock %}

@@ -60,6 +60,22 @@ def index(request):
                 from datetime import datetime as dt_, time as tm_, timedelta as td_
                 _debut = tz_.make_aware(dt_.combine(tz_.localdate().replace(day=1), tm_.min))
                 cartes_resultats = cartes_pour(profil_staff, _debut, tz_.now() + td_(seconds=1))
+                # Tableaux de bord de la maquette, par rôle
+                from mlshipafrica.enums import TypeProfilStaffChoice as R
+                role = profil_staff.role_profil
+                if role == R.AGENT:
+                    return redirect('management:management_admin_confirmations')
+                if role in (R.MANAGER, R.SUPER, R.COMPTABLE):
+                    from management import tableaux_equipe as te
+                    p, du, au, debut, fin = te.periode_equipe(request)
+                    periodes = te.PERIODES
+                    if role == R.COMPTABLE:
+                        journee = te.journee_comptable(profil_staff.license)
+                        return render(request, 'management/comptable_jour.html', locals())
+                    pil = te.pilotage(profil_staff.license, debut, fin)
+                    if a_le_droit(user, 'argent'):
+                        argent = te.argent_ceo(profil_staff.license, debut, fin)
+                    return render(request, 'management/equipe_tableau.html', locals())
             except ProfilStaff.DoesNotExist:
                 profil_staff_pk = None
                 profil_staff = None

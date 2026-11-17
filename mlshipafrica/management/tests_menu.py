@@ -18,7 +18,7 @@ class MenuParRole(tests_pages.RecettePages):
     def toutes_les_adresses(self, user):
         """Liens du menu, puis onglets de chaque rubrique ouverte."""
         self.client.force_login(user)
-        menu = liens_de(self.client.get('/').content.decode(), 'side')
+        menu = liens_de(self.client.get('/', follow=True).content.decode(), 'side')
         self.assertTrue(menu, 'menu absent pour %s' % user.username)
         adresses = list(menu)
         for url in menu:

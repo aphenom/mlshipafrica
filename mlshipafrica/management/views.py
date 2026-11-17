@@ -979,6 +979,10 @@ def admin_confirmations(request):
     if vue == 'attente':
         articles = en_attente
     motifs = MOTIFS_ANNULATION
+    # Cartes de résultats du mois (volumes seulement) si une commission active concerne cet agent
+    from management.commissions import cartes_pour
+    cartes_resultats = cartes_pour(profil_staff, timezone.make_aware(datetime.datetime.combine(timezone.localdate().replace(day=1), datetime.time.min)),
+                                   timezone.now() + timedelta(seconds=1))
     suite_breadcrumb = "Confirmations"
     return render(request, 'management/admin_confirmations.html', locals())
 
