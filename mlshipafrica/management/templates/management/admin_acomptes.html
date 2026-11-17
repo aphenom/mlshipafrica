@@ -1,67 +1,56 @@
 {% extends "base_main.html" %}
-{% block title %}ML COD Intérieur - Acomptes{% endblock %}
-{% load static %}
-{% load humanize %}
+{% load mlcod %}
+{% block title %}Acomptes clients · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Versements</li><li class="active" aria-current="page">Acomptes clients</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card ml">
+	<div class="head"><div><h1>Acomptes clients</h1><div class="muted">Usage interne : l’acompte n’apparaît jamais chez le vendeur. Une commande annulée avant expédition rend l’acompte remboursable ; après le départ du colis, il n’est plus remboursé.</div></div></div>
+	<div class="kpis">
+		{% for t in totaux_statut %}<a class="kpi" href="?statut={{ t.cle }}" style="{% if t.cle == statut_selected %}border-color:var(--ink){% endif %}"><span class="l">{{ t.libelle }}</span><span class="v {% if t.cle == 'a_rembourser' and t.n %}t-warn{% endif %}">{{ t.n }}</span><span class="n">{{ t.total|fcfa }}</span></a>{% endfor %}
+	</div>
+	{% if par_reseau %}<div class="chips">{% for r in par_reseau %}<span class="chip" style="cursor:default">{{ r.libelle }} <span class="c">{{ r.n }}</span> <span class="muted" style="font-weight:500">{{ r.t|fcfa }}</span></span>{% endfor %}</div>{% endif %}
+</div>
 
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item"><a href="#">Argent</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Acomptes</li>
-	{% endblock %}
+<div class="tablewrap">
+	<table>
+		<thead><tr><th>Commande</th><th>Vendeur</th><th>Réseau</th><th>Référence du dépôt</th><th>Reçu le</th><th class="r">Montant</th><th>{% if statut_selected == 'a_rembourser' %}Action{% else %}Statut{% endif %}</th></tr></thead>
+		<tbody>
+		{% for acompte in acomptes %}
+			<tr>
+				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' acompte.article.code %}">{{ acompte.article.code }}</a><div class="muted" style="font-size:11px"><span class="badge {{ acompte.article.statut_traitement|st_classe }}">{{ acompte.article.get_statut_traitement_display }}</span></div></td>
+				<td>{{ acompte.article.vendeur.nom_store|default:"" }}</td>
+				<td>{{ acompte.get_reseau_display }}{% if acompte.numero_depot %}<div class="muted mono" style="font-size:11.5px">{{ acompte.numero_depot }}</div>{% endif %}</td>
+				<td class="mono">{{ acompte.reference_depot }}</td>
+				<td class="nw">{{ acompte.date_reception|date:"d/m/Y H:i" }}{% if acompte.recu_par %}<div class="muted" style="font-size:11px">{{ acompte.recu_par.get_full_name|default:acompte.recu_par.email }}</div>{% endif %}</td>
+				<td class="r num nw"><b>{{ acompte.montant|fcfa }}</b></td>
+				<td class="nw">
+					{% if acompte.statut == statuts_acompte.A_REMBOURSER %}<button type="button" class="btn sm primary" data-ouvrir="remb-{{ acompte.pk }}">Rembourser</button>{% if acompte.date_demande_remboursement %}<div class="muted" style="font-size:11px">depuis {{ acompte.date_demande_remboursement|timesince }}</div>{% endif %}
+					{% elif acompte.statut == statuts_acompte.REMBOURSE %}<span class="badge b-mute">Remboursé le {{ acompte.date_remboursement|date:"d/m/Y" }}</span> <span class="mono" style="font-size:11.5px">{{ acompte.reference_remboursement }}</span>
+					{% else %}<span class="badge b-acok">Reçu</span>{% endif %}
+				</td>
+			</tr>
+			{% if acompte.statut == statuts_acompte.A_REMBOURSER %}
+			<tr class="sel" id="remb-{{ acompte.pk }}" hidden><td colspan="7">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Confirmer le remboursement de {{ acompte.montant|fcfa }} au client ?')">{% csrf_token %}<input type="hidden" name="acompte" value="{{ acompte.pk }}">
+					<label class="field">Référence du remboursement *<input name="reference" required maxlength="100" placeholder="ex. OM-55K2J"></label>
+					<div class="tools"><button class="btn primary">Marquer remboursé</button><button type="button" class="btn" data-fermer="remb-{{ acompte.pk }}">Annuler</button><span class="muted" style="font-size:12px">À renvoyer au numéro {{ acompte.numero_depot|default:"qui a payé" }} par {{ acompte.get_reseau_display }}.</span></div>
+				</form>
+			</td></tr>
+			{% endif %}
+		{% empty %}<tr><td colspan="7" class="muted" style="padding:18px">Aucun acompte dans cette liste.</td></tr>{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}
 
-    {% block content %}
-				<div class="row">
-					<div class="col-xl-12 col-lg-12">
-						{% for message in messages %}
-							<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
-						{% endfor %}
-						<div class="card">
-							<div class="card-header d-flex flex-wrap align-items-center gap-2">
-								<div class="card-title mb-0">Acomptes des clients</div>
-								<div class="ms-auto d-flex flex-wrap gap-2">
-									{% for valeur, libelle in statuts_acompte.choices %}
-									<a class="btn btn-sm {% if statut_selected == valeur %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?statut={{ valeur }}">{{ libelle }}{% for k, n in compteurs.items %}{% if k == valeur %} ({{ n }}){% endif %}{% endfor %}</a>
-									{% endfor %}
-								</div>
-							</div>
-							<div class="card-body">
-								<p class="text-muted">Usage interne : l'acompte n'apparaît jamais chez le vendeur. Une commande annulée avant expédition rend l'acompte remboursable ; après le départ du colis, il n'est plus remboursé.</p>
-								<div class="table-responsive">
-									<table class="table table-bordered text-nowrap mb-0">
-										<thead><tr>
-											<th>Colis</th><th>Vendeur</th><th>Montant</th><th>Réseau</th><th>Référence dépôt</th><th>Numéro</th><th>Reçu le</th><th>Statut</th><th>Action / remboursement</th>
-										</tr></thead>
-										<tbody>
-										{% for acompte in acomptes %}
-											<tr>
-												<td><a href="{% url 'management:management_admin_detail_colis' acompte.article.code %}">{{ acompte.article.code }}</a></td>
-												<td>{{ acompte.article.vendeur.nom_store }}</td>
-												<td>{{ acompte.montant|floatformat:0|intcomma }} F</td>
-												<td>{{ acompte.get_reseau_display }}</td>
-												<td>{{ acompte.reference_depot }}</td>
-												<td>{{ acompte.numero_depot }}</td>
-												<td>{{ acompte.date_reception|date:"d/m/Y H:i" }}</td>
-												<td>{{ acompte.get_statut_display }}</td>
-												<td>
-													{% if acompte.statut == statuts_acompte.A_REMBOURSER %}
-													<form method="post" class="d-flex gap-1" onsubmit="return confirm('Confirmer le remboursement ?')">
-														{% csrf_token %}
-														<input type="hidden" name="acompte" value="{{ acompte.pk }}">
-														<input name="reference" class="form-control form-control-sm" placeholder="Référence du remboursement" required maxlength="100">
-														<button class="btn btn-sm btn-success">Remboursé</button>
-													</form>
-													{% elif acompte.statut == statuts_acompte.REMBOURSE %}
-													{{ acompte.date_remboursement|date:"d/m/Y H:i" }} · {{ acompte.reference_remboursement }}
-													{% else %}—{% endif %}
-												</td>
-											</tr>
-										{% empty %}
-											<tr><td colspan="9" class="text-center text-muted">Aucun acompte dans cette liste.</td></tr>
-										{% endfor %}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-    {% endblock %}
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('click', function (e) {
+	var o = e.target.closest('[data-ouvrir]'), f = e.target.closest('[data-fermer]');
+	if (o) { var tr = document.getElementById(o.dataset.ouvrir); tr.hidden = !tr.hidden; if (!tr.hidden) tr.querySelector('input[name=reference]').focus(); }
+	if (f) document.getElementById(f.dataset.fermer).hidden = true;
+});
+</script>
+{% endblock %}

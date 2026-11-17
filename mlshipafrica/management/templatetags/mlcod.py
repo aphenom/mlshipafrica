@@ -31,3 +31,9 @@ def couleur_taux(taux):
     if taux is None:
         return 'var(--line)'
     return 'var(--ok)' if taux >= 80 else 'var(--warn)' if taux >= 75 else 'var(--bad)'
+
+
+@register.filter
+def get_item(dico, cle):
+    """{{ comptes|get_item:statut }} : valeur d'un dictionnaire par sa clé."""
+    return dico.get(cle) if hasattr(dico, 'get') else None

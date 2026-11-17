@@ -1026,6 +1026,14 @@ def admin_acomptes(request):
     if statut_selected in StatutAcompte.values:
         acomptes = acomptes.filter(statut=statut_selected)
     compteurs = {s: Acompte.objects.filter(license=profil_staff.license, statut=s).count() for s in StatutAcompte.values}
+    # Indicateurs de la maquette : total par statut et répartition par réseau (rapprochement Wave, Orange, MTN, Moov)
+    tous_acomptes = Acompte.objects.filter(license=profil_staff.license)
+    totaux_statut = [{'cle': v, 'libelle': l, 'n': compteurs.get(v, 0),
+                      'total': tous_acomptes.filter(statut=v).aggregate(t=Sum('montant'))['t'] or 0} for v, l in StatutAcompte.choices]
+    par_reseau = list(acomptes.values('reseau').annotate(n=Count('id'), t=Sum('montant')).order_by('-n'))
+    from mlshipafrica.enums import ReseauPaiement
+    for r in par_reseau:
+        r['libelle'] = ReseauPaiement(r['reseau']).label if r['reseau'] in ReseauPaiement.values else r['reseau']
     statuts_acompte = StatutAcompte
     suite_breadcrumb = "Acomptes"
     return render(request, 'management/admin_acomptes.html', locals())
@@ -1185,6 +1193,14 @@ def admin_releves(request):
         releve_detail = Releve.objects.filter(vendeur__license=profil_staff.license, code=request.GET['releve']).first()
         lignes_detail = releve_detail.ecritures.select_related('article').order_by('date') if releve_detail else []
     total_a_verser = releves.filter(statut=StatutReleve.A_VERSER, net__gt=0).aggregate(t=Sum('net'))['t'] or 0
+    # Indicateurs de la maquette, sur tous les relevés de la licence (pas seulement le filtre affiché)
+    tous_releves = Releve.objects.filter(vendeur__license=profil_staff.license)
+    a_verser = tous_releves.filter(statut=StatutReleve.A_VERSER)
+    kpi_a_verser = a_verser.filter(net__gt=0).aggregate(t=Sum('net'), n=Count('id'))
+    kpi_sans_coordonnees = a_verser.filter(Q(vendeur__compte_versement__isnull=True) | Q(vendeur__compte_versement='')).count()
+    kpi_verses_mois = tous_releves.filter(statut=StatutReleve.VERSE, date_versement__gte=timezone.make_aware(
+        datetime.datetime.combine(timezone.localdate().replace(day=1), datetime.time.min))).aggregate(t=Sum('net'), n=Count('id'))
+    comptes_statut = dict(tous_releves.values_list('statut').annotate(n=Count('id')))
     statuts_releve = StatutReleve
     moyens = MoyenVersement.choices
     return render(request, 'management/admin_releves.html', locals())
@@ -1243,6 +1259,7 @@ def admin_benefice(request):
     profil_staff = user.account_profil_staff
     debut, fin, periode, jour_debut, jour_fin = _periode(request)
     resultat = journal(profil_staff.license, debut, fin)
+    marge_colis = (resultat['benefice'] / resultat['livres']) if resultat['livres'] else None
     dernier_import = ImportPrestataire.objects.filter(license=profil_staff.license, supprime=False).first()
     return render(request, 'management/admin_benefice.html', locals())
 

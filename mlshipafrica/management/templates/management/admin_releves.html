@@ -1,43 +1,60 @@
 {% extends "base_main.html" %}
-{% block title %}ML COD Intérieur - Relevés vendeurs{% endblock %}
-{% load humanize %}
-	{% block breadcrumb-li %}<li class="breadcrumb-item"><a href="#">Argent</a></li><li class="breadcrumb-item active">Relevés vendeurs</li>{% endblock %}
-    {% block content %}
-				{% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>{% endfor %}
-				<div class="card">
-					<div class="card-header d-flex flex-wrap align-items-center gap-2">
-						<div class="card-title mb-0">Relevés vendeurs (lundi et jeudi)</div>
-						<div class="ms-auto d-flex gap-2 flex-wrap">
-							{% for v, l in statuts_releve.choices %}<a class="btn btn-sm {% if statut_selected == v %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?statut={{ v }}">{{ l }}</a>{% endfor %}
-							<form method="post" onsubmit="return confirm('Générer maintenant les relevés de tous les vendeurs ?')">{% csrf_token %}<button name="generer" value="1" class="btn btn-sm btn-outline-dark">Générer maintenant</button></form>
-						</div>
-					</div>
-					<div class="card-body table-responsive">
-						{% if statut_selected == 'a_verser' %}<p>Total net à verser : <b>{{ total_a_verser|floatformat:0|intcomma }} F</b></p>{% endif %}
-						<table class="table table-bordered table-sm mb-0">
-							<thead><tr><th>Relevé</th><th>Vendeur</th><th>Versement</th><th class="text-end">Encaissé</th><th class="text-end">Frais</th><th class="text-end">Retours</th><th class="text-end">Garde</th><th class="text-end">Stockage</th><th class="text-end">Net</th><th>Action</th></tr></thead>
-							<tbody>
-							{% for r in releves %}
-								<tr>
-									<td><a href="?statut={{ statut_selected }}&releve={{ r.code }}">{{ r.code }}</a><div class="small text-muted">{{ r.date_creation|date:"d/m/Y" }}</div></td>
-									<td>{{ r.vendeur.nom_store }}</td>
-									<td class="small">{{ r.vendeur.get_moyen_versement_display|default:"<span class='text-danger'>non renseigné</span>" }} {{ r.vendeur.compte_versement|default:"" }}</td>
-									<td class="text-end">{{ r.total_collecte|floatformat:0|intcomma }}</td><td class="text-end">{{ r.total_frais|floatformat:0|intcomma }}</td>
-									<td class="text-end">{{ r.total_retours|floatformat:0|intcomma }}</td><td class="text-end">{{ r.total_garde|floatformat:0|intcomma }}</td>
-									<td class="text-end">{{ r.total_stockage|floatformat:0|intcomma }}</td>
-									<td class="text-end fw-bold {% if r.net < 0 %}text-danger{% endif %}">{{ r.net|floatformat:0|intcomma }}</td>
-									<td>{% if r.statut == 'a_verser' %}
-										<form method="post" class="d-flex gap-1" onsubmit="return confirm('Marquer ce relevé versé ?')">{% csrf_token %}
-											<input type="hidden" name="releve" value="{{ r.pk }}">
-											<select name="moyen" class="form-select form-select-sm" style="max-width:130px">{% for v, l in moyens %}<option value="{{ v }}" {% if r.vendeur.moyen_versement == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
-											<input name="reference" class="form-control form-control-sm" placeholder="Référence" required style="max-width:140px">
-											<button class="btn btn-sm btn-success">Versé</button></form>
-										{% else %}{{ r.date_versement|date:"d/m/Y" }} · {{ r.reference_versement }}{% endif %}</td>
-								</tr>
-							{% empty %}<tr><td colspan="10" class="text-center text-muted">Aucun relevé.</td></tr>{% endfor %}
-							</tbody>
-						</table>
-					</div>
-				</div>
-				{% if releve_detail %}{% include "management/_releve_detail.html" %}{% endif %}
-    {% endblock %}
+{% load mlcod %}
+{% block title %}Relevés vendeurs · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Versements</li><li class="active" aria-current="page">Relevés vendeurs</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card ml">
+	<div class="head">
+		<div><h1>Relevés vendeurs</h1><div class="muted">Arrêtés chaque lundi et jeudi à 6 h : encaissé pour le vendeur, moins les frais, les retours, la garde et le stockage. Versez le net puis notez la référence du transfert.</div></div>
+		<form method="post" onsubmit="return confirm('Générer maintenant les relevés de tous les vendeurs ?')">{% csrf_token %}<button name="generer" value="1" class="btn">Générer maintenant</button></form>
+	</div>
+	<div class="kpis">
+		<div class="kpi"><span class="l">À verser</span><span class="v">{{ kpi_a_verser.t|default:0|fcfa }}</span><span class="n {% if kpi_a_verser.n %}t-warn{% else %}t-ok{% endif %}">{{ kpi_a_verser.n|default:0 }} relevé{{ kpi_a_verser.n|pluralize }}</span></div>
+		<div class="kpi"><span class="l">Sans coordonnées de versement</span><span class="v {% if kpi_sans_coordonnees %}t-bad{% else %}t-ok{% endif %}">{{ kpi_sans_coordonnees }}</span><span class="n">le vendeur les saisit dans Mon argent</span></div>
+		<div class="kpi"><span class="l">Versés ce mois</span><span class="v">{{ kpi_verses_mois.t|default:0|fcfa }}</span><span class="n t-ok">{{ kpi_verses_mois.n|default:0 }} relevé{{ kpi_verses_mois.n|pluralize }}</span></div>
+	</div>
+	<div class="chips">{% for v, l in statuts_releve.choices %}<a class="chip" href="?statut={{ v }}"{% if statut_selected == v %} aria-current="page"{% endif %}>{{ l }} <span class="c">{{ comptes_statut|get_item:v|default:0 }}</span></a>{% endfor %}</div>
+</div>
+
+{% if releve_detail %}{% include "management/_releve_detail.html" %}{% endif %}
+
+<div class="tablewrap">
+	<table>
+		<thead><tr><th>Relevé</th><th>Vendeur</th><th>Versement vers</th><th class="r">Encaissé</th><th class="r">Retenues</th><th class="r">Net</th><th>{% if statut_selected == 'a_verser' %}Action{% else %}Versé{% endif %}</th></tr></thead>
+		<tbody>
+		{% for r in releves %}
+			<tr>
+				<td class="nw"><a class="linkcode" href="?statut={{ statut_selected }}&releve={{ r.code }}">{{ r.code }}</a><div class="muted" style="font-size:11px">arrêté le {{ r.date_arrete|date:"d/m/Y" }}</div></td>
+				<td><a href="{% url 'management:management_admin_vendeur_profil' r.vendeur.code %}">{{ r.vendeur.nom_store|default:r.vendeur.code }}</a></td>
+				<td style="font-size:12.5px">{% if r.vendeur.compte_versement %}{{ r.vendeur.get_moyen_versement_display }} · <span class="mono">{{ r.vendeur.compte_versement }}</span>{% if r.vendeur.titulaire_versement %}<div class="muted">{{ r.vendeur.titulaire_versement }}</div>{% endif %}{% else %}<span class="badge b-bad">non renseigné</span>{% endif %}</td>
+				<td class="r num nw">{{ r.total_collecte|fcfa }}</td>
+				<td class="r num nw t-bad" title="Frais {{ r.total_frais|fcfa }} · retours {{ r.total_retours|fcfa }} · garde {{ r.total_garde|fcfa }} · stockage {{ r.total_stockage|fcfa }}">− {{ r.total_frais|add:r.total_retours|add:r.total_garde|add:r.total_stockage|fcfa }}</td>
+				<td class="r num nw"><b class="{% if r.net < 0 %}t-bad{% endif %}">{{ r.net|fcfa }}</b></td>
+				<td class="nw">{% if r.statut == 'a_verser' %}<button type="button" class="btn sm primary" data-ouvrir="verser-{{ r.pk }}">Verser</button>{% else %}<span class="badge st-verse">{{ r.date_versement|date:"d/m/Y" }}</span> <span class="mono" style="font-size:11.5px">{{ r.reference_versement }}</span>{% if r.verse_par %}<div class="muted" style="font-size:11px">par {{ r.verse_par.get_full_name|default:r.verse_par.email }}</div>{% endif %}{% endif %}</td>
+			</tr>
+			{% if r.statut == 'a_verser' %}
+			<tr class="sel" id="verser-{{ r.pk }}" hidden><td colspan="7">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Marquer le relevé {{ r.code }} versé ({{ r.net|fcfa }}) ?')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk }}">
+					<label class="field">Moyen<select name="moyen">{% for v, l in moyens %}<option value="{{ v }}" {% if r.vendeur.moyen_versement == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+					<label class="field">Référence du transfert *<input name="reference" required placeholder="ex. WV-8F3K21"></label>
+					<div class="tools"><button class="btn primary">Marquer versé</button><button type="button" class="btn" data-fermer="verser-{{ r.pk }}">Annuler</button></div>
+				</form>
+			</td></tr>
+			{% endif %}
+		{% empty %}<tr><td colspan="7" class="muted" style="padding:18px">Aucun relevé.</td></tr>{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('click', function (e) {
+	var o = e.target.closest('[data-ouvrir]'), f = e.target.closest('[data-fermer]');
+	if (o) { var tr = document.getElementById(o.dataset.ouvrir); tr.hidden = !tr.hidden; if (!tr.hidden) tr.querySelector('input[name=reference]').focus(); }
+	if (f) document.getElementById(f.dataset.fermer).hidden = true;
+});
+</script>
+{% endblock %}
