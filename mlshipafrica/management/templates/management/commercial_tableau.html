@@ -1,0 +1,38 @@
+{% extends "base_main.html" %}
+{% block title %}Mon portefeuille · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
+{% block content %}
+<div class="ceo">
+	<div class="chead"><div><div class="crumb">{% now "l j F Y" %}</div><h1>Mon portefeuille</h1><div class="muted">Vos demandes de collaboration et vos vendeurs. Aucun montant ici : seulement des volumes.</div></div></div>
+
+	<div class="ctiles">
+		<a class="ctile" href="{% url 'management:management_admin_liste_vendeurs' %}?type_vendeur=attente_approbation" style="text-decoration:none{% if pf.demandes_en_retard %};border-color:var(--bad){% endif %}"><span class="cl">Demandes en attente</span><span class="cv {% if pf.demandes_en_retard %}t-bad{% endif %}">{{ pf.nb_demandes }}</span><span class="cs">{% if pf.demandes_en_retard %}{{ pf.demandes_en_retard }} en attente depuis plus de 48 h{% else %}traitées à temps{% endif %}</span></a>
+		<a class="ctile" href="{% url 'management:management_admin_liste_vendeurs' %}?type_vendeur=actif" style="text-decoration:none"><span class="cl">Mes vendeurs actifs</span><span class="cv">{{ pf.actifs }}</span><span class="cs">{{ pf.nouveaux_mois }} approuvé{{ pf.nouveaux_mois|pluralize }} ce mois</span></a>
+		<div class="ctile"><span class="cl">Ont commandé (30 j)</span><span class="cv t-ok">{{ pf.commandent }}</span><span class="cs">sur {{ pf.actifs }} actif{{ pf.actifs|pluralize }}</span></div>
+		<div class="ctile"><span class="cl">À relancer</span><span class="cv {% if pf.nb_a_relancer %}t-warn{% else %}t-ok{% endif %}">{{ pf.nb_a_relancer }}</span><span class="cs">aucune commande depuis 7 jours</span></div>
+		<div class="ctile"><span class="cl">Sans agent COD</span><span class="cv {% if pf.sans_agent %}t-bad{% else %}t-ok{% endif %}">{{ pf.sans_agent }}</span><span class="cs">leurs commandes ne sont appelées par personne</span></div>
+	</div>
+
+	{% include "management/_cartes_resultats.html" %}
+
+	<div class="cgridm">
+		<div class="card cpanel">
+			<div class="head" style="align-items:center"><h2>Demandes de collaboration</h2><a class="btn sm" href="{% url 'management:management_admin_liste_vendeurs' %}?type_vendeur=attente_approbation">Toutes</a></div>
+			{% for d in pf.demandes %}
+			<div class="tache"><span class="pt {% if d.en_retard %}bad{% endif %}"></span><div class="tx"><b>{{ d.nom_store|default:"(sans nom)" }}</b><span class="muted">Reçue il y a {{ d.date_creation|timesince }}{% if d.nom_contact or d.prenom_contact %} · {{ d.nom_contact|default:"" }} {{ d.prenom_contact|default:"" }}{% endif %}{% if d.numero_contact %} · <a href="tel:{{ d.numero_contact }}">{{ d.numero_contact }}</a>{% endif %}</span></div><a class="btn sm {% if d.en_retard %}dark{% endif %}" href="{% url 'management:management_admin_vendeur_edit_profil' d.code %}">Examiner</a></div>
+			{% empty %}<div class="muted">Aucune demande en attente.</div>{% endfor %}
+		</div>
+		<div class="card cpanel">
+			<h2>Vendeurs à relancer</h2>
+			{% for v in pf.a_relancer %}
+			<div class="tache"><span class="pt {% if not v.derniere %}bad{% endif %}"></span><div class="tx"><b>{{ v.nom_store }}</b><span class="muted">{% if v.derniere %}dernière commande il y a {{ v.derniere|timesince }}{% else %}n’a jamais commandé{% endif %}{% if v.numero_contact %} · <a href="tel:{{ v.numero_contact }}">{{ v.numero_contact }}</a>{% endif %}</span></div><a class="btn sm" href="{% url 'management:management_admin_vendeur_profil' v.code %}">Fiche</a></div>
+			{% empty %}<div class="muted">Tous vos vendeurs ont commandé cette semaine.</div>{% endfor %}
+		</div>
+	</div>
+
+	<div class="card cpanel">
+		<h2>Mes vendeurs · commandes sur 30 jours</h2>
+		{% for v in pf.classement %}<div class="ctop"><span class="cr">{{ forloop.counter }}</span><span class="cn"><a href="{% url 'management:management_admin_vendeur_profil' v.code %}">{{ v.nom_store }}</a><small>{{ v.livres_30 }} livré{{ v.livres_30|pluralize }}{% if not v.agent_cod %} · <span class="t-warn">sans agent COD</span>{% endif %}</small></span><span class="ftrack"><span class="ffill" style="width:{% widthratio v.commandes_30 pf.classement_max 100 %}%"></span></span><b>{{ v.commandes_30 }}</b></div>{% empty %}<div class="muted">Pas encore de vendeur actif.</div>{% endfor %}
+	</div>
+</div>
+{% endblock %}

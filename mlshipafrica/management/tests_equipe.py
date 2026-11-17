@@ -102,3 +102,25 @@ class FicheVendeur(tests_pages.RecettePages):
         self.assertNotIn(' F', page)
         liste = self.client.get('/management/admin_liste_vendeurs/?type_vendeur=actif').content.decode()
         self.assertIn(self.vendeur.nom_store, liste)
+
+
+class CommercialEtStock(tests_pages.RecettePages):
+    test_toutes_les_pages = None
+
+    def test_portefeuille_du_commercial(self):
+        from management.models import Vendeur
+        from management.tests import vendeur_pour
+        autre = vendeur_pour(self.vendeur.license, 'Boutique Ailleurs')   # approuvé, suivi par personne : pas à lui
+        Vendeur.objects.filter(pk=self.vendeur.pk).update(commercial=self.comptes[R.COMMERCIAL].account_profil_staff)
+        self.client.force_login(self.comptes[R.COMMERCIAL])
+        page = self.client.get('/').content.decode()
+        self.assertIn('Mon portefeuille', page)
+        self.assertIn(self.vendeur.nom_store, page)
+        self.assertNotIn(autre.nom_store, page)
+        self.assertNotIn(' F', page)
+
+    def test_stock_du_manager(self):
+        self.client.force_login(self.comptes[R.MANAGER])
+        page = self.client.get('/management/admin_stock/').content.decode()
+        self.assertIn('Envois à réceptionner', page)
+        self.assertIn('Derniers mouvements', page)

@@ -171,3 +171,33 @@ def journee_comptable(license):
             evenements.append(('Stockage', 'ok'))
         calendrier.append({'date': d, 'evenements': evenements})
     return {'jour': jour, 'a_faire': a_faire, 'calendrier': calendrier}
+
+
+def portefeuille_commercial(vendeurs):
+    """Accueil du commercial (maquette) : demandes, vendeurs actifs, à relancer, classement. Volumes seulement.
+    `vendeurs` est déjà limité à ce que le compte a le droit de voir (views.vendeurs_visibles)."""
+    maintenant = timezone.now()
+    debut_mois = timezone.make_aware(datetime.combine(timezone.localdate().replace(day=1), time.min))
+    pas_brouillon = ~Q(vendeur_article__statut_traitement=S.BROUILLON) & Q(vendeur_article__etat_suppression=False)
+    actifs = (vendeurs.filter(etat_approbation=True, etat_validation=True, etat_suppression=False)
+              .annotate(commandes_30=Count('vendeur_article', filter=pas_brouillon & Q(vendeur_article__date_creation__gte=maintenant - timedelta(days=30))),
+                        livres_30=Count('vendeur_article', filter=pas_brouillon & Q(vendeur_article__date_creation__gte=maintenant - timedelta(days=30),
+                                                                                       vendeur_article__statut_traitement__in=LIVRES)),
+                        derniere=Max('vendeur_article__date_creation', filter=pas_brouillon))
+              .select_related('agent_cod__user'))
+    actifs = list(actifs)
+    a_relancer = [v for v in actifs if v.derniere is None or v.derniere < maintenant - timedelta(days=7)]
+    a_relancer.sort(key=lambda v: (v.derniere is not None, v.derniere or maintenant))
+    demandes = list(vendeurs.filter(etat_approbation=False, etat_suppression=False).order_by('date_creation')[:8])
+    for d in demandes:
+        d.en_retard = d.date_creation < maintenant - timedelta(hours=48)
+    classement = sorted(actifs, key=lambda v: -v.commandes_30)[:10]
+    return {
+        'demandes': demandes, 'nb_demandes': vendeurs.filter(etat_approbation=False, etat_suppression=False).count(),
+        'demandes_en_retard': sum(1 for d in demandes if d.en_retard),
+        'actifs': len(actifs), 'commandent': sum(1 for v in actifs if v.commandes_30),
+        'sans_agent': sum(1 for v in actifs if not v.agent_cod_id),
+        'nouveaux_mois': vendeurs.filter(etat_approbation=True, date_approbation__gte=debut_mois).count(),
+        'a_relancer': a_relancer[:10], 'nb_a_relancer': len(a_relancer),
+        'classement': classement, 'classement_max': max([v.commandes_30 for v in classement] or [1]) or 1,
+    }

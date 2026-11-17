@@ -1133,6 +1133,15 @@ def admin_stock(request):
     produits = ProduitStock.objects.filter(vendeur__license=profil_staff.license).select_related('vendeur')
     if vendeur_selected:
         produits = produits.filter(vendeur__code=vendeur_selected)
+    # Indicateurs de la maquette
+    kpi_pieces = produits.aggregate(t=Sum('quantite_disponible'))['t'] or 0
+    kpi_epuises = produits.filter(actif=True, quantite_disponible__lte=0).count()
+    kpi_de_cote = produits.aggregate(t=Sum('quantite_de_cote'))['t'] or 0
+    from management.models import MouvementStock
+    mouvements = MouvementStock.objects.filter(produit__vendeur__license=profil_staff.license).select_related('produit__vendeur', 'article', 'par')
+    if vendeur_selected:
+        mouvements = mouvements.filter(produit__vendeur__code=vendeur_selected)
+    mouvements = mouvements.order_by('-date')[:30]
     suite_breadcrumb = "Stock"
     return render(request, 'management/admin_stock.html', locals())
 

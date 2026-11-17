@@ -1,44 +1,60 @@
 {% extends "base_main.html" %}
-{% block title %}ML COD Intérieur - Stock{% endblock %}
-{% load humanize %}
-	{% block breadcrumb-li %}
-		<li class="breadcrumb-item active" aria-current="page">Stock</li>
-	{% endblock %}
-    {% block content %}
-				{% for message in messages %}
-					<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
-				{% endfor %}
-				<div class="card">
-					<div class="card-header"><div class="card-title">Réceptions à contrôler ({{ entrees_a_recevoir|length }})</div></div>
-					<div class="card-body">
-						{% for e in entrees_a_recevoir %}
-						<form method="post" class="border rounded p-2 mb-2" onsubmit="return confirm('Valider la réception de ce bordereau ?')">
-							{% csrf_token %}
-							<div class="fw-bold">{{ e.code }} · {{ e.vendeur.nom_store }} · annoncé le {{ e.date_annonce|date:"d/m/Y H:i" }}</div>
-							{% if e.commentaire %}<div class="small text-muted">{{ e.commentaire }}</div>{% endif %}
-							<table class="table table-sm mb-2"><thead><tr><th>Référence</th><th>Produit</th><th>Annoncé</th><th>Reçu</th></tr></thead><tbody>
-							{% for l in e.lignes.all %}<tr><td>{{ l.reference }}</td><td>{{ l.designation }}</td><td>{{ l.quantite_annoncee }}</td><td><input name="recu_{{ l.pk }}" type="number" min="0" value="{{ l.quantite_annoncee }}" class="form-control form-control-sm" style="max-width:100px"></td></tr>{% endfor %}
-							</tbody></table>
-							<button name="valider_entree" value="{{ e.pk }}" class="btn btn-success btn-sm">Valider la réception</button>
-						</form>
-						{% empty %}<p class="text-muted mb-0">Aucune réception en attente.</p>{% endfor %}
-					</div>
-				</div>
-				<div class="card">
-					<div class="card-header d-flex align-items-center">
-						<div class="card-title mb-0">Inventaire</div>
-						<form method="get" class="ms-auto"><select name="vendeur" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()"><option value="">Tous les vendeurs en stockage</option>{% for v in vendeurs_stockage %}<option value="{{ v.code }}" {% if vendeur_selected == v.code %}selected{% endif %}>{{ v.nom_store }}</option>{% endfor %}</select></form>
-					</div>
-					<div class="card-body table-responsive">
-						<table class="table table-bordered table-sm mb-0">
-							<thead><tr><th>Vendeur</th><th>Référence</th><th>Produit</th><th>Disponible</th><th>Mis de côté</th><th>Ajustement (+/−) et motif</th></tr></thead>
-							<tbody>
-							{% for p in produits %}
-								<tr><td>{{ p.vendeur.nom_store }}</td><td>{{ p.reference }}</td><td>{{ p.designation }}</td><td class="{% if p.quantite_disponible < 0 %}text-danger fw-bold{% endif %}">{{ p.quantite_disponible }}</td><td>{{ p.quantite_de_cote }}</td>
-								<td><form method="post" class="d-flex gap-1">{% csrf_token %}<input name="delta" type="number" class="form-control form-control-sm" style="max-width:90px" required><input name="motif" class="form-control form-control-sm" placeholder="Motif" required><button name="ajuster_produit" value="{{ p.pk }}" class="btn btn-outline-primary btn-sm">OK</button></form></td></tr>
-							{% empty %}<tr><td colspan="6" class="text-center text-muted">Aucun produit.</td></tr>{% endfor %}
-							</tbody>
-						</table>
-					</div>
-				</div>
-    {% endblock %}
+{% block title %}Stock et produits · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li class="active" aria-current="page">Stock et produits</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card ml">
+	<div class="head">
+		<div><h1>Stock et produits</h1><div class="muted">Produits des vendeurs en stockage, gardés au bureau d’Abidjan. Comptez chaque envoi à son arrivée : les écarts restent visibles chez le vendeur. Tout ajustement demande un motif ; aucun mouvement n’est jamais modifié.</div></div>
+		<form method="get" class="tools">
+			<label class="field"><select name="vendeur" aria-label="Vendeur" onchange="if (event.isTrusted) this.form.submit()"><option value="">Tous les vendeurs en stockage</option>{% for v in vendeurs_stockage %}<option value="{{ v.code }}" {% if vendeur_selected == v.code %}selected{% endif %}>{{ v.nom_store }}</option>{% endfor %}</select></label>
+			<noscript><button class="btn">Afficher</button></noscript>
+		</form>
+	</div>
+	<div class="kpis">
+		<div class="kpi"><span class="l">Envois à réceptionner</span><span class="v {% if entrees_a_recevoir %}t-warn{% else %}t-ok{% endif %}">{{ entrees_a_recevoir|length }}</span><span class="n">bordereaux annoncés par les vendeurs</span></div>
+		<div class="kpi"><span class="l">Pièces disponibles</span><span class="v">{{ kpi_pieces }}</span><span class="n">{{ produits|length }} produit{{ produits|length|pluralize }}</span></div>
+		<div class="kpi"><span class="l">Produits épuisés</span><span class="v {% if kpi_epuises %}t-bad{% else %}t-ok{% endif %}">{{ kpi_epuises }}</span><span class="n">les vendeurs le voient dans Mon stock</span></div>
+		<div class="kpi"><span class="l">Mis de côté (abîmés)</span><span class="v">{{ kpi_de_cote }}</span><span class="n">non comptés comme disponibles</span></div>
+	</div>
+</div>
+
+{% for e in entrees_a_recevoir %}
+<form method="post" class="card" style="border-color:var(--warn)" onsubmit="return confirm('Valider la réception du bordereau {{ e.code }} ?')">
+	{% csrf_token %}
+	<div class="head" style="align-items:center">
+		<div><h2><span class="mono">{{ e.code }}</span> · {{ e.vendeur.nom_store }}</h2><div class="muted" style="font-size:12.5px">Annoncé le {{ e.date_annonce|date:"d/m/Y H:i" }}{% if e.commentaire %} · {{ e.commentaire }}{% endif %}</div></div>
+		<button name="valider_entree" value="{{ e.pk }}" class="btn primary">Valider la réception</button>
+	</div>
+	<div class="tablewrap"><table>
+		<thead><tr><th>Référence</th><th>Produit</th><th class="r">Annoncé</th><th>Compté à l’arrivée</th></tr></thead>
+		<tbody>{% for l in e.lignes.all %}<tr><td class="mono">{{ l.reference }}</td><td>{{ l.designation }}</td><td class="r num">{{ l.quantite_annoncee }}</td><td><input name="recu_{{ l.pk }}" type="number" min="0" value="{{ l.quantite_annoncee }}" class="form-control form-control-sm" style="max-width:110px" aria-label="Quantité reçue pour {{ l.reference }}"></td></tr>{% endfor %}</tbody>
+	</table></div>
+</form>
+{% endfor %}
+
+<div class="card">
+	<h2>Inventaire</h2>
+	<div class="tablewrap"><table>
+		<thead><tr><th>Vendeur</th><th>Référence</th><th>Produit</th><th class="r">Disponible</th><th class="r">Mis de côté</th><th>Ajustement</th></tr></thead>
+		<tbody>
+		{% for p in produits %}
+			<tr>
+				<td>{{ p.vendeur.nom_store }}</td><td class="mono">{{ p.reference }}</td><td><b>{{ p.designation }}</b></td>
+				<td class="r num">{% if p.quantite_disponible <= 0 %}<span class="badge b-bad">{{ p.quantite_disponible }}</span>{% else %}{{ p.quantite_disponible }}{% endif %}</td>
+				<td class="r num">{{ p.quantite_de_cote }}</td>
+				<td><form method="post" class="tools" style="flex-wrap:nowrap" onsubmit="return confirm('Ajuster le stock de {{ p.designation|escapejs }} ?')">{% csrf_token %}<input name="delta" type="number" class="form-control form-control-sm" style="max-width:80px" placeholder="+/−" required aria-label="Ajustement"><input name="motif" class="form-control form-control-sm" placeholder="Motif (inventaire, casse…)" required style="min-width:160px"><button name="ajuster_produit" value="{{ p.pk }}" class="btn sm">Ajuster</button></form></td>
+			</tr>
+		{% empty %}<tr><td colspan="6" class="muted" style="padding:18px">Aucun produit en stock.</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+</div>
+
+<details class="card dplier">
+	<summary class="dsum"><h2>Derniers mouvements</h2><span class="dinfo">{{ mouvements|length }} <span class="dchev">▾</span></span></summary>
+	<div class="tablewrap"><table>
+		<thead><tr><th>Date</th><th>Vendeur</th><th>Produit</th><th>Mouvement</th><th class="r">Qté</th><th>Commande</th><th>Par</th></tr></thead>
+		<tbody>{% for m in mouvements %}<tr><td class="nw">{{ m.date|date:"d/m/Y H:i" }}</td><td>{{ m.produit.vendeur.nom_store }}</td><td class="mono">{{ m.produit.reference }}</td><td>{{ m.get_type_display }}{% if m.commentaire %}<div class="muted" style="font-size:11.5px">{{ m.commentaire }}</div>{% endif %}</td><td class="r num {% if m.quantite < 0 %}t-bad{% else %}t-ok{% endif %}">{% if m.quantite > 0 %}+{% endif %}{{ m.quantite }}</td><td>{% if m.article %}<a class="linkcode" href="{% url 'management:management_admin_detail_colis' m.article.code %}">{{ m.article.code }}</a>{% endif %}</td><td class="muted">{% if m.par %}{{ m.par.get_full_name|default:m.par.email }}{% else %}automatique{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="muted" style="padding:18px">Aucun mouvement.</td></tr>{% endfor %}</tbody>
+	</table></div>
+</details>
+{% endblock %}

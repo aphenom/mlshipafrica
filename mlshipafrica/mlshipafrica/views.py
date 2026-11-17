@@ -65,6 +65,11 @@ def index(request):
                 role = profil_staff.role_profil
                 if role == R.AGENT:
                     return redirect('management:management_admin_confirmations')
+                if role == R.COMMERCIAL:
+                    from management import tableaux_equipe as te
+                    from management.views import vendeurs_visibles
+                    pf = te.portefeuille_commercial(vendeurs_visibles(user))
+                    return render(request, 'management/commercial_tableau.html', locals())
                 if role in (R.MANAGER, R.SUPER, R.COMPTABLE):
                     from management import tableaux_equipe as te
                     p, du, au, debut, fin = te.periode_equipe(request)
