@@ -41,6 +41,10 @@
 	<span class="bulk-g"><select name="statut" id="bulk-statut" aria-label="Nouveau statut"><option value="">Passer au statut…</option>{% for v, l in groupes_statuts %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
 		<button class="btn sm primary" name="action" value="avancer" data-besoin="statut">Appliquer</button></span>
 	{% endif %}
+	{% if peut_format %}
+	<span class="bulk-g"><select name="format" aria-label="Bon format"><option value="">Bon format…</option>{% for f in formats %}<option value="{{ f.pk }}">{{ f.nom }}</option>{% endfor %}</select>
+		<button class="btn sm" name="action" value="format" data-besoin="format" data-confirme="Mettre les colis cochés au format choisi ? Les frais de livraison sont recalculés et chaque vendeur est prévenu.">Corriger le format</button></span>
+	{% endif %}
 	{% if peut_unpaid %}<button class="btn sm primary" name="action" value="unpaid" data-confirme="Passer les colis livrés cochés en « Unpaid » (livrés, en attente de versement) ? Cela confirme que l’argent est chez nous.">Passer en Unpaid</button>{% endif %}
 	<input name="commentaire" placeholder="Commentaire / raison" maxlength="300" aria-label="Commentaire">
 	{% if peut_corriger %}<button class="btn sm" name="action" value="corriger" data-besoin="statut,commentaire" data-confirme="Corriger le statut des colis cochés ? La raison reste dans l’historique.">Corriger</button>{% endif %}
@@ -62,7 +66,7 @@
 		{% for article in page %}
 			<tr>
 				<td><input type="checkbox" name="codes" value="{{ article.code }}" class="sel" aria-label="Cocher {{ article.code }}"></td>
-				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a><div class="muted" style="font-size:11px">{{ article.date_creation|date:"d/m/Y H:i" }}{% if article.code_tracking %} · {{ article.code_tracking }}{% endif %}</div></td>
+				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a><div class="muted" style="font-size:11px">{{ article.date_creation|date:"d/m/Y H:i" }}{% if article.code_tracking %} · {{ article.code_tracking }}{% endif %}{% if article.format_article %} · <b>{{ article.format_article.nom }}</b>{% endif %}</div></td>
 				<td>{% if article.vendeur %}{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store }}</a>{% else %}{{ article.vendeur.nom_store }}{% endif %}<div class="muted mono" style="font-size:11px">{{ article.vendeur.code }}</div>{% else %}—{% endif %}</td>
 				<td>{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}<div class="muted nw" style="font-size:11.5px">{{ article.numero_principal_destinataire|default:"" }}</div></td>
 				<td>{{ article.localite_arrivee.nom|default:"—" }}{% if article.zone_arrivee %}<div class="muted" style="font-size:11px">{{ article.zone_arrivee.nom }}</div>{% endif %}</td>
@@ -134,7 +138,7 @@
 		var besoin = (b.dataset.besoin || '').split(',').filter(Boolean);
 		for (var i = 0; i < besoin.length; i++) {
 			var champ = form.querySelector('[name=' + besoin[i] + ']');
-			if (champ && !champ.value.trim()) { e.preventDefault(); champ.focus(); alert(besoin[i] === 'statut' ? 'Choisissez le statut.' : 'Indiquez la raison.'); return; }
+			if (champ && !champ.value.trim()) { e.preventDefault(); champ.focus(); alert(besoin[i] === 'statut' ? 'Choisissez le statut.' : besoin[i] === 'format' ? 'Choisissez le bon format.' : 'Indiquez la raison.'); return; }
 		}
 		if (b.dataset.confirme && !confirm(b.dataset.confirme)) { e.preventDefault(); }
 		else if (b.value === 'avancer' && !confirm('Passer ' + n.textContent + ' colis au statut choisi ? Les colis pour lesquels le circuit ne le permet pas seront laissés tels quels.')) { e.preventDefault(); }

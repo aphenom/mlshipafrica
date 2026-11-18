@@ -15,7 +15,8 @@ from urllib.parse import parse_qs
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 from django.db.models import Max, Q
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
@@ -134,7 +135,7 @@ def _retour(request):
 
 @login_required
 @require_POST
-@droit_requis('colis_mouvements', 'colis_corriger', 'paiements')
+@droit_requis('colis_mouvements', 'colis_corriger', 'paiements', 'colis_format')
 def admin_colis_actions(request):
     user = request.user
     license = user.account_profil_staff.license
@@ -147,6 +148,25 @@ def admin_colis_actions(request):
         messages.error(request, "Plus de %d colis : affinez les filtres (période, vendeur, ville)." % MAX_SELECTION)
         return _retour(request)
     commentaire = request.POST.get('commentaire', '')
+    if action == 'format':
+        if not a_le_droit(user, 'colis_format'):
+            raise PermissionDenied
+        from core.models import FormatArticle
+        fmt = FormatArticle.objects.filter(license=license, pk=request.POST.get('format') or 0, etat_suppression=False).first()
+        if fmt is None:
+            messages.error(request, "Choisissez le bon format.")
+            return _retour(request)
+        faits, refus = 0, []
+        for article in articles:
+            ok, raison = corriger_format(article, fmt, user, commentaire)
+            faits += ok
+            if not ok and 'déjà au format' not in raison:
+                refus.append(raison)
+        if faits:
+            messages.success(request, "%d colis passé%s au format %s : frais recalculés, vendeur prévenu." % (faits, 's' if faits > 1 else '', fmt.nom))
+        if refus:
+            messages.warning(request, "Non modifiés : " + ' · '.join(refus[:10]))
+        return _retour(request)
     if action == 'avancer':
         if not a_le_droit(user, 'colis_mouvements'):
             raise PermissionDenied
@@ -184,6 +204,50 @@ def admin_colis_actions(request):
         messages.warning(request, "%d colis non modifié%s : le circuit ne permet pas ce statut pour eux — %s%s" % (
             len(refus), 's' if len(refus) > 1 else '', ', '.join(refus[:15]), '…' if len(refus) > 15 else ''))
     return _retour(request)
+
+
+# ------------------------------------------------------------------------------------------- format vérifié
+
+AVANT_DEPART = (S.EN_ATTENTE_DEPOT, S.EN_ATTENTE_RAMASSAGE, S.DEPOT, S.RAMASSE, S.SUBSTITUE)
+
+
+def corriger_format(article, format_article, user, motif=''):
+    """
+    Le colis est mesuré à la réception : si le vendeur a choisi un format plus petit (ou plus grand) que la réalité,
+    le manager met le bon format. Les frais de livraison sont recalculés au tarif du bon format, l'écart passe dans la
+    comptabilité, le vendeur est prévenu sur la commande avec ses nouveaux frais. Avant le départ seulement (le CEO :
+    toujours). Renvoie (fait, raison).
+    """
+    from management.finance import comptabiliser
+    from management.models import MessageColis
+    from mlshipafrica.enums import TypeProfilStaffChoice as R
+    if format_article is None or format_article.license_id != article.license_id:
+        return False, "Format inconnu."
+    if article.format_article_id == format_article.pk:
+        return False, "%s : déjà au format %s" % (article.code, format_article.nom)
+    est_ceo = getattr(getattr(user, 'account_profil_staff', None), 'role_profil', None) == R.SUPER
+    if article.statut_traitement not in AVANT_DEPART and not est_ceo:
+        return False, "%s : déjà parti (%s), seul le CEO peut changer le format" % (article.code, article.get_statut_traitement_display())
+    ancien, ancien_frais = article.format_article.nom if article.format_article_id else '—', article.montant_frais or 0
+    article.format_article, article.tarification = format_article, None
+    try:
+        with transaction.atomic():
+            article.save()                 # tarif du bon format : frais de livraison, collecte et net recalculés
+    except ValidationError as e:
+        article.refresh_from_db()
+        return False, "%s : %s" % (article.code, ' '.join(e.messages))
+    comptabiliser(article)
+    texte = "Format vérifié à la réception : %s → %s. Frais de livraison : %s F (avant : %s F)." % (
+        ancien, format_article.nom, '{:,.0f}'.format(article.montant_frais or 0).replace(',', '\u202f'),
+        '{:,.0f}'.format(ancien_frais).replace(',', '\u202f'))
+    if motif.strip():
+        texte += " Motif : %s" % motif.strip()[:200]
+    MessageColis.objects.create(article=article, auteur=user, de_vendeur=False, texte=texte)
+    if article.vendeur and article.vendeur.user_id:
+        from management.notifications import _url_colis, notifier
+        notifier([article.vendeur.user], 'message', "Format corrigé sur %s : %s" % (article.code, format_article.nom), texte[:300],
+                 _url_colis(article, True) + '#messages')
+    return True, ''
 
 
 # ------------------------------------------------------------------------------------------- impressions

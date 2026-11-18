@@ -162,3 +162,34 @@ class Shipping(tests_pages.RecettePages):
         lignes = texte_xlsx(r.content).splitlines()
         self.assertTrue(lignes[0].startswith('Commande;'))
         self.assertNotIn('Frais ML', lignes[0])
+
+    def test_manager_corrige_le_format_a_la_reception(self):
+        from core.models import FormatArticle
+        from management.models import MessageColis, Notification, Tarification
+        colis = self.nouveau_depose()
+        grand = FormatArticle.objects.create(license=colis.license, nom='Grand test')
+        t = colis.tarification
+        t.pk, t.format_article, t.montant_frais = None, grand, (colis.montant_frais or 0) + 2000
+        t.save()
+        avant = colis.montant_frais
+        self.client.force_login(self.comptes[R.MANAGER])
+        page = self.client.get('/management/admin_detail_colis/%s/' % colis.code).content.decode()
+        self.assertIn('Format vérifié au bureau', page)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post('/management/admin_colis_actions/', {'action': 'format', 'format': grand.pk, 'codes': [colis.code],
+                                                                 'commentaire': 'carton 60 cm'})
+        colis.refresh_from_db()
+        self.assertEqual(colis.format_article, grand)
+        self.assertEqual(colis.montant_frais, avant + 2000)                          # tarif du bon format
+        msg = MessageColis.objects.get(article=colis)
+        self.assertIn('Grand test', msg.texte)
+        self.assertFalse(msg.interne)                                                # le vendeur le voit
+        self.assertTrue(Notification.objects.filter(destinataire=self.vendeur.user, titre__startswith='Format corrigé').exists())
+        # parti : le manager ne peut plus
+        en_route = self.colis(S.EN_TRANSIT)
+        if en_route:
+            from management.actions_colis import corriger_format
+            ok, _ = corriger_format(en_route, grand, self.comptes[R.MANAGER])
+            self.assertFalse(ok)
+        self.client.force_login(self.comptes[R.AGENT])
+        self.assertNotIn('Format vérifié au bureau', self.client.get('/management/admin_detail_colis/%s/' % colis.code).content.decode())

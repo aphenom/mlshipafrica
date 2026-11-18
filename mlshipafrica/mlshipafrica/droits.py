@@ -44,6 +44,7 @@ DROITS = {
     'colis_corriger': {CEO, MANAGER},                  # corriger un statut posté par erreur (motif obligatoire)
     'colis_corriger_argent': {CEO},                    # corriger un colis Unpaid ou Reversé
     'colis_modifier': {CEO},                           # modifier les données d'une commande (client, montant, produit…)
+    'colis_format': {CEO, MANAGER},                    # corriger le format (petit, moyen, grand) vérifié à la réception
     'colis_imprimer': {CEO, COMPTABLE, MANAGER, AGENT},  # bordereaux, feuilles de route, étiquettes, factures, export
     'stock': {CEO, MANAGER},                           # réceptions de stock, inventaire
     'confirmations': {CEO, MANAGER, AGENT},            # appeler les clients, valider l'acompte

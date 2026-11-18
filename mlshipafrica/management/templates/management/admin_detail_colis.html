@@ -46,6 +46,12 @@
 					{% if 'argent' in droits %}<td class="r num nw">{{ article.montant_frais|fcfa }}</td>{% endif %}
 				</tr></tbody>
 			</table></div>
+			{% if peut_format %}
+			<form method="POST" class="tools" style="margin-top:10px;align-items:flex-end" onsubmit="return confirm('Changer le format de ce colis ? Les frais de livraison sont recalculés et le vendeur est prévenu.')">{% csrf_token %}
+				<label class="field">Format vérifié au bureau<select name="format" required>{% for f in formats %}<option value="{{ f.pk }}"{% if f.pk == article.format_article_id %} selected{% endif %}>{{ f.nom }}</option>{% endfor %}</select></label>
+				<label class="field">Motif<input name="motif_format" maxlength="200" placeholder="ex. carton 60 cm, 4 kg"></label>
+				<button class="btn sm" name="submit_format" value="1">Corriger le format</button>
+			</form>{% endif %}
 			{% if 'argent' in droits %}
 			<div class="recap" style="max-width:460px">
 				<div class="rl"><span>Frais de livraison</span><span class="num">{{ article.montant_frais|fcfa }}</span></div>

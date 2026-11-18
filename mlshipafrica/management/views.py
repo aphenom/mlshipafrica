@@ -464,6 +464,10 @@ def admin_liste_colis(request):
     peut_corriger = a_le_droit(user, 'colis_corriger')
     peut_unpaid = a_le_droit(user, 'paiements')
     peut_imprimer = a_le_droit(user, 'colis_imprimer')
+    peut_format = a_le_droit(user, 'colis_format')
+    if peut_format:
+        from core.models import FormatArticle
+        formats = FormatArticle.objects.filter(license=profil_staff.license, etat_suppression=False).order_by('pk')
     return render(request, 'management/admin_liste_colis.html', locals())
 
 
@@ -534,6 +538,11 @@ def admin_detail_colis(request, code):
             statut_traitement_applicables = statuts_suivants(article, dernier_historique, user) if peut_bouger else []
             statuts_corrigibles = statuts_correction(article, user)
             peut_modifier_commande = a_le_droit(user, 'colis_modifier')
+            from management.actions_colis import AVANT_DEPART
+            peut_format = a_le_droit(user, 'colis_format') and (article.statut_traitement in AVANT_DEPART or profil_staff.role_profil == 'super')
+            if peut_format:
+                from core.models import FormatArticle
+                formats = FormatArticle.objects.filter(license=profil_staff.license, etat_suppression=False).order_by('pk')
             from management.notifications import messages_visibles
             fil = messages_visibles(user, article=article)
 
@@ -596,6 +605,18 @@ def admin_detail_colis(request, code):
                         article.save()
                         comptabiliser(article)
                         django_messages.success(request, "Commande modifiée (l'ancienne et la nouvelle valeur sont gardées dans le journal d'audit).")
+
+                if request.POST.get("submit_format"):
+                    if not a_le_droit(user, 'colis_format'):
+                        raise PermissionDenied("Seuls le manager COD et le CEO corrigent le format.")
+                    from core.models import FormatArticle
+                    from management.actions_colis import corriger_format
+                    fmt = FormatArticle.objects.filter(license=profil_staff.license, pk=request.POST.get('format') or 0).first()
+                    ok, raison = corriger_format(article, fmt, user, request.POST.get('motif_format', ''))
+                    if ok:
+                        django_messages.success(request, "Format corrigé : frais de livraison recalculés, le vendeur est prévenu sur la commande.")
+                    else:
+                        django_messages.error(request, raison)
 
                 if request.POST.get("submit_correction"):
                     if _id_dernier(article) != request.POST.get("last_mouvement", ""):
