@@ -148,7 +148,15 @@ class ParcoursVendeur(tests_pages.RecettePages):
         self.assertNotIn('Nouvelle commande</a>', page)
         self.assertIn('Bordereau de dépôt', page)
         codes = [a.code for a in self.articles[:3]]
-        for doc in ('bordereau', 'factures', 'etiquettes'):
+        a_deposer = Article.objects.filter(vendeur=self.vendeur, statut_traitement=S.EN_ATTENTE_DEPOT).first()
+        if a_deposer is None:
+            a_deposer = self.articles[0]
+            Article.objects.filter(pk=a_deposer.pk).update(statut_traitement=S.EN_ATTENTE_DEPOT)
+        codes = [a_deposer.code] + [c for c in codes if c != a_deposer.code]
+        bordereau = self.client.post('/management/vendeur_imprimer/', {'doc': 'bordereau', 'codes': codes}).content.decode()
+        self.assertIn(a_deposer.code, bordereau)
+        self.assertIn('non repris', bordereau)                                       # les colis déjà partis n'y sont pas
+        for doc in ('factures', 'etiquettes'):
             r = self.client.post('/management/vendeur_imprimer/', {'doc': doc, 'codes': codes})
             self.assertEqual(r.status_code, 200)
             self.assertIn(codes[0], r.content.decode())

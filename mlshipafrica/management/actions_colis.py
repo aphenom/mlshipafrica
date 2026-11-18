@@ -290,11 +290,22 @@ def vendeur_imprimer(request):
         return _export(articles, True, pour_vendeur=True)
     if doc not in DOCUMENTS_VENDEUR:
         return redirect('management:management_vendeur_liste_colis')
+    ecartes = 0
+    if doc == 'bordereau':
+        # Seuls les colis à remettre : en attente de dépôt ou de ramassage, hors stock (déjà chez nous)
+        a_remettre = [a for a in articles if a.statut_traitement in (S.EN_ATTENTE_DEPOT, S.EN_ATTENTE_RAMASSAGE)
+                      and not a.produit_stock_id]
+        ecartes = len(articles) - len(a_remettre)
+        articles = a_remettre
+        if not articles:
+            messages.error(request, "Aucun colis à remettre parmi les colis cochés : le bordereau de dépôt ne reprend que les colis "
+                                    "en attente de dépôt ou de ramassage (ceux de votre stock sont déjà chez ML COD Intérieur).")
+            return redirect('management:management_vendeur_liste_colis')
     a_encaisser = sum((a.valeur_totale or 0) for a in articles if a.is_option_encaissement)
     return render(request, 'management/imprimer_colis.html', {
         'doc': {'bordereau': 'bordereau_depot', 'factures': 'factures_vendeur'}.get(doc, doc), 'titre': DOCUMENTS_VENDEUR[doc],
         'articles': articles, 'a_encaisser': a_encaisser, 'vendeur': vendeur, 'maintenant': timezone.now(),
-        'par': vendeur.nom_store or vendeur.code, 'retour': '/management/vendeur_liste_colis/',
+        'par': vendeur.nom_store or vendeur.code, 'retour': '/management/vendeur_liste_colis/', 'ecartes': ecartes,
     })
 
 

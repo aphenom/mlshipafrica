@@ -40,27 +40,26 @@
 	<button class="btn sm" name="doc" value="factures">Factures</button>
 	<button class="btn sm" name="doc" value="etiquettes">Étiquettes</button>
 	<button class="btn sm" name="doc" value="export" formtarget="_self">Export Excel</button>
-	<span class="muted" style="font-size:12px">Le bordereau se signe à la remise des colis (dépôt au bureau ou ramassage) : gardez votre exemplaire.</span>
+	<span class="muted" style="font-size:12px">Le bordereau reprend les colis cochés à remettre (en attente de dépôt ou de ramassage) ; il se signe à la remise : gardez votre exemplaire.</span>
 </div>
 <div class="tablewrap">
 	<table>
-		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-page" aria-label="Cocher la page"></th><th>Commande</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th><th class="r">Frais</th><th>Origine</th><th>Statut</th><th>Mis à jour</th><th></th></tr></thead>
+		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-page" aria-label="Cocher la page"></th><th>Commande</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th><th class="r">Frais</th><th>Origine</th><th>Statut</th><th>Mis à jour</th></tr></thead>
 		<tbody>
 		{% for c in page %}
 			<tr>
 				<td>{% if c.statut_traitement != statut_traitement.BROUILLON %}<input type="checkbox" class="sel" name="codes" value="{{ c.code }}" aria-label="Cocher {{ c.code }}">{% endif %}</td>
-				<td class="nw"><a class="linkcode" href="{% if c.statut_traitement == statut_traitement.BROUILLON %}{% url 'management:management_vendeur_edit_colis' %}?current_article={{ c.code }}{% else %}{% url 'management:management_vendeur_detail_colis' c.code %}{% endif %}">{{ c.code }}</a><div class="muted" style="font-size:11.5px">{{ c.date_creation|date:"d/m/Y H:i" }}</div></td>
+				<td class="nw"><a class="linkcode" href="{% if c.statut_traitement == statut_traitement.BROUILLON %}{% url 'management:management_vendeur_edit_colis' %}?current_article={{ c.code }}{% else %}{% url 'management:management_vendeur_detail_colis' c.code %}{% endif %}">{{ c.code }}</a><div class="muted" style="font-size:11.5px">{{ c.date_creation|date:"d/m/Y H:i" }}{% if c.statut_traitement != statut_traitement.BROUILLON %} · <a href="{% url 'management:management_vendeur_facture_colis' c.code %}">facture</a>{% endif %}</div></td>
 				<td>{{ c.nom_destinataire|default:"" }} {{ c.prenom_destinataire|default:"" }}<div class="muted" style="font-size:11.5px">{{ c.numero_principal_destinataire|default:"" }}</div></td>
 				<td>{{ c.localite_arrivee.nom|default:"—" }}{% if c.zone_arrivee %}<div class="muted" style="font-size:11.5px">{{ c.zone_arrivee.nom }}</div>{% endif %}</td>
 				<td class="r num nw">{% if c.is_option_encaissement %}<b>{{ c.valeur_totale|fcfa }}</b>{% else %}<span class="muted">Déjà payé</span>{% endif %}</td>
 				<td class="r num nw">{{ c.montant_total_frais|fcfa }}</td>
 				<td><span class="badge b-mute">{% if c.produit_stock_id %}Mon stock ML COD{% elif c.is_option_recuperation %}Ramassage{% else %}Dépôt{% endif %}</span></td>
-				<td><span class="badge {{ c.statut_traitement|st_classe }}">{{ c.get_statut_traitement_display }}</span></td>
+				<td>{% if c.produit_stock_id and c.statut_traitement == statut_traitement.EN_ATTENTE_DEPOT %}<span class="badge st-attente">À préparer depuis votre stock</span>{% else %}<span class="badge {{ c.statut_traitement|st_classe }}">{{ c.get_statut_traitement_display }}</span>{% endif %}</td>
 				<td class="muted nw">{{ c.date_modification|date:"d/m/Y H:i" }}</td>
-				<td class="nw">{% if c.statut_traitement != statut_traitement.BROUILLON %}<a class="btn sm" href="{% url 'management:management_vendeur_facture_colis' c.code %}">Facture</a>{% endif %}</td>
 			</tr>
 		{% empty %}
-			<tr><td colspan="10" class="muted" style="padding:18px">Aucune commande pour ces filtres.</td></tr>
+			<tr><td colspan="9" class="muted" style="padding:18px">Aucune commande pour ces filtres.</td></tr>
 		{% endfor %}
 		</tbody>
 	</table>

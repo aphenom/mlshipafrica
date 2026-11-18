@@ -85,7 +85,7 @@
 		<tbody>{% for a in articles %}<tr><td>{{ forloop.counter }}</td><td class="mono">{{ a.code }}{% if a.reference_externe %}<div class="muted">{{ a.reference_externe }}</div>{% endif %}</td><td>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</td><td class="mono">{{ a.numero_principal_destinataire|default:"" }}</td><td>{{ a.localite_arrivee.nom|default:"" }}</td><td>{{ a.designation|default:"—" }} × {{ a.quantite|default:1 }}{% if a.produit_stock_id %}<div class="muted">depuis le stock</div>{% endif %}</td><td class="r">{% if a.is_option_encaissement %}{{ a.valeur_totale|fcfa }}{% else %}payé{% endif %}</td><td style="width:60px"></td></tr>{% endfor %}
 		<tr class="tot"><td colspan="6">Total : {{ articles|length }} colis</td><td class="r">{{ a_encaisser|fcfa }}</td><td></td></tr></tbody>
 	</table>
-	<p class="muted" style="font-size:12px;margin-top:10px">À imprimer en 2 exemplaires : un pour le vendeur, un pour ML COD Intérieur. Signé à la remise des colis, il sert de décharge.</p>
+	<p class="muted" style="font-size:12px;margin-top:10px">À imprimer en 2 exemplaires : un pour le vendeur, un pour ML COD Intérieur. Signé à la remise des colis, il sert de décharge.{% if ecartes %} {{ ecartes }} colis coché{{ ecartes|pluralize }} non repris : déjà remis, déjà livré{{ ecartes|pluralize }} ou préparé{{ ecartes|pluralize }} depuis votre stock.{% endif %}</p>
 	<div class="sign"><div>Remis par (vendeur)</div><div>Reçu par ML COD Intérieur (nom)</div><div>Date et heure</div></div>
 </div>
 
