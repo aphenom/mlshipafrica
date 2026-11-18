@@ -209,8 +209,8 @@ class Shipping(tests_pages.RecettePages):
         for retire in ('Signature client', 'LIVRÉ'):
             self.assertNotIn(retire, route)
         self.assertIn('<th>Ville</th>', route)
-        self.assertIn('PAYÉ</span>', route)                                       # colonne acompte : payé…
-        self.assertIn('tagp zero">0 F', route)                                     # … ou 0 F
+        self.assertIn('OUI · PAYÉ', route)                                         # colonne acompte : oui payé…
+        self.assertIn('NON PAYÉ', route)                                           # … ou non payé
 
     def test_qr_codes_generes_par_le_serveur(self):
         colis = self.nouveau_depose()

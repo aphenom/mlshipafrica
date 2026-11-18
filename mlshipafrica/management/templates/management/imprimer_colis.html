@@ -53,6 +53,7 @@
 	.chip { font-size:8pt; font-weight:700; border:1.5px solid #222; padding:.6mm 1.6mm; border-radius:1mm; white-space:nowrap; }
 	.tagp { font-weight:800; padding:.3mm 1.6mm; border-radius:1mm; font-size:7.2pt; color:#fff; background:#16a34a; }
 	.tagp.zero { background:#6b7280; }
+	.tagp.non { background:#dc2626; }
 	.a5 { width:148mm; min-height:210mm; padding:10mm; display:flex; flex-direction:column; gap:5mm; break-after:page; page-break-after:always; }
 	.a5 .bloc { border:1px solid #e6e6e6; border-radius:1.5mm; padding:2.5mm 3mm; }
 	.a5 .bloc .t { font-size:7.5pt; color:#444; font-weight:700; }
@@ -103,7 +104,7 @@
 			<td>{% if a.zone_arrivee %}{{ a.zone_arrivee.nom }}{% if a.adresse_destinataire %} · {% endif %}{% endif %}{{ a.adresse_destinataire|default:""|truncatechars:40 }}</td>
 			<td style="font-size:7.8pt;line-height:1.25"><b>{{ a.quantite|default:1 }} ×</b> {% if a.produit_stock %}{{ a.produit_stock.designation }}{% else %}{{ a.designation|default:"—" }}{% endif %}</td>
 			<td style="text-align:right;white-space:nowrap"><b>{% if a.is_option_encaissement %}{{ a.valeur_totale|fcfa }}{% else %}—{% endif %}</b></td>
-			<td style="white-space:nowrap">{% if a.acompte_paye %}<span class="tagp">{{ a.acompte_paye.montant|fcfa }} PAYÉ</span>{% else %}<span class="tagp zero">0 F</span>{% endif %}</td>
+			<td style="white-space:nowrap">{% if a.acompte_paye %}<span class="tagp">OUI · PAYÉ</span>{% else %}<span class="tagp non">NON PAYÉ</span>{% endif %}</td>
 			<td></td></tr>
 		{% endfor %}
 		<tr><td colspan="7"><b>Total · {{ articles|length }} colis · {{ quantite_totale }} article{{ quantite_totale|pluralize }}</b></td><td style="text-align:right;white-space:nowrap"><b>{{ a_encaisser|fcfa }}</b></td><td style="white-space:nowrap"><b>{{ total_acomptes|fcfa }}</b></td><td></td></tr>
@@ -195,7 +196,7 @@
 	</div>
 	{% if a.is_option_encaissement %}<div class="cash on"><b style="font-size:9pt">À ENCAISSER</b><b style="font-size:17pt">{{ a.valeur_totale|fcfa }}</b></div>
 	{% else %}<div class="cash"><b style="font-size:9pt">RIEN À ENCAISSER</b><span style="font-size:10pt">client payé par le vendeur</span></div>{% endif %}
-	{% if not vendeur %}<div class="acompte">{% if a.acompte_paye %}<b>Acheminement {{ a.acompte_paye.montant|fcfa }}</b><span class="tagp">PAYÉ · {{ a.acompte_paye.get_reseau_display }}</span>{% else %}<b>Acheminement 0 F</b><span class="tagp zero">RIEN PAYÉ</span>{% endif %}</div>{% endif %}
+	{% if not vendeur %}<div class="acompte">{% if a.acompte_paye %}<b>Acheminement {{ a.acompte_paye.montant|fcfa }}</b><span class="tagp">PAYÉ · {{ a.acompte_paye.get_reseau_display }}</span>{% else %}<b>Acheminement 0 F</b><span class="tagp non">NON PAYÉ</span>{% endif %}</div>{% endif %}
 	<div style="font-size:9pt;border-top:1px solid #e6e6e6;padding-top:1.6mm">
 		<div style="display:flex;justify-content:space-between"><b>{% if a.produit_stock %}{{ a.produit_stock.designation }}{% else %}{{ a.designation|default:"—" }}{% endif %}</b><b>× {{ a.quantite|default:1 }}</b></div>
 		<div style="color:#444">Vendeur : {{ a.vendeur.nom_store|default:"" }}{% if a.vendeur.numero_contact %} · {{ a.vendeur.numero_contact }}{% endif %}{% if a.format_article %} · {{ a.format_article.nom }}{% endif %}</div>
