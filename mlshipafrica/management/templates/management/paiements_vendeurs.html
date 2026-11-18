@@ -55,7 +55,7 @@
 		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-page" aria-label="Cocher la page"></th><th>Commande</th><th>Vendeur</th><th>Client</th><th>Ville</th><th class="r">Encaissé</th><th>Livré le</th></tr></thead>
 		<tbody>
 		{% for a in page %}
-			<tr><td><input type="checkbox" class="sel" name="codes" value="{{ a.code }}" data-m="{{ a.valeur_totale|default:0|floatformat:0 }}"></td>
+			<tr><td><input type="checkbox" class="sel" name="codes" value="{{ a.code }}" data-m="{{ a.valeur_totale|default:0|stringformat:'.0f' }}"></td>
 				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' a.code %}">{{ a.code }}</a></td>
 				<td>{{ a.vendeur.nom_store|default:"—" }}</td><td>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</td>
 				<td>{{ a.localite_arrivee.nom|default:"—" }}</td><td class="r num nw">{{ a.valeur_totale|fcfa }}</td><td class="nw muted">{{ a.date_modification|date:"d/m/Y H:i" }}</td></tr>
@@ -77,7 +77,7 @@
 		<tbody>
 		{% for v in vendeurs_a_payer %}
 			<tr{% if v.bloque %} class="muted"{% endif %}>
-				<td><input type="checkbox" class="selv" name="vendeurs" value="{{ v.vendeur.code }}" data-m="{{ v.net|floatformat:0 }}" {% if jour_paiement and not v.bloque and v.net > 0 %}checked{% endif %}{% if v.bloque %} disabled title="{{ v.bloque }}"{% endif %}></td>
+				<td><input type="checkbox" class="selv" name="vendeurs" value="{{ v.vendeur.code }}" data-m="{{ v.net|stringformat:'.0f' }}" {% if jour_paiement and not v.bloque and v.net > 0 %}checked{% endif %}{% if v.bloque %} disabled title="{{ v.bloque }}"{% endif %}></td>
 				<td><b>{{ v.vendeur.nom_store|default:v.vendeur.code }}</b><div class="muted mono" style="font-size:11px">{{ v.vendeur.code }}</div></td>
 				<td class="r num">{{ v.colis }}</td>
 				<td class="r num nw">{{ v.collecte|fcfa }}</td>
@@ -108,7 +108,7 @@
 				<td class="r num nw"><b class="{% if r.net < 0 %}t-bad{% endif %}">{{ r.net|fcfa }}</b></td>
 				<td class="r num nw t-bad">{% if r.statut == 'verse' %}{% if r.frais_versement %}− {{ r.frais_versement|fcfa }}{% else %}—{% endif %}{% elif r.frais_estimes %}− {{ r.frais_estimes|fcfa }}{% else %}—{% endif %}</td>
 				<td class="r num nw"><b>{% if r.statut == 'verse' %}{{ r.montant_verse|default:r.net|fcfa }}{% elif r.statut == 'a_verser' %}{{ r.a_envoyer|fcfa }}{% else %}—{% endif %}</b></td>
-				<td class="nw">{% if r.statut == 'a_verser' %}{% if r.net > 0 and not r.vendeur.versement_valide %}<span class="badge b-bad" title="Validez d'abord ses coordonnées dans Moyens de paiement">bloqué</span>{% else %}<button type="button" class="btn sm primary" data-ouvrir="verser-{{ r.pk }}">Verser</button>{% endif %} <button type="button" class="btn sm" data-ouvrir="annuler-{{ r.pk }}">Annuler</button>
+				<td class="nw">{% if r.statut == 'a_verser' %}{% if r.net > 0 and not r.vendeur.versement_valide %}<span class="badge b-bad" title="Validez d'abord ses coordonnées dans Moyens de paiement">bloqué</span>{% else %}<button type="button" class="btn sm primary" data-ouvrir="verser-{{ r.pk }}">Verser</button>{% endif %}<div><button type="button" class="lien-annuler" data-ouvrir="annuler-{{ r.pk }}">Annuler la facture</button></div>
 					{% elif r.statut == 'verse' %}<span class="badge st-verse">{{ r.date_versement|date:"d/m/Y" }}</span> <span class="mono" style="font-size:11.5px">{{ r.reference_versement }}</span>
 					{% else %}<span class="badge b-mute">Annulée</span><div class="muted" style="font-size:11px">{{ r.motif_annulation }}</div>{% endif %}</td>
 			</tr>
@@ -138,6 +138,7 @@
 <style>
 .bulk { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; margin:10px 0; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.08); }
 .ctabs a.on { font-weight:700; }
+.lien-annuler { background:none; border:0; padding:4px 0 0; color:var(--bad); font-size:11.5px; text-decoration:underline; cursor:pointer; }
 </style>
 {% endblock %}
 

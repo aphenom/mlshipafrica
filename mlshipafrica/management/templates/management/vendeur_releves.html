@@ -22,20 +22,19 @@
 <div class="card">
 	<h2>Mes factures de paiement</h2>
 	<div class="tablewrap"><table>
-		<thead><tr><th>Facture</th><th class="r">Encaissé</th><th class="r">Frais de livraison + collecte</th><th class="r">Retours</th><th class="r">Garde + stockage</th><th class="r">Net</th><th>Statut</th><th></th></tr></thead>
+		<thead><tr><th>Facture</th><th class="r">Encaissé</th><th class="r">Frais</th><th class="r">Retours</th><th class="r">Garde + stockage</th><th class="r">Net</th><th>Statut</th></tr></thead>
 		<tbody>
 		{% for r in releves %}
 			<tr>
-				<td class="nw mono">{{ r.code }}<div class="muted" style="font-size:11.5px;font-family:inherit">émise le {{ r.date_arrete|date:"d/m/Y" }}</div></td>
+				<td class="nw"><span class="mono">{{ r.code }}</span><div class="muted" style="font-size:11.5px">émise le {{ r.date_arrete|date:"d/m/Y" }}</div><div class="tools" style="gap:6px;margin-top:6px"><a class="btn sm" href="{% url 'management:management_facture_paiement' r.code %}">Voir</a><a class="btn sm" href="?facture={{ r.code }}#messages">Contester</a></div></td>
 				<td class="r num nw">{{ r.total_collecte|fcfa }}</td>
 				<td class="r num nw t-bad">{% if r.total_frais %}− {{ r.total_frais|fcfa }}{% else %}—{% endif %}</td>
 				<td class="r num nw t-bad">{% if r.total_retours %}− {{ r.total_retours|fcfa }}{% else %}—{% endif %}</td>
 				<td class="r num nw t-bad">{% if r.total_garde or r.total_stockage %}− {{ r.total_garde|add:r.total_stockage|fcfa }}{% else %}—{% endif %}</td>
 				<td class="r num nw"><b>{{ r.net|fcfa }}</b>{% if r.statut == 'verse' and r.frais_versement %}<div class="muted" style="font-size:11px">envoyé {{ r.montant_verse|fcfa }}</div>{% endif %}</td>
 				<td>{% if r.statut == 'verse' %}<span class="badge st-verse">Versé le {{ r.date_versement|date:"d/m/Y" }}</span>{% if r.reference_versement %}<div class="mono muted" style="font-size:11px">{{ r.reference_versement }}</div>{% endif %}{% else %}<span class="badge st-unpaid">Paid · versement en cours</span>{% endif %}</td>
-				<td class="nw"><a class="btn sm" href="{% url 'management:management_facture_paiement' r.code %}">Voir</a> <a class="btn sm" href="?facture={{ r.code }}#messages">Contester</a></td>
 			</tr>
-		{% empty %}<tr><td colspan="8" class="muted" style="padding:18px">Pas encore de facture de paiement.</td></tr>{% endfor %}
+		{% empty %}<tr><td colspan="7" class="muted" style="padding:18px">Pas encore de facture de paiement.</td></tr>{% endfor %}
 		</tbody>
 	</table></div>
 </div>
@@ -56,7 +55,7 @@
 		{% if prochain.retours %}<div class="rl"><span>Frais de retour</span><span class="num t-bad">− {{ prochain.retours|fcfa }}</span></div>{% endif %}
 		{% if prochain.garde %}<div class="rl"><span>Garde</span><span class="num t-bad">− {{ prochain.garde|fcfa }}</span></div>{% endif %}
 		{% if prochain.stockage %}<div class="rl"><span>Stockage</span><span class="num t-bad">− {{ prochain.stockage|fcfa }}</span></div>{% endif %}
-		<div class="net"><b>Net</b><b class="num">{{ prochain.net|fcfa }}</b></div>
+		<div class="net"><b>{% if prochain.net < 0 %}Reste dû (déduit des prochains encaissements){% else %}Net{% endif %}</b><b class="num{% if prochain.net < 0 %} t-bad{% endif %}">{{ prochain.net|fcfa }}</b></div>
 	</div>
 </details>
 {% endblock %}

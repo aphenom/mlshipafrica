@@ -25,7 +25,7 @@
 	<div class="rl"><span>Frais de retour</span><span class="num t-bad">− {{ r.total_retours|fcfa }}</span></div>
 	<div class="rl"><span>Garde</span><span class="num t-bad">− {{ r.total_garde|fcfa }}</span></div>
 	<div class="rl"><span>Stockage</span><span class="num t-bad">− {{ r.total_stockage|fcfa }}</span></div>
-	<div class="net"><b>Net</b><b class="num">{{ r.net|fcfa }}</b></div>
+	<div class="net"><b>Net</b><b class="num{% if r.net < 0 %} t-bad{% endif %}">{{ r.net|fcfa }}</b></div>
 	{% if r.statut == 'verse' %}
 	{% if r.frais_versement %}<div class="rl"><span>Frais de versement {{ r.get_moyen_versement_display }} (à votre charge)</span><span class="num t-bad">− {{ r.frais_versement|fcfa }}</span></div>{% endif %}
 	<div class="net"><b>Montant envoyé</b><b class="num">{{ r.montant_verse|default:r.net|fcfa }}</b></div>
