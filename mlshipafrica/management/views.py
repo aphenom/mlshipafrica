@@ -1148,7 +1148,7 @@ def vendeur_stock(request):
     from management.finance import configuration
     tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_jour', None)
     pieces = sum(max(p.quantite_disponible, 0) for p in produits)
-    epuises = sum(1 for p in produits if p.quantite_disponible <= 0)
+    epuises = sum(1 for p in produits if p.quantite_disponible <= 0 and not p.en_route)   # un produit en route n'est pas à réapprovisionner
     de_cote = sum(p.quantite_de_cote for p in produits)
     envois_en_attente = sum(1 for e in entrees if e.statut == StatutEntreeStock.ANNONCEE)
     return render(request, 'management/vendeur_stock.html', locals())
