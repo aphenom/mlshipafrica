@@ -454,16 +454,22 @@ class Article(MyModelAbstract):
         # Les changements faits par l'équipe passent par la vue d'admin, qui crée elle-même l'historique.
         # (Avant : get_current_user() valait None hors requête web et faisait planter la sauvegarde.)
         par_equipe = bool(utilisateur is not None and getattr(utilisateur, 'is_staff', False))
-        if self.statut_traitement != self._init_statut_traitement and not par_equipe:
+        historiser = self.statut_traitement != self._init_statut_traitement and not par_equipe
+        dernier = self.get_last_historique() if historiser and self.pk else None
+        # Le colis est enregistré AVANT son historique : la comptabilité, les SMS et les retours se déclenchent sur
+        # l'historique et relisent le colis. Avant, hors transaction (vendeur, tâche planifiée, Woura, API), ils
+        # lisaient encore l'ancien statut : l'encaissement et les frais d'un colis livré n'étaient pas comptés.
+        resultat = super().save(*args, **kwargs)
+        if historiser:
             histo_article = HistoriqueArticle()
             histo_article.article = self
             histo_article.date = timezone.now()
             histo_article.statut_traitement = self.statut_traitement
             histo_article.license = self.license
-            histo_article.dernier_historique_article = self.get_last_historique()
+            histo_article.dernier_historique_article = dernier
             histo_article.save()
-
-        return super().save(*args, **kwargs)
+        self._init_statut_traitement = self.statut_traitement
+        return resultat
     
 
 """ Historisations des mouvements des articles répresentant les colis pendant le traitement"""

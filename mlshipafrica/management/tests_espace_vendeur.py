@@ -83,7 +83,8 @@ class EspaceVendeur(tests_pages.RecettePages):
         self.assertEqual(int(article.valeur_totale), 30000)
 
     def test_detail_colis_frise_et_prix_lisible_par_le_navigateur(self):
-        a = Article.objects.filter(vendeur=self.vendeur, statut_traitement=S.EN_RETOUR).first()
+        # Le colis du parcours « retour » finit « Revenu à Abidjan » (avant le correctif du 18/11, il restait à tort « En retour »)
+        a = Article.objects.filter(vendeur=self.vendeur, statut_traitement__in=(S.EN_RETOUR, S.REVENU_ABIDJAN)).first()
         Article.objects.filter(pk=a.pk).update(statut_traitement=S.REVENU_ABIDJAN, date_revenu_abidjan=timezone.now())
         page = self.client.get('/management/vendeur_detail_colis/%s/' % a.code).content.decode()
         self.assertIn('name="valeur" type="number" min="0" value="15000"', page)   # pas « 15 000 » : invalide dans un champ nombre
