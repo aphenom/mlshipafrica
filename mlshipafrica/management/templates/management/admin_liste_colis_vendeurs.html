@@ -54,7 +54,7 @@
 										<tbody>
 										{% for vendeur in vendeurs %}
 											<tr>
-												<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a></td>
+												<td>{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a>{% else %}{{vendeur.code}}{% endif %}</td>
 												<td>{{vendeur.nom_store}}</td>
 												<td data-order="{{ vendeur.nombre_articles_en_attente_ramassage }}" data-sort="{{ vendeur.nombre_articles_en_attente_ramassage }}">{{ vendeur.nombre_articles_en_attente_ramassage|floatformat:-2|intcomma }}</td>
 												<td data-order="{{ vendeur.nombre_articles_en_attente_depot }}" data-sort="{{ vendeur.nombre_articles_en_attente_depot }}">{{ vendeur.nombre_articles_en_attente_depot|floatformat:-2|intcomma }}</td>

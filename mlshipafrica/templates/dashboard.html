@@ -533,7 +533,7 @@
 									<tbody>
 									{% for vendeur in top_vendeurs %}
 										<tr>
-											<td><a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a></td>
+											<td>{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' vendeur.code %}">{{vendeur.code}}</a>{% else %}{{vendeur.code}}{% endif %}</td>
 											<td>{{vendeur.nom_store}}</td>
 											<td data-order="{{ vendeur.articles_livres }}" data-sort="{{ vendeur.articles_livres }}">{{ vendeur.articles_livres|floatformat:-2|intcomma }}</td>
 											{% if 'argent' in droits %}<td data-order="{{ vendeur.valeur_totale }}" data-sort="{{ vendeur.valeur_totale }}">{{ vendeur.valeur_totale|floatformat:-2|intcomma }}</td>

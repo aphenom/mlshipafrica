@@ -20,6 +20,11 @@
 		<div class="rl"><span>Garde</span><span class="num t-bad">− {{ releve_detail.total_garde|fcfa }}</span></div>
 		<div class="rl"><span>Stockage</span><span class="num t-bad">− {{ releve_detail.total_stockage|fcfa }}</span></div>
 		<div class="net"><b>Net</b><b class="num">{{ releve_detail.net|fcfa }}</b></div>
+		{% if releve_detail.statut == 'verse' and releve_detail.frais_versement %}
+		<div class="rl"><span>Frais de versement {{ releve_detail.get_moyen_versement_display }} (à la charge du vendeur)</span><span class="num t-bad">− {{ releve_detail.frais_versement|fcfa }}</span></div>
+		<div class="net"><b>Montant envoyé</b><b class="num">{{ releve_detail.montant_verse|fcfa }}</b></div>
+		{% endif %}
+		{% if releve_detail.statut == 'verse' and releve_detail.compte_verse %}<div class="muted" style="font-size:12px;text-align:right">Envoyé sur {{ releve_detail.get_moyen_versement_display }} · {{ releve_detail.compte_verse }}</div>{% endif %}
 	</div>
 	<div class="muted" style="font-size:11.5px;text-align:center">ML COD Intérieur est un service de ML SHIP AFRICA · montants en francs CFA</div>
 </div>

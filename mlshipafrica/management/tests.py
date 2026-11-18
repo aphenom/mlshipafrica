@@ -785,7 +785,9 @@ class ArgentTests(TestCase):
         self.assertEqual(int(j['cout_facture']), attendu['cout'] + 100)
         self.assertEqual(int(j['ecart_prestataire']), 100)
 
-        # Versement : les colis encaissés passent « Reversé »
+        # Versement : seulement sur un numéro validé (procuration vérifiée) ; les colis encaissés passent « Reversé »
+        r.vendeur.moyen_valide, r.vendeur.compte_valide, r.vendeur.versement_valide = 'wave', '0707070707', True
+        r.vendeur.save()
         marquer_verse(r, self.comptable, 'WAVE-123', 'wave')
         self.assertTrue(all(Article.objects.get(code=c).statut_traitement == S.REVERSE for c in livres_codes))
 

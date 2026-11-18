@@ -15,7 +15,7 @@
 				<span class="badge {% if article.etat_confirmation == 'confirme' %}st-livre{% elif article.etat_confirmation == 'annule' %}st-echec{% else %}st-livraison{% endif %}" style="font-family:var(--font);vertical-align:4px">{{ article.get_etat_confirmation_display }}</span>
 				{% if article.etat_suppression %}<span class="badge b-bad" style="font-family:var(--font);vertical-align:4px">Supprimé</span>{% endif %}
 			</h1>
-			<div class="muted">Vendeur : {% if article.vendeur %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store|default:article.vendeur.code }}</a> <span class="mono" style="font-size:12px">{{ article.vendeur.code }}</span>{% if article.vendeur.numero_contact %} · {{ article.vendeur.numero_contact }}{% endif %}{% else %}—{% endif %}</div>
+			<div class="muted">Vendeur : {% if article.vendeur %}{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store|default:article.vendeur.code }}</a>{% else %}{{ article.vendeur.nom_store|default:article.vendeur.code }}{% endif %} <span class="mono" style="font-size:12px">{{ article.vendeur.code }}</span>{% if article.vendeur.numero_contact %} · {{ article.vendeur.numero_contact }}{% endif %}{% else %}—{% endif %}</div>
 		</div>
 		{% if 'confirmations' in droits and article.etat_confirmation != 'confirme' %}<a class="btn" href="{% url 'management:management_admin_confirmations' %}">File de confirmation</a>{% endif %}
 	</div>

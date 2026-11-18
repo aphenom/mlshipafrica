@@ -30,6 +30,7 @@ urlpatterns = [
     path('admin_acomptes/', views.admin_acomptes, name='management_admin_acomptes'),
     path('admin_stock/', views.admin_stock, name='management_admin_stock'),
     path('admin_releves/', views.admin_releves, name='management_admin_releves'),
+    path('admin_moyens_versement/', views.admin_moyens_versement, name='management_admin_moyens_versement'),
     path('admin_benefice/', views.admin_benefice, name='management_admin_benefice'),
     path('admin_fichier_prestataire/', views.admin_fichier_prestataire, name='management_admin_fichier_prestataire'),
     path('admin_commissions/', views.admin_commissions, name='management_admin_commissions'),

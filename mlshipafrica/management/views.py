@@ -29,7 +29,7 @@ from datetime import timedelta
 import datetime
 import logging
 from django.db.models.functions import Coalesce
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 logger = logging.getLogger(__name__)
 
@@ -1202,17 +1202,71 @@ def admin_releves(request):
         releve_detail = Releve.objects.filter(vendeur__license=profil_staff.license, code=request.GET['releve']).first()
         lignes_detail = releve_detail.ecritures.select_related('article').order_by('date') if releve_detail else []
     total_a_verser = releves.filter(statut=StatutReleve.A_VERSER, net__gt=0).aggregate(t=Sum('net'))['t'] or 0
+    from management.finance import frais_versement
+    releves = list(releves[:500])
+    for r in releves:
+        if r.statut == StatutReleve.A_VERSER:
+            r.frais_estimes = frais_versement(r.vendeur.moyen_valide, r.net) if r.vendeur.versement_valide else 0
+            r.a_envoyer = max(r.net - r.frais_estimes, 0) if r.net > 0 else 0
     # Indicateurs de la maquette, sur tous les relevés de la licence (pas seulement le filtre affiché)
     tous_releves = Releve.objects.filter(vendeur__license=profil_staff.license)
     a_verser = tous_releves.filter(statut=StatutReleve.A_VERSER)
     kpi_a_verser = a_verser.filter(net__gt=0).aggregate(t=Sum('net'), n=Count('id'))
-    kpi_sans_coordonnees = a_verser.filter(Q(vendeur__compte_versement__isnull=True) | Q(vendeur__compte_versement='')).count()
+    kpi_sans_coordonnees = a_verser.filter(net__gt=0).filter(Q(vendeur__versement_valide=False) | Q(vendeur__compte_valide='')).count()
     kpi_verses_mois = tous_releves.filter(statut=StatutReleve.VERSE, date_versement__gte=timezone.make_aware(
         datetime.datetime.combine(timezone.localdate().replace(day=1), datetime.time.min))).aggregate(t=Sum('net'), n=Count('id'))
     comptes_statut = dict(tous_releves.values_list('statut').annotate(n=Count('id')))
     statuts_releve = StatutReleve
     moyens = MoyenVersement.choices
     return render(request, 'management/admin_releves.html', locals())
+
+
+@login_required
+@droit_requis('moyens_versement')
+def admin_moyens_versement(request):
+    """
+    Moyens de paiement des vendeurs : la comptable vérifie la procuration de chaque nouveau numéro avant tout
+    versement (validé / refusé avec motif). Le CEO règle les frais de versement, à la charge du vendeur.
+    """
+    from management.finance import refuser_coordonnees, valider_coordonnees
+    from management.models import FraisVersement
+    from mlshipafrica.enums import MoyenVersement
+    user = request.user
+    profil_staff = user.account_profil_staff
+    peut_regler_frais = a_le_droit(user, 'frais_versement_regler')
+    vendeurs = Vendeur.objects.filter(license=profil_staff.license, etat_suppression=False)
+    if request.method == 'POST':
+        try:
+            if request.POST.get('frais'):
+                if not peut_regler_frais:
+                    raise PermissionDenied("Seul le CEO règle les frais de versement.")
+                for moyen in MoyenVersement.values:
+                    taux = (request.POST.get('taux_' + moyen) or '0').replace(',', '.').strip()
+                    plafond = (request.POST.get('plafond_' + moyen) or '').replace(' ', '').strip()
+                    regle, _ = FraisVersement.objects.get_or_create(moyen=moyen)
+                    regle.taux = Decimal(taux or '0')
+                    regle.plafond = Decimal(plafond) if plafond else None
+                    if regle.taux < 0 or regle.taux > 10:
+                        raise ValidationError("Un taux de frais doit être entre 0 et 10 %.")
+                    regle.save()
+                django_messages.success(request, "Frais de versement enregistrés.")
+            else:
+                vendeur = vendeurs.get(code=request.POST.get('vendeur'))
+                if request.POST.get('action') == 'valider':
+                    valider_coordonnees(vendeur, user)
+                    django_messages.success(request, "Coordonnées de %s validées : les versements peuvent reprendre." % (vendeur.nom_store or vendeur.code))
+                else:
+                    refuser_coordonnees(vendeur, user, request.POST.get('motif', ''))
+                    django_messages.success(request, "Changement de %s refusé." % (vendeur.nom_store or vendeur.code))
+        except (ValidationError, Vendeur.DoesNotExist, InvalidOperation) as erreur:
+            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Valeur invalide."])))
+        return redirect('management:management_admin_moyens_versement')
+    a_valider = vendeurs.filter(versement_valide=False).exclude(compte_versement__isnull=True).exclude(compte_versement='').order_by('versement_modifie_le')
+    valides = vendeurs.filter(versement_valide=True).select_related('versement_valide_par').order_by('nom_store')
+    sans = vendeurs.filter(etat_approbation=True).filter(Q(compte_versement__isnull=True) | Q(compte_versement='')).order_by('nom_store')
+    regles = {f.moyen: f for f in FraisVersement.objects.all()}
+    frais = [(v, l, regles.get(v)) for v, l in MoyenVersement.choices]
+    return render(request, 'management/admin_moyens_versement.html', locals())
 
 
 @login_required
@@ -1226,22 +1280,24 @@ def vendeur_releves(request):
     except Vendeur.DoesNotExist:
         raise Http404
     if request.method == 'POST':
+        from management.finance import enregistrer_coordonnees
         moyen = request.POST.get('moyen_versement')
-        compte = (request.POST.get('compte_versement') or '').strip()
-        if moyen in MoyenVersement.values and compte:
-            changement = (moyen, compte) != (vendeur.moyen_versement, vendeur.compte_versement)
-            vendeur.moyen_versement, vendeur.compte_versement = moyen, compte[:60]
-            vendeur.titulaire_versement = (request.POST.get('titulaire_versement') or '')[:100]
-            vendeur.save()
+        try:
+            changement = enregistrer_coordonnees(vendeur, moyen, request.POST.get('compte_versement'),
+                                                 request.POST.get('titulaire_versement'), request.FILES.get('procuration_versement'))
+        except ValidationError as erreur:
+            django_messages.error(request, ' '.join(erreur.messages))
+        else:
             if changement:
                 # Sécurité : le vendeur est prévenu de tout changement de ses coordonnées de versement
                 from sms.service import mettre_en_file
                 transaction.on_commit(lambda: mettre_en_file(
                     'moyen', vendeur.numero_sms or vendeur.numero_contact, {'moyen': MoyenVersement(moyen).label},
                     cle_dedoublonnage='moyen:%s:%s' % (vendeur.code, timezone.now().strftime('%Y%m%d%H%M%S')), vendeur=vendeur))
-            django_messages.success(request, "Coordonnées de versement enregistrées.")
-        else:
-            django_messages.error(request, "Choisissez un moyen de versement et indiquez le numéro ou le RIB.")
+                django_messages.success(request, "Coordonnées enregistrées. La comptabilité vérifie votre procuration : les versements reprennent dès la validation."
+                                        if not vendeur.versement_valide else "Coordonnées enregistrées.")
+            else:
+                django_messages.success(request, "Coordonnées enregistrées.")
         return redirect('management:management_vendeur_releves')
     releves = vendeur.releves.all()
     releve_detail = releves.filter(code=request.GET.get('releve')).first() if request.GET.get('releve') else None
@@ -1251,6 +1307,8 @@ def vendeur_releves(request):
     en_cours = totaux(non_releve)
     lignes_en_cours = non_releve.select_related('article').order_by('-date')[:200]
     moyens = MoyenVersement.choices
+    from management.models import FraisVersement
+    frais_versement_regles = FraisVersement.objects.filter(taux__gt=0)
     # Mon argent de la maquette : à recevoir, dernier versement, prochain relevé (lundi ou jeudi, 6 h)
     from management.espace_vendeur import a_recevoir, prochain_releve
     total_a_recevoir = a_recevoir(vendeur)

@@ -22,9 +22,10 @@
 	<div class="chero">
 		<div class="chmain">
 			<span class="cl">Bénéfice ML COD Intérieur</span>
-			<span class="cbig">{{ argent.journal.benefice|fcfa }}</span>
-			<span class="cs">{% if argent.variation is not None %}<span class="cdelta {% if argent.variation >= 0 %}up{% else %}down{% endif %}">{% if argent.variation >= 0 %}+{% endif %}{{ argent.variation }} %</span> vs {% endif %}{{ argent.precedent.benefice|fcfa }} sur la période précédente</span>
-			<span class="cs" style="opacity:.75">{% for lib, montant in argent.journal.par_type %}{% if montant %}{{ lib }} {{ montant|fcfa }} · {% endif %}{% endfor %}coût prestataire − {{ argent.journal.cout_prestataire|fcfa }}</span>
+			<span class="cbig">{{ argent.journal.benefice_realise|fcfa }}</span>
+			<span class="cs">{% if argent.variation is not None %}<span class="cdelta {% if argent.variation >= 0 %}up{% else %}down{% endif %}">{% if argent.variation >= 0 %}+{% endif %}{{ argent.variation }} %</span> vs {% endif %}{{ argent.precedent.benefice_realise|fcfa }} sur la période précédente · colis terminés</span>
+			<span class="cs" style="opacity:.75">{% for lib, montant in argent.journal.par_type %}{% if montant %}{{ lib }} {{ montant|fcfa }} · {% endif %}{% endfor %}coût prestataire des colis terminés − {{ argent.journal.cout_realise|fcfa }}</span>
+			{% if argent.journal.cout_engage %}<span class="cs" style="opacity:.75">Coût engagé sur les colis encore en route : − {{ argent.journal.cout_engage|fcfa }} (compté quand ils seront terminés)</span>{% endif %}
 		</div>
 		<div class="chcash">
 			<span class="cl">Trésorerie à venir</span>
@@ -37,7 +38,7 @@
 	{% endif %}
 
 	<div class="ctiles">
-		<div class="ctile"><span class="cl">Taux de livraison</span><span class="cv {{ pil.taux_classe }}">{% if pil.taux is None %}—{% else %}{{ pil.taux }} %{% endif %}</span><span class="cs">minimum 75 % · objectif 80 %</span></div>
+		<div class="ctile"><span class="cl">Taux de livraison</span><span class="cv {{ pil.taux_classe }}">{% if pil.taux is None %}—{% else %}{{ pil.taux }} %{% endif %}</span><span class="cs">{% if pil.termines is not None %}sur {{ pil.termines }} colis terminé{{ pil.termines|pluralize }}{% if pil.en_cours %} · {{ pil.en_cours }} en cours{% endif %} · {% endif %}minimum 75 %</span></div>
 		<div class="ctile"><span class="cl">Commandes</span><span class="cv">{{ pil.commandes }}</span><span class="cs">{{ pil.confirmees }} confirmées · {{ pil.annules }} annulées</span></div>
 		<div class="ctile"><span class="cl">Livrés</span><span class="cv">{{ pil.livres }}</span><span class="cs">{{ pil.echecs }} échecs ou retours</span></div>
 		{% if argent %}<div class="ctile"><span class="cl">Marge par colis livré</span><span class="cv">{{ argent.marge_colis|fcfa }}</span><span class="cs">tout compris</span></div>{% endif %}
@@ -78,7 +79,7 @@
 	<div class="cgridm">
 		<div class="card cpanel">
 			<h2>Top vendeurs · commandes</h2>
-			{% for t in pil.top %}<div class="ctop"><span class="cr">{{ forloop.counter }}</span><span class="cn">{% if t.code %}<a href="{% url 'management:management_admin_vendeur_profil' t.code %}">{{ t.nom }}</a>{% else %}{{ t.nom }}{% endif %}<small>{{ t.livres }} livré{{ t.livres|pluralize }}{% if t.taux is not None %} · {{ t.taux }} %{% endif %}</small></span><span class="ftrack"><span class="ffill" style="width:{% widthratio t.n pil.top_max 100 %}%"></span></span><b>{{ t.n }}</b></div>{% empty %}<div class="muted">Aucune commande sur la période.</div>{% endfor %}
+			{% for t in pil.top %}<div class="ctop"><span class="cr">{{ forloop.counter }}</span><span class="cn">{% if t.code and 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' t.code %}">{{ t.nom }}</a>{% else %}{{ t.nom }}{% endif %}<small>{{ t.livres }} livré{{ t.livres|pluralize }}{% if t.taux is not None %} · {{ t.taux }} %{% endif %}</small></span><span class="ftrack"><span class="ffill" style="width:{% widthratio t.n pil.top_max 100 %}%"></span></span><b>{{ t.n }}</b></div>{% empty %}<div class="muted">Aucune commande sur la période.</div>{% endfor %}
 		</div>
 		<div class="card cpanel">
 			<h2>Pourquoi les commandes sont annulées</h2>

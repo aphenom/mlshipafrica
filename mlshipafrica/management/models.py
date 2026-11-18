@@ -155,6 +155,17 @@ class Vendeur(MyModelAbstract):
     moyen_versement = models.CharField("Moyen de versement", max_length=10, choices=MoyenVersement.choices, null=True, blank=True)
     compte_versement = models.CharField("Numéro ou RIB de versement", max_length=60, null=True, blank=True)
     titulaire_versement = models.CharField("Titulaire du compte", max_length=100, null=True, blank=True)
+    # Coordonnées VALIDÉES par la comptable (procuration vérifiée) : ce sont les seules utilisées pour verser.
+    # Le vendeur modifie les champs ci-dessus ; tant que la comptable n'a pas validé, le versement est bloqué.
+    procuration_versement = models.FileField("Procuration signée", upload_to='procurations/%Y/%m/', null=True, blank=True)
+    versement_valide = models.BooleanField("Coordonnées de versement validées", default=False)
+    moyen_valide = models.CharField("Moyen validé", max_length=10, choices=MoyenVersement.choices, blank=True, default='')
+    compte_valide = models.CharField("Numéro ou RIB validé", max_length=60, blank=True, default='')
+    titulaire_valide = models.CharField("Titulaire validé", max_length=100, blank=True, default='')
+    versement_valide_le = models.DateTimeField("Validé le", null=True, blank=True)
+    versement_valide_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='versements_valides')
+    versement_modifie_le = models.DateTimeField("Coordonnées modifiées le", null=True, blank=True)
+    versement_refus_motif = models.CharField("Motif du dernier refus", max_length=200, blank=True, default='')
 
     # Suivi par l'équipe : le commercial qui a activé le vendeur, l'agent COD qui confirme ses commandes
     commercial = models.ForeignKey(ProfilStaff, models.SET_NULL, null=True, blank=True, related_name='vendeurs_suivis',
@@ -768,6 +779,11 @@ class Releve(models.Model):
     moyen_versement = models.CharField(max_length=10, choices=MoyenVersement.choices, blank=True, default='')
     reference_versement = models.CharField(max_length=100, blank=True, default='')
     verse_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='releves_verses')
+    # Versement Mobile Money : frais à la charge du vendeur, déduits du net (ex. Wave 1 %)
+    frais_versement = models.DecimalField("Frais de versement", max_digits=12, decimal_places=2, default=0)
+    montant_verse = models.DecimalField("Montant envoyé", max_digits=12, decimal_places=2, null=True, blank=True)
+    compte_verse = models.CharField("Numéro ou RIB utilisé", max_length=60, blank=True, default='')
+    titulaire_verse = models.CharField("Titulaire", max_length=100, blank=True, default='')
 
     class Meta:
         ordering = ['-date_creation']
@@ -791,6 +807,21 @@ class Ecriture(models.Model):
     class Meta:
         ordering = ['-date']
         indexes = [models.Index(fields=['vendeur', 'releve'], name='ecriture_vendeur_releve_idx')]
+
+
+""" Frais de versement des relevés, par moyen (réglés par le CEO, à la charge du vendeur) """
+class FraisVersement(models.Model):
+
+    moyen = models.CharField("Moyen", max_length=10, choices=MoyenVersement.choices, unique=True)
+    taux = models.DecimalField("Taux (%)", max_digits=5, decimal_places=2, default=0)
+    plafond = models.DecimalField("Plafond (F, vide = aucun)", max_digits=12, decimal_places=2, null=True, blank=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['moyen']
+
+    def __str__(self):
+        return '%s : %s %%' % (self.get_moyen_display(), self.taux)
 
 
 """ Commissions de l'équipe (réglées par le CEO, désactivées par défaut) """

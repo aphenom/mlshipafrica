@@ -1,0 +1,85 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Moyens de paiement des vendeurs · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Versements</li><li class="active" aria-current="page">Moyens de paiement</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card ml">
+	<div class="head">
+		<div><h1>Moyens de paiement des vendeurs</h1><div class="muted">Le vendeur saisit son numéro (Orange Money, Wave, MTN, Moov ou banque) et joint une procuration signée. Vous vérifiez la procuration avant tout versement : tant qu'un nouveau numéro n'est pas validé, ses relevés sont bloqués et rien n'est envoyé, ni sur l'ancien ni sur le nouveau numéro.</div></div>
+	</div>
+	<div class="kpis">
+		<div class="kpi"><span class="l">À valider</span><span class="v {% if a_valider %}t-bad{% else %}t-ok{% endif %}">{{ a_valider|length }}</span><span class="n">versements bloqués en attendant</span></div>
+		<div class="kpi"><span class="l">Validés</span><span class="v">{{ valides|length }}</span><span class="n t-ok">versements possibles</span></div>
+		<div class="kpi"><span class="l">Vendeurs actifs sans numéro</span><span class="v {% if sans %}t-warn{% endif %}">{{ sans|length }}</span><span class="n">ils le saisissent dans Mon argent</span></div>
+	</div>
+</div>
+
+<div class="card">
+	<h2>À valider</h2>
+	<div class="tablewrap"><table>
+		<thead><tr><th>Vendeur</th><th>Nouveau numéro</th><th>Numéro validé jusqu'ici</th><th>Procuration</th><th>Modifié le</th><th>Décision</th></tr></thead>
+		<tbody>
+		{% for v in a_valider %}
+			<tr>
+				<td><b>{{ v.nom_store|default:v.code }}</b><div class="muted mono" style="font-size:11px">{{ v.code }}{% if v.numero_contact %} · {{ v.numero_contact }}{% endif %}</div></td>
+				<td>{{ v.get_moyen_versement_display }} · <span class="mono">{{ v.compte_versement }}</span>{% if v.titulaire_versement %}<div class="muted">{{ v.titulaire_versement }}</div>{% endif %}</td>
+				<td style="font-size:12.5px">{% if v.compte_valide %}{{ v.get_moyen_valide_display }} · <span class="mono">{{ v.compte_valide }}</span>{% else %}<span class="muted">premier numéro</span>{% endif %}</td>
+				<td>{% if v.procuration_versement %}<a class="btn sm" href="{{ v.procuration_versement.url }}" target="_blank" rel="noopener">Ouvrir</a>{% else %}<span class="badge b-bad">manquante</span>{% endif %}</td>
+				<td class="nw muted">{{ v.versement_modifie_le|date:"d/m/Y H:i"|default:"—" }}</td>
+				<td>
+					<form method="post" class="tools" style="gap:6px">{% csrf_token %}<input type="hidden" name="vendeur" value="{{ v.code }}">
+						<button class="btn sm primary" name="action" value="valider" {% if not v.procuration_versement %}disabled title="Pas de procuration jointe"{% endif %} onclick="return confirm('Procuration vérifiée : valider {{ v.compte_versement }} pour {{ v.nom_store|default:v.code|escapejs }} ?')">Valider</button>
+						<input name="motif" placeholder="Motif si refus" maxlength="200" style="min-width:160px;padding:6px 9px;border:1px solid var(--line);border-radius:8px">
+						<button class="btn sm danger" name="action" value="refuser">Refuser</button>
+					</form>
+				</td>
+			</tr>
+		{% empty %}<tr><td colspan="6" class="muted" style="padding:18px">Aucun changement en attente.</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+</div>
+
+<div class="card">
+	<details class="dplier"{% if not a_valider %} open{% endif %}><summary class="dsum"><h2>Numéros validés · {{ valides|length }}</h2><span class="dinfo"><span class="dchev">▾</span></span></summary>
+	<div class="tablewrap"><table>
+		<thead><tr><th>Vendeur</th><th>Versement sur</th><th>Procuration</th><th>Validé</th></tr></thead>
+		<tbody>
+		{% for v in valides %}
+			<tr>
+				<td><b>{{ v.nom_store|default:v.code }}</b><div class="muted mono" style="font-size:11px">{{ v.code }}</div></td>
+				<td>{{ v.get_moyen_valide_display }} · <span class="mono">{{ v.compte_valide }}</span>{% if v.titulaire_valide %}<div class="muted">{{ v.titulaire_valide }}</div>{% endif %}</td>
+				<td>{% if v.procuration_versement %}<a class="btn sm" href="{{ v.procuration_versement.url }}" target="_blank" rel="noopener">Ouvrir</a>{% else %}<span class="badge b-warn">repris avant le contrôle</span>{% endif %}</td>
+				<td class="nw muted" style="font-size:12.5px">{% if v.versement_valide_le %}{{ v.versement_valide_le|date:"d/m/Y" }}{% if v.versement_valide_par %} · {{ v.versement_valide_par.get_full_name|default:v.versement_valide_par.email }}{% endif %}{% else %}avant le 18/11/2026{% endif %}</td>
+			</tr>
+		{% empty %}<tr><td colspan="4" class="muted" style="padding:18px">Aucun numéro validé.</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+	</details>
+</div>
+
+<div class="card">
+	<h2>Frais de versement</h2>
+	<div class="muted">À la charge du vendeur : déduits du net de chaque relevé au moment du versement, et affichés sur son relevé. Arrondis au franc.</div>
+	{% if peut_regler_frais %}
+	<form method="post">{% csrf_token %}<input type="hidden" name="frais" value="1">
+		<div class="tablewrap"><table>
+			<thead><tr><th>Moyen</th><th class="r">Taux (%)</th><th class="r">Plafond (F)</th></tr></thead>
+			<tbody>{% for v, l, f in frais %}<tr><td>{{ l }}</td><td class="r"><input class="zin" name="taux_{{ v }}" value="{{ f.taux|default:0|floatformat:'-2' }}" inputmode="decimal"></td><td class="r"><input class="zin" name="plafond_{{ v }}" value="{% if f.plafond is not None %}{{ f.plafond|floatformat:0 }}{% endif %}" placeholder="aucun" inputmode="numeric"></td></tr>{% endfor %}</tbody>
+		</table></div>
+		<div class="tools" style="margin-top:10px"><button class="btn primary">Enregistrer les frais</button></div>
+	</form>
+	{% else %}
+	<div class="chips">{% for v, l, f in frais %}<span class="chip">{{ l }} <span class="c">{{ f.taux|default:0|floatformat:"-2" }} %{% if f.plafond is not None %} · max {{ f.plafond|fcfa }}{% endif %}</span></span>{% endfor %}</div>
+	<div class="muted" style="font-size:12px">Réglés par le CEO.</div>
+	{% endif %}
+</div>
+
+{% if sans %}
+<div class="card">
+	<details class="dplier"><summary class="dsum"><h2>Vendeurs actifs sans numéro · {{ sans|length }}</h2><span class="dinfo"><span class="dchev">▾</span></span></summary>
+	<div class="vchips">{% for v in sans %}<span class="vchip">{{ v.nom_store|default:v.code }} <small>{{ v.numero_contact|default:"" }}</small></span>{% endfor %}</div>
+	</details>
+</div>
+{% endif %}
+{% endblock %}

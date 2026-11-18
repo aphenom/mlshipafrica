@@ -54,6 +54,10 @@ REVERSEMENTS = [_p('Reversements à faire', M + 'admin_liste_reversements', 'pai
                 _p('Par vendeur', M + 'admin_liste_reversements_vendeurs', 'paiements'),
                 _p('Historique', M + 'admin_liste_reversements', 'paiements', type_reversements='historique')]
 RELEVES = [_p('Relevés vendeurs', M + 'admin_releves', 'releves')]
+MOYENS = [_p('Moyens de paiement', M + 'admin_moyens_versement', 'moyens_versement')]
+# Ancien circuit (colis par colis) : seulement l'historique, pour consultation. Les vendeurs sont payés par les relevés.
+ANCIENS_PAIEMENTS = [_p('Anciens frais réglés', M + 'admin_liste_paiements', 'paiements', type_paiements='historique'),
+                     _p('Anciens reversements', M + 'admin_liste_reversements', 'paiements', type_reversements='historique')]
 ACOMPTES = [_p('Acomptes clients', M + 'admin_acomptes', 'acomptes')]
 BENEFICE = [_p('Journal et bénéfice', M + 'admin_benefice', 'benefice')]
 COMMISSIONS = [_p('Commissions', M + 'admin_commissions', 'commissions_voir')]
@@ -91,8 +95,8 @@ MENUS_EQUIPE = {
     R.COMPTABLE: [
         _r('Aujourd’hui', TABLEAU),
         _r('Shipping', EN_ROUTE + RECEPTION + RETOURS, DETAIL_COLIS),
-        _r('Encaissements', PRESTATAIRE + FRAIS),
-        _r('Versements', RELEVES + REVERSEMENTS + ACOMPTES),
+        _r('Encaissements', PRESTATAIRE),
+        _r('Versements', RELEVES + MOYENS + ACOMPTES + ANCIENS_PAIEMENTS),
         _r('Rapports', BENEFICE + COMMISSIONS + JOURNAUX_ARGENT + MOUVEMENTS),
         _r('Vendeurs', VENDEURS, FICHE_VENDEUR),
     ],
@@ -103,8 +107,8 @@ MENUS_EQUIPE = {
     ],
     R.SUPER: [
         _r('Tableau de bord', TABLEAU),
-        _r('Finance', BENEFICE + RELEVES + ACOMPTES + COMMISSIONS),
-        _r('Paiements', FRAIS + REVERSEMENTS + JOURNAUX_ARGENT),
+        _r('Finance', BENEFICE + ACOMPTES + COMMISSIONS),
+        _r('Paiements', RELEVES + MOYENS + ANCIENS_PAIEMENTS + JOURNAUX_ARGENT),
         _r('Prestataire', PRESTATAIRE),
         _r('Commercial', VENDEURS, FICHE_VENDEUR),
         _r('Shipping', APPELS + EN_ROUTE + RECEPTION + RETOURS + STOCK + MOUVEMENTS, DETAIL_COLIS),

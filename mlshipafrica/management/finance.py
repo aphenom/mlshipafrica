@@ -16,7 +16,7 @@ encore relevées. Généré le lundi et le jeudi (commande releves_vendeurs). La
 """
 import csv
 import io
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -26,11 +26,12 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from management.models import Article, Depart, Ecriture, HistoriqueArticle, Releve
-from mlshipafrica.enums import StatutReleve, StatutTraitement as S, TypeEcriture as T
+from mlshipafrica.enums import MoyenVersement, StatutReleve, StatutTraitement as S, TypeEcriture as T
 
 LIVRES = (S.LIVRE, S.LIVRE_PAYE, S.REVERSE)
 TYPES_VENDEUR_DEBIT = (T.FRAIS, T.FRAIS_COLLECTE, T.FRAIS_RETOUR, T.GARDE, T.STOCKAGE)
 ZERO = Decimal('0')
+STATUTS_EN_ROUTE = (S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE, S.ECHEC_LIVRAISON, S.RECONDUIT, S.EN_RETOUR)
 
 
 def _d(v):
@@ -149,17 +150,93 @@ def generer_releves(arrete=None):
     return crees
 
 
+def frais_versement(moyen, net):
+    """Frais Mobile Money à la charge du vendeur, arrondis au franc (taux et plafond réglés par le CEO)."""
+    from management.models import FraisVersement
+    net = _d(net)
+    if net <= 0 or not moyen:
+        return ZERO
+    regle = FraisVersement.objects.filter(moyen=moyen).first()
+    if regle is None or not regle.taux:
+        return ZERO
+    frais = (net * regle.taux / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    if regle.plafond is not None:
+        frais = min(frais, _d(regle.plafond))
+    return frais
+
+
+@transaction.atomic
+def enregistrer_coordonnees(vendeur, moyen, compte, titulaire='', procuration=None):
+    """
+    Le vendeur saisit ou change ses coordonnées de versement. Un changement de moyen ou de numéro bloque les
+    versements jusqu'à ce que la comptable valide la procuration : on continue à n'utiliser que les dernières
+    coordonnées validées. Renvoie True s'il y a eu un changement.
+    """
+    compte, titulaire = (compte or '').strip()[:60], (titulaire or '').strip()[:100]
+    if moyen not in MoyenVersement.values or not compte:
+        raise ValidationError("Choisissez un moyen de versement et indiquez le numéro ou le RIB.")
+    changement = (moyen, compte) != (vendeur.moyen_versement, vendeur.compte_versement)
+    if changement and not procuration and not (vendeur.procuration_versement and (moyen, compte) == (vendeur.moyen_valide, vendeur.compte_valide)):
+        raise ValidationError("Joignez la procuration signée (photo ou PDF) : elle est obligatoire pour tout nouveau numéro.")
+    vendeur.moyen_versement, vendeur.compte_versement, vendeur.titulaire_versement = moyen, compte, titulaire
+    if procuration:
+        vendeur.procuration_versement = procuration
+    if changement:
+        vendeur.versement_modifie_le = timezone.now()
+        vendeur.versement_refus_motif = ''
+        # Revenir aux coordonnées déjà validées ne demande pas de nouvelle validation
+        vendeur.versement_valide = (moyen, compte) == (vendeur.moyen_valide, vendeur.compte_valide) and bool(vendeur.compte_valide)
+    vendeur.save()
+    return changement
+
+
+@transaction.atomic
+def valider_coordonnees(vendeur, par):
+    if not vendeur.compte_versement or not vendeur.moyen_versement:
+        raise ValidationError("Ce vendeur n'a pas de coordonnées à valider.")
+    if not vendeur.procuration_versement:
+        raise ValidationError("Pas de procuration jointe : demandez-la au vendeur avant de valider.")
+    vendeur.moyen_valide, vendeur.compte_valide = vendeur.moyen_versement, vendeur.compte_versement
+    vendeur.titulaire_valide = vendeur.titulaire_versement or ''
+    vendeur.versement_valide, vendeur.versement_valide_le, vendeur.versement_valide_par = True, timezone.now(), par
+    vendeur.versement_refus_motif = ''
+    vendeur.save()
+
+
+@transaction.atomic
+def refuser_coordonnees(vendeur, par, motif):
+    """Refus : on revient aux dernières coordonnées validées (s'il y en a), le vendeur voit le motif."""
+    if not (motif or '').strip():
+        raise ValidationError("Indiquez le motif du refus : le vendeur le verra.")
+    vendeur.versement_refus_motif = motif.strip()[:200]
+    if vendeur.compte_valide:
+        vendeur.moyen_versement, vendeur.compte_versement = vendeur.moyen_valide, vendeur.compte_valide
+        vendeur.titulaire_versement = vendeur.titulaire_valide
+        vendeur.versement_valide = True
+    else:
+        vendeur.versement_valide = False
+    vendeur.save()
+
+
 @transaction.atomic
 def marquer_verse(releve, user, reference, moyen=''):
-    releve = Releve.objects.select_for_update().get(pk=releve.pk)
+    """Versement d'un relevé : uniquement sur les coordonnées validées, frais de versement déduits du net."""
+    releve = Releve.objects.select_for_update().select_related('vendeur').get(pk=releve.pk)
     if releve.statut == StatutReleve.VERSE:
         raise ValidationError("Ce relevé est déjà versé.")
     if not (reference or '').strip():
         raise ValidationError("Indiquez la référence du versement.")
+    vendeur = releve.vendeur
+    if releve.net > 0 and not (vendeur.versement_valide and vendeur.compte_valide and vendeur.moyen_valide):
+        raise ValidationError("Coordonnées de versement de %s non validées : validez sa procuration dans « Moyens de paiement » avant de verser." % (
+            vendeur.nom_store or vendeur.code))
     releve.statut = StatutReleve.VERSE
     releve.date_versement = timezone.now()
     releve.reference_versement = reference.strip()[:100]
-    releve.moyen_versement = moyen or (releve.vendeur.moyen_versement or '')
+    releve.moyen_versement = vendeur.moyen_valide or moyen or ''
+    releve.compte_verse, releve.titulaire_verse = vendeur.compte_valide, vendeur.titulaire_valide
+    releve.frais_versement = frais_versement(releve.moyen_versement, releve.net)
+    releve.montant_verse = max(releve.net - releve.frais_versement, ZERO) if releve.net > 0 else ZERO
     releve.verse_par = user
     releve.save()
     # Les colis du relevé sont réglés : frais payés, collecte reversée (statut « Reversé »)
@@ -182,18 +259,21 @@ def journal(license, debut, fin):
     par_type = {r['type']: _d(r['t']) for r in e.values('type').annotate(t=Sum('montant'))}
     revenus = sum((par_type.get(t, ZERO) for t in TYPES_VENDEUR_DEBIT), ZERO)
     cout = par_type.get(T.COUT_PRESTATAIRE, ZERO)
+    # Le coût prestataire est compté au départ, les frais ML à la livraison : le coût des colis encore en route est
+    # « engagé », il ne pèse pas sur le bénéfice réalisé tant que le colis n'est pas terminé.
+    cout_engage = _d(e.filter(type=T.COUT_PRESTATAIRE, article__statut_traitement__in=STATUTS_EN_ROUTE).aggregate(t=Sum('montant'))['t'])
     livres = HistoriqueArticle.objects.filter(license=license, date_creation__gte=debut, date_creation__lt=fin,
                                               etat_suppression=False, statut_traitement__in=(S.LIVRE, S.LIVRE_PAYE)
                                               ).values('article').distinct().count()
     departs = Depart.objects.filter(article__license=license, date__gte=debut, date__lt=fin)
-    en_route = Article.objects.filter(license=license, etat_suppression=False, statut_traitement__in=(
-        S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE, S.ECHEC_LIVRAISON, S.RECONDUIT, S.EN_RETOUR))
+    en_route = Article.objects.filter(license=license, etat_suppression=False, statut_traitement__in=STATUTS_EN_ROUTE)
     from management.models import Acompte
     acomptes = Acompte.objects.filter(license=license, date_reception__gte=debut, date_reception__lt=fin).aggregate(
         n=Count('id'), t=Sum('montant'))
     return {
         'par_type': [(T(t).label, par_type.get(t, ZERO)) for t in (T.FRAIS, T.FRAIS_COLLECTE, T.FRAIS_RETOUR, T.GARDE, T.STOCKAGE)],
         'revenus': revenus, 'cout_prestataire': cout, 'benefice': revenus - cout,
+        'cout_engage': cout_engage, 'cout_realise': cout - cout_engage, 'benefice_realise': revenus - (cout - cout_engage),
         'collecte': par_type.get(T.COLLECTE, ZERO), 'livres': livres, 'departs': departs.count(),
         'cout_facture': _d(departs.aggregate(t=Sum('cout_facture'))['t']),
         'ecart_prestataire': _d(departs.filter(cout_facture__isnull=False).aggregate(

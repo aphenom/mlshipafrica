@@ -311,3 +311,14 @@ Page **Fichier du prestataire** (`/management/admin_fichier_prestataire/`), droi
 - **Fichier importé par erreur** : le CEO seul (droit `prestataire_supprimer`) a un bouton « Supprimer ce fichier ». Les coûts que ce fichier avait rapprochés sur les départs sont remis à zéro, ses lignes sont retirées, l'import reste listé dans « Fichiers supprimés » (qui, quand) et le journal d'audit garde la trace. On peut ensuite réimporter le bon fichier.
 - Modèles : `ImportPrestataire`, `LignePrestataire` (migration `0030_fichier_prestataire`). Chaque import est conservé ; la page propose les 30 derniers.
 
+
+---
+
+## 17. Argent des vendeurs (lot du 18/11/2026)
+
+- **Un seul circuit de paiement** : les vendeurs sont payés par les **relevés** (lundi et jeudi). Les anciennes pages « Frais à régler » et « Reversements à faire » (colis par colis) sortent des menus ; leur historique reste consultable (« Anciens frais réglés », « Anciens reversements »). Aucune donnée supprimée.
+- **Moyens de paiement** (`/management/admin_moyens_versement/`, droit `moyens_versement` : CEO et comptable). Le vendeur saisit son numéro dans Mon argent et joint une **procuration signée** (obligatoire pour tout nouveau numéro). Tant que la comptable n'a pas validé, ses relevés sont **bloqués** et rien n'est envoyé, ni sur l'ancien ni sur le nouveau numéro. Refus avec motif : retour aux dernières coordonnées validées. On verse toujours sur `compte_valide`, jamais sur le numéro saisi.
+- **Frais de versement** (modèle `FraisVersement`, réglés par le CEO, droit `frais_versement_regler`) : à la charge du vendeur, déduits du net au versement (Wave 1 % par défaut, arrondi au franc, plafond facultatif). Le relevé garde `frais_versement`, `montant_verse`, `compte_verse`, `titulaire_verse`.
+- **Migration 0031** : crée les frais par défaut et reprend comme validées les coordonnées déjà saisies avant ce lot (badge « repris avant le contrôle »), pour ne pas bloquer les prochains versements.
+- **Bénéfice** : le tableau du CEO affiche le bénéfice **réalisé** (colis terminés). Le coût du prestataire des colis encore en route est affiché à part (« coût engagé »). Le taux de livraison indique sur combien de colis terminés il est calculé.
+- **Comptabilité** (commit séparé, à appliquer en premier) : `Article.save` enregistre le colis avant son historique. Après la mise en ligne, lancer `python manage.py reprise_comptable` pour rattraper les encaissements et frais non comptés (ils iront dans le prochain relevé).

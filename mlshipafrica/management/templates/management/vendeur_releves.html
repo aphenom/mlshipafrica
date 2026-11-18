@@ -58,13 +58,17 @@
 
 	<aside class="aside card">
 		<h2>Où recevoir mon argent</h2>
-		<form method="post" class="form" style="grid-template-columns:1fr">{% csrf_token %}
+		{% if vendeur.versement_refus_motif %}<div class="note bad">Votre dernier changement a été refusé : {{ vendeur.versement_refus_motif }}</div>{% endif %}
+		{% if vendeur.compte_versement and not vendeur.versement_valide %}<div class="note" style="background:var(--warn-soft);color:var(--warn)"><b>En attente de validation.</b> Nos versements sont suspendus jusqu'à ce que la comptabilité ait vérifié votre procuration{% if vendeur.compte_valide %} ; en attendant, rien n'est envoyé sur l'ancien numéro{% endif %}.</div>
+		{% elif vendeur.versement_valide %}<div class="note">Versements sur : <b>{{ vendeur.get_moyen_valide_display }}</b> · <span class="mono">{{ vendeur.compte_valide }}</span>{% if vendeur.titulaire_valide %} · {{ vendeur.titulaire_valide }}{% endif %} <span class="badge b-ok">validé</span></div>{% endif %}
+		<form method="post" enctype="multipart/form-data" class="form" style="grid-template-columns:1fr">{% csrf_token %}
 			<label class="field">Moyen *<select name="moyen_versement" required><option value="">Choisir</option>{% for v, l in moyens %}<option value="{{ v }}" {% if vendeur.moyen_versement == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
 			<label class="field">Numéro ou RIB *<input name="compte_versement" value="{{ vendeur.compte_versement|default:'' }}" required maxlength="60"></label>
 			<label class="field">Titulaire<input name="titulaire_versement" value="{{ vendeur.titulaire_versement|default:'' }}" maxlength="100"></label>
+			<label class="field">Procuration signée {% if not vendeur.procuration_versement %}*{% endif %}<input type="file" name="procuration_versement" accept="image/*,application/pdf"><span class="hint">{% if vendeur.procuration_versement %}Déjà jointe. Obligatoire à nouveau si vous changez de numéro.{% else %}Photo ou PDF, obligatoire.{% endif %}</span></label>
 			<button class="btn primary">Enregistrer</button>
 		</form>
-		<div class="note ml">Par sécurité, chaque changement vous est confirmé par SMS.</div>
+		<div class="note ml">Par sécurité, tout changement de numéro est vérifié par la comptabilité avant le prochain versement, et vous est confirmé par SMS.{% if frais_versement_regles %} Frais de versement à votre charge, déduits du montant envoyé : {% for f in frais_versement_regles %}{{ f.get_moyen_display }} {{ f.taux|floatformat:"-2" }} %{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %}</div>
 	</aside>
 </div>
 {% endblock %}

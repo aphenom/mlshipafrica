@@ -28,7 +28,7 @@
 		{% for article in page %}
 			<tr>
 				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a><div class="muted" style="font-size:11px">{{ article.date_creation|date:"d/m/Y H:i" }}{% if article.code_tracking %} · {{ article.code_tracking }}{% endif %}</div></td>
-				<td>{% if article.vendeur %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store }}</a><div class="muted mono" style="font-size:11px">{{ article.vendeur.code }}</div>{% else %}—{% endif %}</td>
+				<td>{% if article.vendeur %}{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store }}</a>{% else %}{{ article.vendeur.nom_store }}{% endif %}<div class="muted mono" style="font-size:11px">{{ article.vendeur.code }}</div>{% else %}—{% endif %}</td>
 				<td>{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}<div class="muted nw" style="font-size:11.5px">{{ article.numero_principal_destinataire|default:"" }}</div></td>
 				<td>{{ article.localite_arrivee.nom|default:"—" }}{% if article.zone_arrivee %}<div class="muted" style="font-size:11px">{{ article.zone_arrivee.nom }}</div>{% endif %}</td>
 				<td class="r num nw">{% if article.is_option_encaissement %}{{ article.valeur_totale|fcfa }}{% else %}<span class="muted">payé</span>{% endif %}<div class="muted" style="font-size:11px">{% if article.is_option_recuperation %}Ramassage{% elif article.produit_stock_id %}Stock{% else %}Dépôt{% endif %}</div></td>

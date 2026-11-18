@@ -111,6 +111,8 @@ def pilotage(license, debut, fin):
     vendeurs = Vendeur.objects.filter(license=license, etat_suppression=False)
     return {
         'commandes': c['total'], 'livres': c['livres'], 'echecs': c['echecs'], 'annules': c['annules'], 'taux': t,
+        # Le taux ne compte que les colis terminés (livrés ou en échec) : on affiche combien, et combien sont encore en cours
+        'termines': c['livres'] + c['echecs'], 'en_cours': max(c['total'] - c['livres'] - c['echecs'] - c['annules'], 0),
         'taux_classe': 't-ok' if t is not None and t >= 80 else 't-warn' if t is not None and t >= 75 else 't-bad' if t is not None else '',
         'non_traitees': non_traitees, 'heures_sans_appel': HEURES_SANS_APPEL, 'bloques': bloques, 'acomptes': acomptes,
         'confirmees': confirmees, 'par_statut': par_statut, 'circulation': circulation, 'total_circulation': total_circulation,
@@ -129,10 +131,10 @@ def argent_ceo(license, debut, fin):
     a_verser = Releve.objects.filter(vendeur__license=license, statut=StatutReleve.A_VERSER).aggregate(t=Sum('net'), n=Count('id'))
     a_rembourser = Acompte.objects.filter(article__license=license, statut=StatutAcompte.A_REMBOURSER).aggregate(t=Sum('montant'), n=Count('id'))
     variation = None
-    if precedent['benefice']:
-        variation = round((j['benefice'] - precedent['benefice']) * 100 / abs(precedent['benefice']))
+    if precedent['benefice_realise']:
+        variation = round((j['benefice_realise'] - precedent['benefice_realise']) * 100 / abs(precedent['benefice_realise']))
     return {'journal': j, 'precedent': precedent, 'variation': variation,
-            'marge_colis': (j['benefice'] / j['livres']) if j['livres'] else 0,
+            'marge_colis': (j['benefice_realise'] / j['livres']) if j['livres'] else 0,
             'a_verser': a_verser['t'] or 0, 'releves_a_verser': a_verser['n'] or 0,
             'a_rembourser': a_rembourser['t'] or 0, 'acomptes_a_rembourser': a_rembourser['n'] or 0}
 
