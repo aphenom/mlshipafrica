@@ -2,7 +2,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django_dump_die.middleware import dd
 
-from management.models import Article, Encaissement, HistoriqueArticle, ProfilStaff, ReglementArticle, Reversement, Vendeur
+from management.models import Article, Encaissement, HistoriqueArticle, ProduitStock, ProfilStaff, ReglementArticle, Reversement, Vendeur
 from management.forms import VendeurColisForm, VendeurForm
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseRedirect
@@ -1097,25 +1097,60 @@ def vendeur_stock(request):
         tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_jour', None)
         return render(request, 'management/vendeur_stock_offre.html', locals())
     if request.method == 'POST':
-        refs, noms, qtes = request.POST.getlist('reference'), request.POST.getlist('designation'), request.POST.getlist('quantite')
-        photos = [request.FILES.get('photo_%d' % i) for i in range(len(refs))]
-        try:
-            lignes = [(r, d, int(q or 0), p) for r, d, q, p in zip(refs, noms, qtes, photos)]
-            entree = annoncer_entree(vendeur, lignes, request.POST.get('commentaire', ''))
+        action = request.POST.get('action')
+        if action == 'creer_produit':
+            reference = (request.POST.get('reference') or '').strip()[:60]
+            designation = (request.POST.get('designation') or '').strip()[:150]
+            if not reference or not designation:
+                django_messages.error(request, "Indiquez la référence et le nom du produit.")
+            elif ProduitStock.objects.filter(vendeur=vendeur, reference__iexact=reference).exists():
+                django_messages.error(request, "La référence %s existe déjà dans vos produits." % reference)
+            else:
+                ProduitStock.objects.create(vendeur=vendeur, reference=reference, designation=designation,
+                                            photo=request.FILES.get('photo') or None)
+                django_messages.success(request, "Produit %s créé. Faites un envoi de stock pour le remplir." % designation)
+            return redirect('management:management_vendeur_stock')
+        if action == 'envoi':
+            produits_choisis = {str(p.pk): p for p in vendeur.produits_stock.filter(actif=True)}
+            lignes = []
+            try:
+                for pid, q in zip(request.POST.getlist('produit'), request.POST.getlist('quantite')):
+                    if pid in produits_choisis and int(q or 0) > 0:
+                        p = produits_choisis[pid]
+                        lignes.append((p.reference, p.designation, int(q), p.photo or None))
+                entree = annoncer_entree(vendeur, lignes, request.POST.get('commentaire', ''))
+            except (ValidationError, ValueError) as erreur:
+                django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Quantité invalide."])))
+                return redirect('management:management_vendeur_stock')
             from management.notifications import stock_annonce
             stock_annonce(entree)
-            django_messages.success(request, "Envoi %s annoncé : il sera contrôlé à la réception." % entree.code)
-        except (ValidationError, ValueError) as erreur:
-            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Quantité invalide."])))
+            django_messages.success(request, "Envoi %s créé : imprimez le bordereau en 2 exemplaires et remettez-le avec vos produits." % entree.code)
+            return redirect('management:management_vendeur_bordereau_stock', entree.code)
         return redirect('management:management_vendeur_stock')
-    produits = vendeur.produits_stock.filter(actif=True)
-    entrees = EntreeStock.objects.filter(vendeur=vendeur).prefetch_related('lignes')[:20]
+    from management.models import Ecriture, LigneEntreeStock
+    from mlshipafrica.enums import StatutEntreeStock, StatutReleve, TypeEcriture
+    produits = list(vendeur.produits_stock.filter(actif=True).order_by('designation'))
+    en_route = dict(LigneEntreeStock.objects.filter(entree__vendeur=vendeur, entree__statut=StatutEntreeStock.ANNONCEE)
+                    .values_list('reference').annotate(t=Sum('quantite_annoncee')))
+    for p in produits:
+        p.en_route = en_route.get(p.reference, 0)
+    entrees = EntreeStock.objects.filter(vendeur=vendeur).prefetch_related('lignes')[:30]
     mouvements = MouvementStock.objects.filter(produit__vendeur=vendeur).select_related('produit', 'article')[:50]
     debut_mois = timezone.localdate().replace(day=1)
     stockage_mois = FacturationStockage.objects.filter(vendeur=vendeur, jour__gte=debut_mois).aggregate(t=Sum('montant'))['t'] or 0
+    # Stockage déjà déduit : lignes de stockage du mois reprises sur une facture de paiement (non annulée)
+    debut_mois_dt = timezone.make_aware(datetime.datetime.combine(debut_mois, datetime.time.min))
+    lignes_stockage = Ecriture.objects.filter(vendeur=vendeur, type=TypeEcriture.STOCKAGE, date__gte=debut_mois_dt)
+    stockage_deduit = lignes_stockage.filter(releve__isnull=False).exclude(releve__statut=StatutReleve.ANNULE).aggregate(t=Sum('montant'))['t'] or 0
+    stockage_a_deduire = max((stockage_mois or 0) - stockage_deduit, 0)
+    dernier_releve_stockage = (lignes_stockage.filter(releve__isnull=False).exclude(releve__statut=StatutReleve.ANNULE)
+                               .select_related('releve').order_by('-releve__date_creation').first())
+    from management.finance import configuration
+    tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_jour', None)
     pieces = sum(max(p.quantite_disponible, 0) for p in produits)
     epuises = sum(1 for p in produits if p.quantite_disponible <= 0)
     de_cote = sum(p.quantite_de_cote for p in produits)
+    envois_en_attente = sum(1 for e in entrees if e.statut == StatutEntreeStock.ANNONCEE)
     return render(request, 'management/vendeur_stock.html', locals())
 
 

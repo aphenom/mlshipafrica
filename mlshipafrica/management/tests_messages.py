@@ -79,3 +79,21 @@ class MessagesEtCloche(tests_pages.RecettePages):
         self.assertEqual(r['Location'], '/management/vendeur_releves/')
         n.refresh_from_db()
         self.assertTrue(n.lue)
+
+    def test_stockage_deduit_notifie_et_visible(self):
+        from decimal import Decimal
+        from management.finance import generer_releves
+        from management.models import Ecriture, FacturationStockage
+        from management.notifications import releves_emis
+        from mlshipafrica.enums import TypeEcriture
+        from django.utils import timezone
+        FacturationStockage.objects.create(vendeur=self.vendeur, jour=timezone.localdate(), pieces=30, montant=Decimal('300'))
+        Ecriture.objects.create(vendeur=self.vendeur, type=TypeEcriture.STOCKAGE, montant=Decimal('300'), cle='stk-test',
+                                license=self.vendeur.license)
+        with self.captureOnCommitCallbacks(execute=True):
+            releves = generer_releves(vendeurs=[self.vendeur], par=self.comptes[R.COMPTABLE])
+            releves_emis(releves, self.comptes[R.COMPTABLE])
+        self.assertTrue(Notification.objects.filter(destinataire=self.vendeur.user, titre__startswith='Frais de stockage déduits').exists())
+        self.client.force_login(self.vendeur.user)
+        page = self.client.get('/management/vendeur_stock/').content.decode()
+        self.assertIn('déjà déduit', page)

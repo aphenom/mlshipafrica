@@ -202,6 +202,10 @@ def releves_emis(releves, par):
             notifier([r.vendeur.user], 'paiement', "Facture de paiement %s émise" % r.code,
                      "Votre paiement est en préparation : voir le détail colis par colis.",
                      reverse('management:management_facture_paiement', args=[r.code]), 'emis:%s' % r.pk)
+            if r.total_stockage:
+                notifier([r.vendeur.user], 'stock', "Frais de stockage déduits : %s F" % '{:,.0f}'.format(r.total_stockage).replace(',', '\u202f'),
+                         "Déduits de votre facture de paiement %s." % r.code,
+                         reverse('management:management_vendeur_stock'), 'stockage-deduit:%s' % r.pk)
     if releves:
         license = releves[0].vendeur.license
         total = sum((r.net for r in releves if r.net > 0), 0)

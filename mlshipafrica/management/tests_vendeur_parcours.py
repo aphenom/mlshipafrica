@@ -81,20 +81,29 @@ class ParcoursVendeur(tests_pages.RecettePages):
         self.assertIn('voir la commande', page)
 
     def test_stock_photo_et_validation_du_manager(self):
+        page = self.client.get('/management/vendeur_stock/').content.decode()
+        self.assertIn('Créer un nouveau produit', page)
+        self.assertIn('Envoi de stock', page)
+        self.assertNotIn('+ Nouvelle commande', page)                                # plus de création de commande ici
         photo = SimpleUploadedFile('creme.png', PNG, content_type='image/png')
-        self.client.post('/management/vendeur_stock/', {'reference': ['CR-1'], 'designation': ['Crème'], 'quantite': ['12'],
-                                                        'photo_0': photo})
-        entree = EntreeStock.objects.get(vendeur=self.vendeur)
-        ligne = entree.lignes.get()
-        self.assertTrue(ligne.photo)
-        self.assertFalse(ProduitStock.objects.filter(vendeur=self.vendeur, reference='CR-1').exists())   # en attente
-        self.client.force_login(self.comptes[R.MANAGER])
-        page = self.client.get('/management/admin_stock/').content.decode()
-        self.assertIn(ligne.photo.url, page)
-        self.client.post('/management/admin_stock/', {'valider_entree': entree.pk, 'recu_%d' % ligne.pk: '10'})
+        self.client.post('/management/vendeur_stock/', {'action': 'creer_produit', 'reference': 'CR-1', 'designation': 'Crème', 'photo': photo})
         produit = ProduitStock.objects.get(vendeur=self.vendeur, reference='CR-1')
-        self.assertEqual(produit.quantite_disponible, 10)
+        self.assertEqual(produit.quantite_disponible, 0)                            # créé vide
         self.assertTrue(produit.photo)
+        doublon = self.client.post('/management/vendeur_stock/', {'action': 'creer_produit', 'reference': 'cr-1', 'designation': 'X'}, follow=True)
+        self.assertIn('existe déjà', doublon.content.decode())
+        r = self.client.post('/management/vendeur_stock/', {'action': 'envoi', 'produit': [produit.pk], 'quantite': ['12']})
+        entree = EntreeStock.objects.get(vendeur=self.vendeur)
+        self.assertEqual(r['Location'], '/management/vendeur_bordereau_stock/%s/' % entree.code)   # le bordereau s'ouvre
+        ligne = entree.lignes.get()
+        self.assertTrue(ligne.photo)                                                 # photo reprise du produit
+        page = self.client.get('/management/vendeur_stock/').content.decode()
+        self.assertIn('En attente du comptage', page)
+        self.client.force_login(self.comptes[R.MANAGER])
+        self.assertIn(ligne.photo.url, self.client.get('/management/admin_stock/').content.decode())
+        self.client.post('/management/admin_stock/', {'valider_entree': entree.pk, 'recu_%d' % ligne.pk: '10'})
+        produit.refresh_from_db()
+        self.assertEqual(produit.quantite_disponible, 10)
 
     def test_sans_option_stockage_le_vendeur_peut_la_demander(self):
         self.vendeur.option_stockage = False
