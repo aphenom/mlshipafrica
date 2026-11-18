@@ -26,6 +26,7 @@
 	</div>
 	{% include "management/_lignes_paiement.html" with lignes=lignes autres=autres r=releve_detail %}
 </div>
+{% include "management/_messages.html" with releve=releve_detail fil=fil article=None %}
 {% endif %}
 
 {% if etape == 'unpaid' %}
@@ -99,7 +100,7 @@
 		<tbody>
 		{% for r in releves %}
 			<tr>
-				<td class="nw"><a class="linkcode" href="?etape={{ etape }}&releve={{ r.code }}">{{ r.code }}</a><div class="muted" style="font-size:11px">émise le {{ r.date_arrete|date:"d/m/Y" }}{% if r.genere_par %} · {{ r.genere_par.get_full_name|default:r.genere_par.email }}{% endif %}</div></td>
+				<td class="nw"><a class="linkcode" href="?etape={{ etape }}&releve={{ r.code }}">{{ r.code }}</a>{% if r.contestation_ouverte %} <span class="badge b-bad">contestée</span>{% endif %}<div class="muted" style="font-size:11px">émise le {{ r.date_arrete|date:"d/m/Y" }}{% if r.genere_par %} · {{ r.genere_par.get_full_name|default:r.genere_par.email }}{% endif %}</div></td>
 				<td>{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' r.vendeur.code %}">{{ r.vendeur.nom_store|default:r.vendeur.code }}</a>{% else %}{{ r.vendeur.nom_store|default:r.vendeur.code }}{% endif %}</td>
 				<td style="font-size:12.5px">{% if r.statut == 'verse' %}{% if r.compte_verse %}{{ r.get_moyen_versement_display }} · <span class="mono">{{ r.compte_verse }}</span>{% else %}{{ r.get_moyen_versement_display|default:"—" }}{% endif %}{% elif r.statut == 'annule' %}—{% elif r.vendeur.versement_valide and r.vendeur.compte_valide %}{{ r.vendeur.get_moyen_valide_display }} · <span class="mono">{{ r.vendeur.compte_valide }}</span>{% elif r.vendeur.compte_versement %}<span class="badge b-warn">à valider</span>{% else %}<span class="badge b-bad">non renseigné</span>{% endif %}</td>
 				<td class="r num nw">{{ r.total_collecte|fcfa }}</td>

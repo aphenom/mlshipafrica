@@ -36,6 +36,7 @@
 			{% if user.is_authenticated %}
 			<div class="tools">
 				<span class="chip who"><span class="lbl">Connecté :</span> <b>{% if user.account_vendeur %}{{ user.account_vendeur.nom_store|default:user.email }}{% else %}{{ user.get_full_name|default:user.email }}{% endif %}</b>{% if menu.espace %}&nbsp;· {{ menu.espace }}{% endif %}</span>
+				<a class="chip cloche" href="{% url 'management:management_notifications' %}" aria-label="Notifications{% if notifications_non_lues %} : {{ notifications_non_lues }} non lue{{ notifications_non_lues|pluralize }}{% endif %}"><span aria-hidden="true">🔔</span>{% if notifications_non_lues %}<span class="pastille">{{ notifications_non_lues }}</span>{% endif %}</a>
 				<a class="chip" href="{% url 'account_change_password' %}">Mot de passe</a>
 			</div>
 			{% endif %}

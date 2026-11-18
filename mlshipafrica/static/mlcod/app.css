@@ -335,3 +335,16 @@ body.mlcod .jour .jt { font-size: 28px; font-weight: 800; }
 }
 .kvs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 24px; font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Cloche de notifications */
+.chip.cloche { position: relative; text-decoration: none; }
+.chip.cloche .pastille { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+/* Messages sur une commande ou une facture */
+.fil { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+.fil .msg { padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); max-width: 92%; }
+.fil .msg.moi { align-self: flex-end; background: var(--brand-soft); }
+.fil .msg.interne { background: var(--warn-soft); }
+.fil .msg small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+.notif { display: flex; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.notif.nonlue { background: var(--brand-soft); }
+.notif b { display: block; }

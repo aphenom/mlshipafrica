@@ -78,6 +78,8 @@
 		</div>
 		{% endif %}
 
+		{% include "management/_messages.html" with article=article fil=fil %}
+
 		<div class="card">
 			<h2>Confirmation et acompte</h2>
 			<div class="muted">{{ article.get_etat_confirmation_display }}{% if article.date_confirmation %} le {{ article.date_confirmation|date:"d/m/Y H:i" }}{% if article.confirme_par %} par {{ article.confirme_par.get_full_name|default:article.confirme_par.email }}{% endif %}{% endif %} · {{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }}{% if article.agent_cod %} · agent {{ article.agent_cod.user.get_full_name|default:article.agent_cod.user.email }}{% endif %}</div>

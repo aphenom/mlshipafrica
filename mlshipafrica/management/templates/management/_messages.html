@@ -1,0 +1,19 @@
+{# Fil de messages : article OU releve ; retour = URL de la page #}
+<div class="card" id="messages">
+	<h2>Messages{% if fil %} · {{ fil|length }}{% endif %}</h2>
+	<div class="fil">
+	{% for m in fil %}
+		<div class="msg{% if m.auteur_id == user.pk %} moi{% endif %}{% if m.interne %} interne{% endif %}"><small>{% if m.de_vendeur %}{{ m.auteur.account_vendeur.nom_store|default:"Vendeur" }}{% elif user.is_staff %}{{ m.auteur.get_full_name|default:m.auteur.email }}{% else %}ML COD Intérieur{% endif %} · {{ m.date|date:"d/m H:i" }}{% if m.interne %} · note interne{% endif %}{% if m.contestation %} · <b class="t-bad">contestation</b>{% endif %}</small>{{ m.texte|linebreaksbr }}</div>
+	{% empty %}<div class="muted" style="font-size:12.5px">Aucun message. {% if user.is_staff %}Écrivez au vendeur, ou laissez une note interne pour l’équipe.{% else %}Une question sur {% if releve %}cette facture{% else %}cette commande{% endif %} ? Écrivez à ML COD Intérieur.{% endif %}</div>{% endfor %}
+	</div>
+	<form method="post" action="{% url 'management:management_poster_message' %}" class="form" style="grid-template-columns:1fr;margin-top:8px">{% csrf_token %}
+		{% if article %}<input type="hidden" name="article" value="{{ article.code }}">{% else %}<input type="hidden" name="releve" value="{{ releve.code }}">{% endif %}
+		<input type="hidden" name="retour" value="{{ request.get_full_path }}#messages">
+		<label class="field">Votre message<textarea name="texte" rows="2" maxlength="2000" required></textarea></label>
+		<div class="tools">
+			{% if user.is_staff %}<label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" name="interne" value="1"> Note interne (le vendeur ne la voit pas)</label>{% if releve and releve.contestation_ouverte %}<label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" name="resolu" value="1"> Contestation réglée</label>{% endif %}
+			{% elif releve %}<label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" name="contester" value="1"> Je conteste cette facture</label>{% endif %}
+			<button class="btn primary sm">Envoyer</button>
+		</div>
+	</form>
+</div>

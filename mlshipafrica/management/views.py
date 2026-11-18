@@ -215,6 +215,8 @@ def vendeur_detail_colis(request, code):
                 license=vendeur.license, is_arrivee=True, etat_validation=True, etat_suppression=False).select_related('zone')]
     except Exception as e:
         raise Http404
+    from management.notifications import messages_visibles
+    fil = messages_visibles(request.user, article=article)
     return render(request, 'management/vendeur_detail_colis.html', locals())
 
 
@@ -502,6 +504,8 @@ def admin_detail_colis(request, code):
             statut_traitement_applicables = statuts_suivants(article, dernier_historique, user) if peut_bouger else []
             statuts_corrigibles = statuts_correction(article, user)
             peut_modifier_commande = a_le_droit(user, 'colis_modifier')
+            from management.notifications import messages_visibles
+            fil = messages_visibles(user, article=article)
 
             # print(statut_traitement_applicables)
 
@@ -1051,6 +1055,8 @@ def vendeur_stock(request):
             if not vendeur.demande_stockage_le:
                 vendeur.demande_stockage_le = timezone.now()
                 vendeur.save(update_fields=['demande_stockage_le'])
+                from management.notifications import stockage_demande
+                stockage_demande(vendeur)
             django_messages.success(request, "Demande envoyée : votre commercial vous rappelle pour activer le stockage.")
             return redirect('management:management_vendeur_stock')
         from management.finance import configuration
@@ -1062,6 +1068,8 @@ def vendeur_stock(request):
         try:
             lignes = [(r, d, int(q or 0), p) for r, d, q, p in zip(refs, noms, qtes, photos)]
             entree = annoncer_entree(vendeur, lignes, request.POST.get('commentaire', ''))
+            from management.notifications import stock_annonce
+            stock_annonce(entree)
             django_messages.success(request, "Envoi %s annoncé : il sera contrôlé à la réception." % entree.code)
         except (ValidationError, ValueError) as erreur:
             django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Quantité invalide."])))
@@ -1092,6 +1100,8 @@ def admin_stock(request):
                 entree = EntreeStock.objects.get(pk=request.POST['valider_entree'], vendeur__license=profil_staff.license)
                 quantites = {int(k.split('_')[1]): int(v or 0) for k, v in request.POST.items() if k.startswith('recu_')}
                 valider_reception(entree, user, quantites)
+                from management.notifications import stock_valide
+                stock_valide(entree)
                 django_messages.success(request, "Bordereau %s validé, le vendeur est prévenu par SMS." % entree.code)
             elif request.POST.get('ajuster_produit'):
                 produit = ProduitStock.objects.get(pk=request.POST['ajuster_produit'], vendeur__license=profil_staff.license)

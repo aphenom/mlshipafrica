@@ -6,4 +6,4 @@ class ManagementConfig(AppConfig):
     name = 'management'
 
     def ready(self):
-        from management import confirmation, finance, retours, stock  # noqa: F401  (acompte, argent, retours et stock selon les mouvements)
+        from management import confirmation, finance, notifications, retours, stock  # noqa: F401  (acompte, argent, cloche, retours et stock selon les mouvements)

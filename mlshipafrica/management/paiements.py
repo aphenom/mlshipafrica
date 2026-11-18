@@ -43,6 +43,8 @@ def admin_paiements(request):
                 if not vendeurs:
                     raise ValidationError("Cochez au moins un vendeur.")
                 crees = generer_releves(vendeurs=vendeurs, license=license, par=user)
+                from management.notifications import releves_emis
+                releves_emis(crees, user)
                 messages.success(request, "%d facture%s de paiement générée%s : les vendeurs les voient dans « Mon argent »." % (
                     len(crees), 's' if len(crees) > 1 else '', 's' if len(crees) > 1 else ''))
                 return redirect(reverse('management:management_admin_releves') + '?etape=factures')
@@ -51,7 +53,9 @@ def admin_paiements(request):
                 annuler_releve(releve, user, request.POST.get('motif', ''))
                 messages.success(request, "Facture %s annulée : ses colis repassent dans « À payer »." % releve.code)
             else:
-                marquer_verse(releve, user, request.POST.get('reference', ''), request.POST.get('moyen', ''))
+                releve = marquer_verse(releve, user, request.POST.get('reference', ''), request.POST.get('moyen', ''))
+                from management.notifications import releve_verse
+                releve_verse(releve)
                 messages.success(request, "Facture %s marquée versée." % releve.code)
         except (ValidationError, Releve.DoesNotExist) as erreur:
             messages.error(request, ' '.join(getattr(erreur, 'messages', ["Facture introuvable."])))
@@ -106,6 +110,8 @@ def admin_paiements(request):
         ctx['releve_detail'] = Releve.objects.filter(vendeur__license=license, code=code).select_related('vendeur').first()
         if ctx['releve_detail']:
             ctx['lignes'], ctx['autres'] = lignes_releve(ctx['releve_detail'])
+            from management.notifications import messages_visibles
+            ctx['fil'] = messages_visibles(user, releve=ctx['releve_detail'])
     ctx['moyens'] = MoyenVersement.choices
     return render(request, 'management/paiements_vendeurs.html', ctx)
 
@@ -132,7 +138,8 @@ def facture_paiement(request, code):
     """Facture de paiement imprimable, ligne par ligne (vendeur, comptable, CEO)."""
     releve = _releve_autorise(request, code)
     lignes, autres = lignes_releve(releve)
-    return render(request, 'management/facture_paiement.html', {
+    from management.notifications import messages_visibles
+    return render(request, 'management/facture_paiement.html', {'fil': messages_visibles(request.user, releve=releve),
         'releve': releve, 'lignes': lignes, 'autres': autres, 'vendeur': releve.vendeur,
         'retour': reverse('management:management_admin_releves') + '?etape=factures' if request.user.is_staff
         else reverse('management:management_vendeur_releves')})
@@ -160,7 +167,10 @@ def vendeur_releves(request):
     en_cours = releves.filter(statut=StatutReleve.A_VERSER)
     kpi_en_cours = en_cours.aggregate(t=Sum('net'), n=Count('id'))
     dernier_verse = releves.filter(statut=StatutReleve.VERSE).order_by('-date_versement').first()
+    facture = releves.filter(code=request.GET.get('facture')).first() if request.GET.get('facture') else None
+    from management.notifications import messages_visibles
     return render(request, 'management/vendeur_releves.html', {
+        'facture': facture, 'fil': messages_visibles(request.user, releve=facture) if facture else None,
         'vendeur': vendeur, 'kpi_a_valider': kpi_a_valider, 'prochain': prochain_totaux,
         'prochain_lignes': prochain_lignes[:300], 'prochain_autres': prochain_autres, 'releves': releves[:200],
         'kpi_en_cours': kpi_en_cours, 'dernier_verse': dernier_verse,
@@ -180,6 +190,9 @@ def vendeur_paiement(request):
         except ValidationError as erreur:
             messages.error(request, ' '.join(erreur.messages))
         else:
+            if changement and not vendeur.versement_valide:
+                from management.notifications import numero_a_valider
+                numero_a_valider(vendeur)
             if changement:
                 # Sécurité : le vendeur est prévenu de tout changement de ses coordonnées de versement
                 from sms.service import mettre_en_file

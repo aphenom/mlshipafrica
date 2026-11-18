@@ -14,6 +14,8 @@ from mlshipafrica.menu import menu_de
 
 
 def context(request):
+    from management.notifications import non_lues
+    notifications_non_lues = non_lues(request.user)   # une requête indexée par page
 
     statut_traitement = StatutTraitement
     statut_vendeur = StatutVendeur
@@ -60,6 +62,7 @@ def context(request):
     else:
         notification_messages = None
     return {
+        "notifications_non_lues": notifications_non_lues,
             'configuration' : configuration, 
             'statut_vendeur' : statut_vendeur, 
             'statut_traitement': statut_traitement, 

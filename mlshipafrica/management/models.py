@@ -797,6 +797,7 @@ class Releve(models.Model):
     annule_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='releves_annules')
     date_annulation = models.DateTimeField(null=True, blank=True)
     motif_annulation = models.CharField("Motif d'annulation", max_length=300, blank=True, default='')
+    contestation_ouverte = models.BooleanField("Contestation du vendeur en cours", default=False)
 
     class Meta:
         ordering = ['-date_creation']
@@ -905,3 +906,42 @@ class LignePrestataire(models.Model):
 
     class Meta:
         ordering = ['rang']
+
+
+class MessageColis(models.Model):
+    """Discussion sur une commande ou sur une facture de paiement, entre le vendeur et l'équipe (note interne possible)."""
+
+    article = models.ForeignKey(Article, models.CASCADE, null=True, blank=True, related_name='messages')
+    releve = models.ForeignKey('Releve', models.CASCADE, null=True, blank=True, related_name='messages')
+    auteur = models.ForeignKey(User, models.SET_NULL, null=True, related_name='messages_colis')
+    de_vendeur = models.BooleanField(default=False)
+    interne = models.BooleanField("Note interne (le vendeur ne la voit pas)", default=False)
+    contestation = models.BooleanField(default=False)
+    texte = models.TextField(max_length=2000)
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['date']
+
+    def __str__(self):
+        return '%s · %s' % (self.article_id or self.releve_id, self.texte[:40])
+
+
+class Notification(models.Model):
+    """Cloche : ce qui concerne chaque compte, selon son rôle (jamais l'argent de la société pour l'équipe terrain)."""
+
+    destinataire = models.ForeignKey(User, models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=30)
+    titre = models.CharField(max_length=150)
+    texte = models.CharField(max_length=300, blank=True, default='')
+    url = models.CharField(max_length=300, blank=True, default='')
+    lue = models.BooleanField(default=False)
+    date = models.DateTimeField(default=timezone.now)
+    cle = models.CharField(max_length=120, blank=True, default='', db_index=True)
+
+    class Meta:
+        ordering = ['-date']
+        indexes = [models.Index(fields=['destinataire', 'lue', '-date'], name='notif_dest_lue_date')]
+
+    def __str__(self):
+        return self.titre
