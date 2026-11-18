@@ -322,3 +322,24 @@ Page **Fichier du prestataire** (`/management/admin_fichier_prestataire/`), droi
 - **Migration 0031** : crée les frais par défaut et reprend comme validées les coordonnées déjà saisies avant ce lot (badge « repris avant le contrôle »), pour ne pas bloquer les prochains versements.
 - **Bénéfice** : le tableau du CEO affiche le bénéfice **réalisé** (colis terminés). Le coût du prestataire des colis encore en route est affiché à part (« coût engagé »). Le taux de livraison indique sur combien de colis terminés il est calculé.
 - **Comptabilité** (commit séparé, à appliquer en premier) : `Article.save` enregistre le colis avant son historique. Après la mise en ligne, lancer `python manage.py reprise_comptable` pour rattraper les encaissements et frais non comptés (ils iront dans le prochain relevé).
+
+## 18. Retours du 18/11 : Shipping, paiements, espace vendeur, messages, recette (5 commits)
+
+**Avant tout : tester dans la recette** (`mlshipafrica/RECETTE.md`, script `mlshipafrica/recette/creer_recette.sh`), jamais en production.
+
+| Commit | Ce qui change | Fichiers clés |
+|---|---|---|
+| Shipping | Statuts dans l'ordre logique avec sauts vers l'avant (`statuts.py`, `appliquer_mouvement`) ; « En transit » enregistré même s'il est sauté (coût prestataire) ; colis sans historique débloqués ; corrections manager/CEO avec raison ; filtre statut + période ; actions groupées et impressions (`actions_colis.py`, `imprimer_colis.html`) ; modification de commande CEO seulement | `management/statuts.py`, `actions_colis.py`, `admin_liste_colis.html`, `admin_detail_colis.html` |
+| Argent | Livré (agent) → Unpaid (comptable) → facture de paiement Paid (vendeurs cochés) → Versé ; plus de relevés automatiques ; factures ligne par ligne ; annulation avec motif ; frais de collecte = taux global du CEO (`taux_collecte`, `frais_collecte`, `appliquer_taux_collecte`) | `management/paiements.py`, `finance.py`, `paiements_vendeurs.html`, `facture_paiement.html`, `admin_reglages_frais.html` |
+| Vendeur | Import de commandes (`import_commandes.py`) ; valider → commande suivante ; frais sur la facture ; montants du tableau de bord sur la période ; photos de stock, demande de stockage ; bouton Retour global | `views.py` (facture, stock), `espace_vendeur.py`, `vendeur_import_colis.html`, `base_main.html` |
+| Messages | `MessageColis` (commande ou facture, note interne, contestation), `Notification` + cloche | `management/notifications.py`, `_messages.html`, `notifications.html` |
+| Recette | `RECETTE=True` : bandeau, aucun SMS / Woura / webhook / e-mail, garde-fou sur le nom de la base ; `recette_preparer` | `settings.py`, `sms/service.py`, `integrations/service.py` |
+
+Migrations : 0032 (libellés Unpaid / Versé), 0033 (factures : génération, annulation), 0034 (photos de stock, demande de stockage), 0035 (messages, notifications, contestation).
+
+Mise en ligne, après validation de la recette :
+1. sauvegarde de la base ; 2. déploiement + `migrate` + `collectstatic` ;
+3. `python manage.py crontab remove && python manage.py crontab add` (la tâche `releves_vendeurs` du lundi/jeudi est retirée) ;
+4. le CEO applique le taux de collecte aux colis existants (Paramètres › Frais et réglages, simulation affichée), ou `python manage.py appliquer_taux_collecte --appliquer [--inclure-factures]`.
+
+Points d'attention : le tarif de stockage du code est 10 F / pièce / jour (le CEO le règle dans Frais et réglages) ; le dossier `media/` (pièces d'identité, procurations, photos) ne doit pas être listable publiquement par le serveur web.

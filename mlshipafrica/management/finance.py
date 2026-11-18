@@ -305,6 +305,7 @@ def lignes_releve(releve_ou_ecritures):
         l['date'] = max(l['date'], e.date)
     lignes = sorted(par_colis.values(), key=lambda l: l['date'])
     for l in lignes:
+        l['etat'] = 'Livré' if l['article'].statut_traitement in LIVRES else 'Non livré · retour'
         l['net'] = l['collecte'] - l['frais'] - l['frais_collecte'] - l['retour'] - l['garde'] - l['stockage']
     return lignes, autres
 

@@ -96,6 +96,7 @@
 				{% if article.date_revenu_abidjan %}revenu à Abidjan le {{ article.date_revenu_abidjan|date:"d/m/Y" }} (J+{{ jours_retour }}){% if jours_retour >= 30 %} · <b>à déclarer abandonné</b>{% endif %}{% endif %}
 				{% if 'argent' in droits %} · frais de retour {{ article.frais_retour|fcfa }} · garde {{ article.frais_garde|fcfa }}{% endif %}
 				{% if article.generation %} · {{ article.generation }} substitution{{ article.generation|pluralize }}{% endif %}
+				{% if not article.date_revenu_abidjan and 'argent' not in droits %}colis non livré : frais de retour facturés au vendeur{% endif %}
 			</div>
 			{% endif %}
 		</div>
@@ -193,7 +194,7 @@
 			</form>
 			{% endif %}
 			{% if statuts_corrigibles %}
-			<details class="dplier" style="margin-top:12px"><summary class="dsum"><b>Corriger le statut</b><span class="dinfo muted" style="font-size:12px">erreur de saisie · raison obligatoire</span></summary>
+			<details class="dplier" style="margin-top:12px"><summary class="dsum"><b>Corriger le statut (erreur de saisie)</b></summary>
 			<form method="POST" class="form" style="grid-template-columns:1fr;margin-top:8px" onsubmit="return confirm('Corriger le statut de ce colis ? La correction et sa raison restent dans l\'historique.')">
 				{% csrf_token %}
 				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">

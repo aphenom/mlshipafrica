@@ -4,7 +4,7 @@
 	<tbody>
 	{% for l in lignes %}
 		<tr><td class="mono nw">{{ l.article.code }}{% if l.article.reference_externe %}<div class="muted" style="font-size:11px">{{ l.article.reference_externe }}</div>{% endif %}</td>
-			<td>{{ l.article.nom_destinataire|default:"" }} {{ l.article.prenom_destinataire|default:"" }}<div class="muted" style="font-size:11.5px">{{ l.article.localite_arrivee.nom|default:"" }} · {{ l.article.get_statut_traitement_display }}</div></td>
+			<td>{{ l.article.nom_destinataire|default:"" }} {{ l.article.prenom_destinataire|default:"" }}<div class="muted" style="font-size:11.5px">{{ l.article.localite_arrivee.nom|default:"" }} · {{ l.etat }}</div></td>
 			<td class="r num nw">{% if l.collecte %}{{ l.collecte|fcfa }}{% else %}—{% endif %}</td>
 			<td class="r num nw t-bad">{% if l.frais %}− {{ l.frais|fcfa }}{% else %}—{% endif %}</td>
 			<td class="r num nw t-bad">{% if l.frais_collecte %}− {{ l.frais_collecte|fcfa }}{% else %}—{% endif %}</td>

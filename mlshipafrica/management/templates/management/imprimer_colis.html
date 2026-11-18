@@ -24,6 +24,8 @@
 	.mono { font-family:ui-monospace, Menlo, Consolas, monospace; }
 	h2.ville { font-size:14px; margin:16px 0 6px; }
 	.tot td { font-weight:700; background:#f3f5f8; }
+	tr.groupe td { background:#e8f3ee; font-weight:800; color:var(--brand); }
+	thead { display:table-header-group; }
 	.sign { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:26px; }
 	.sign div { border-top:1px solid var(--ink); padding-top:5px; font-size:12px; }
 	.labels { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -51,11 +53,11 @@
 		<div><div class="marque">ML COD Intérieur</div><h1>Feuille de route</h1><div class="muted">Bordereau de remise · {{ articles|length }} colis · {{ villes|length }} ville{{ villes|length|pluralize }}</div></div>
 		<div class="r muted">Édité le {{ maintenant|date:"d/m/Y H:i" }}<br>par {{ par }}<br>Livreur : ML COD Intérieur</div>
 	</header>
-	{% for ville, liste in villes %}
-	<h2 class="ville">{{ ville }} · {{ liste|length }} colis</h2>
 	<table>
 		<thead><tr><th>#</th><th>Commande</th><th>Client</th><th>Téléphone</th><th>Adresse</th><th>Produit</th><th class="r">À encaisser</th><th>Remis / signature</th></tr></thead>
 		<tbody>
+		{% for ville, liste in villes %}
+		<tr class="groupe"><td colspan="8">{{ ville }} · {{ liste|length }} colis</td></tr>
 		{% for a in liste %}
 		<tr><td>{{ forloop.counter }}</td><td class="mono">{{ a.code }}{% if a.code_tracking %}<div class="muted">{{ a.code_tracking }}</div>{% endif %}</td>
 			<td>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</td>
@@ -65,9 +67,9 @@
 			<td class="r">{% if a.is_option_encaissement %}{{ a.valeur_totale|fcfa }}{% else %}payé{% endif %}</td>
 			<td style="min-width:110px"></td></tr>
 		{% endfor %}
+		{% endfor %}
 		</tbody>
 	</table>
-	{% endfor %}
 	<table style="margin-top:12px"><tr class="tot"><td>Total : {{ articles|length }} colis</td><td class="r">À encaisser : {{ a_encaisser|fcfa }}</td></tr></table>
 	<div class="sign"><div>Remis par (ML COD)</div><div>Reçu par (livreur)</div><div>Date et heure</div></div>
 </div>

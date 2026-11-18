@@ -15,7 +15,7 @@
 		<a class="kpi" href="?etape=verses"><span class="l">4 · Versés ce mois</span><span class="v">{{ kpi_verses_mois.t|default:0|fcfa }}</span><span class="n t-ok">{{ kpi_verses_mois.n|default:0 }} versement{{ kpi_verses_mois.n|pluralize }}</span></a>
 	</div>
 	{% if kpi_sans_coordonnees %}<div class="note warn">{{ kpi_sans_coordonnees }} numéro{{ kpi_sans_coordonnees|pluralize }} de paiement à valider : ces vendeurs sont bloqués. {% if 'moyens_versement' in droits %}<a href="{% url 'management:management_admin_moyens_versement' %}">Valider dans Moyens de paiement</a>{% endif %}</div>{% endif %}
-	<nav class="ctabs" aria-label="Étapes">{% for v, l in etapes %}<a href="?etape={{ v }}"{% if etape == v %} aria-current="page" class="on"{% endif %}>{{ l }}</a>{% endfor %}</nav>
+	<nav class="ctabs" aria-label="Étapes">{% for v, l in etapes %}<a href="?etape={{ v }}"{% if etape == v %} aria-selected="true"{% endif %}>{{ l }}</a>{% endfor %}</nav>
 </div>
 
 {% if releve_detail %}
@@ -34,8 +34,8 @@
 	<form method="get" class="tools">
 		<input type="hidden" name="etape" value="unpaid">
 		<label class="field"><select name="vendeur" aria-label="Vendeur"><option value="">Tous les vendeurs</option>{% for code, nom in vendeurs_liste %}<option value="{{ code }}" {% if code == vendeur_filtre %}selected{% endif %}>{{ nom }}</option>{% endfor %}</select></label>
-		<label class="field">Livrés du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
-		<label class="field">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
+		<label class="field inline">Livrés du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+		<label class="field inline">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
 		<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="N°, client, téléphone"></label>
 		<button class="btn">Filtrer</button>
 	</form>

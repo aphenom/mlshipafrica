@@ -17,8 +17,8 @@
 			<label class="field"><select name="statut" aria-label="Statut"><option value="">Tous les statuts{% if type_colis %} de l’onglet{% endif %}</option>{% for v, l in statuts_filtre %}<option value="{{ v }}" {% if v == statut_filtre %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
 			<label class="field"><select name="ville" aria-label="Ville"><option value="">Toutes les villes</option>{% for v in villes %}<option {% if v == ville %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
 			<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="N°, tracking, client, téléphone" aria-label="Rechercher" style="min-width:200px"></label>
-			<label class="field" title="Dernier mouvement à partir du">Du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
-			<label class="field" title="Dernier mouvement jusqu’au">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
+			<label class="field inline" title="Dernier mouvement à partir du">Du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+			<label class="field inline" title="Dernier mouvement jusqu’au">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
 			<button class="btn">Filtrer</button>
 			{% if statut_filtre or vendeur_filtre or ville or q or du or au %}<a class="btn sm" href="?type_colis={{ type_colis }}">Effacer</a>{% endif %}
 			{% if type_colis == 'livre' %}<a class="btn sm" href="?type_colis=livre&jours=180">180 jours</a>{% endif %}
@@ -31,7 +31,7 @@
 <input type="hidden" name="tous" value="0" id="sel-tous">
 <input type="hidden" name="doc" value="" id="sel-doc">
 <div class="bulk" id="bulk" hidden>
-	<span class="bulk-n"><b id="sel-n">0</b> colis cochés{% if page.paginator.count > page.object_list|length %} · <button type="button" class="lien" id="sel-tout">cocher les {{ page.paginator.count }} colis du filtre</button>{% endif %}</span>
+	<span class="sel-compte"><b id="sel-n">0</b> colis cochés{% if page.paginator.count > page.object_list|length %} · <button type="button" class="lien" id="sel-tout">cocher les {{ page.paginator.count }} colis du filtre</button>{% endif %}</span>
 	{% if peut_bouger %}
 	<span class="bulk-g"><select name="statut" id="bulk-statut" aria-label="Nouveau statut"><option value="">Passer au statut…</option>{% for v, l in groupes_statuts %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
 		<button class="btn sm primary" name="action" value="avancer" data-besoin="statut">Appliquer</button></span>

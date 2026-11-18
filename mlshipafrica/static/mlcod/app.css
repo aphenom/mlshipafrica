@@ -40,7 +40,7 @@ body.mlcod .topbar a.brandmark, body.mlcod .topbar a.brandmark:hover { display: 
 .brandlogo img { height: 38px; width: auto; display: block; }
 
 .layout { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
-nav.side { flex: 1 1 210px; max-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+nav.side { align-self: flex-start; flex: 1 1 210px; max-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
 nav.side .grp { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 10px 10px 4px; }
 nav.side a { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; color: var(--ink); text-decoration: none; padding: 9px 10px; border-radius: 8px; min-height: 40px; }
 nav.side a:hover { background: var(--surface-2); color: var(--ink); }
@@ -348,3 +348,6 @@ body.mlcod .jour .jt { font-size: 28px; font-weight: 800; }
 .notif { display: flex; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); }
 .notif.nonlue { background: var(--brand-soft); }
 .notif b { display: block; }
+.field.inline { flex-direction: row; align-items: center; gap: 6px; }
+.bulk .sel-compte { color: var(--ink); }
+.bulk, .bulk span, .bulk b { color: var(--ink); }

@@ -33,7 +33,7 @@
 				<td class="r num nw t-bad">{% if r.total_garde or r.total_stockage %}− {{ r.total_garde|add:r.total_stockage|fcfa }}{% else %}—{% endif %}</td>
 				<td class="r num nw"><b>{{ r.net|fcfa }}</b>{% if r.statut == 'verse' and r.frais_versement %}<div class="muted" style="font-size:11px">envoyé {{ r.montant_verse|fcfa }}</div>{% endif %}</td>
 				<td>{% if r.statut == 'verse' %}<span class="badge st-verse">Versé le {{ r.date_versement|date:"d/m/Y" }}</span>{% if r.reference_versement %}<div class="mono muted" style="font-size:11px">{{ r.reference_versement }}</div>{% endif %}{% else %}<span class="badge st-unpaid">Paid · versement en cours</span>{% endif %}</td>
-				<td class="nw"><a class="btn sm" href="{% url 'management:management_facture_paiement' r.code %}">Voir · imprimer</a> <a class="btn sm" href="?facture={{ r.code }}#messages">Question / contester</a></td>
+				<td class="nw"><a class="btn sm" href="{% url 'management:management_facture_paiement' r.code %}">Voir</a> <a class="btn sm" href="?facture={{ r.code }}#messages">Contester</a></td>
 			</tr>
 		{% empty %}<tr><td colspan="8" class="muted" style="padding:18px">Pas encore de facture de paiement.</td></tr>{% endfor %}
 		</tbody>
