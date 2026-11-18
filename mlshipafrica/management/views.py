@@ -19,7 +19,7 @@ from django.db import transaction
 from tablib import Dataset
 
 from management.resources import VendeurResource
-from management.statuts import statuts_suivants
+from management.statuts import ORDRE as ORDRE_STATUTS, appliquer_mouvement, statuts_correction, statuts_suivants
 from mlshipafrica.droits import a_le_droit, droit_requis, droits_de
 
 from django.utils import timezone
@@ -403,95 +403,33 @@ def admin_import_vendeur(request):
 @login_required
 @droit_requis('colis_voir')
 def admin_liste_colis(request):
-    try:
-        type_colis = request.GET.get('type_colis', "en_cours")
-        user = request.user
-        profil_staff = user.account_profil_staff
-        #statut_traitement = StatutTraitement
-
-        if user.is_authenticated and user.is_staff:
-
-            # select_related : 1 requête pour toute la liste au lieu de 2 par colis (vendeur, localité)
-            articles = Article.objects.filter(license=profil_staff.license, etat_suppression=False).select_related('vendeur', 'localite_arrivee')
-            suite_breadcrumb = "" 
-            if type_colis == StatutTraitement.EN_ATTENTE_RAMASSAGE:
-                suite_breadcrumb = "En attente de ramassage" 
-                articles = articles.filter(statut_traitement=StatutTraitement.EN_ATTENTE_RAMASSAGE)
-            if type_colis == StatutTraitement.EN_ATTENTE_DEPOT:
-                suite_breadcrumb = "En attente de dépôt" 
-                articles = articles.filter(statut_traitement=StatutTraitement.EN_ATTENTE_DEPOT)
-            if type_colis == "en_cours":
-                suite_breadcrumb = "En cours" 
-                articles = articles.filter(statut_traitement__in=[
-                    StatutTraitement.RAMASSE,
-                    StatutTraitement.DEPOT,
-                    StatutTraitement.EN_TRANSIT,
-                    StatutTraitement.EN_COURS_LIVRAISON,
-                    StatutTraitement.ARRIVE,
-                    StatutTraitement.ECHEC_LIVRAISON,
-                    StatutTraitement.EN_RETOUR
-                ])
-            if type_colis == "a_sauver":
-                # Colis sans mouvement depuis 48 h alors qu'ils sont en route ou chez le client
-                from django.db.models import Max
-                from management.statuts import STATUTS_SURVEILLES_48H
-                suite_breadcrumb = "À sauver (48 h sans mouvement)"
-                articles = (articles.filter(statut_traitement__in=STATUTS_SURVEILLES_48H)
-                            .annotate(dernier_mouvement=Max('article_historiquearticle__date_creation',
-                                                            filter=Q(article_historiquearticle__etat_suppression=False)))
-                            .filter(dernier_mouvement__lt=timezone.now() - timedelta(hours=48)))
-            if type_colis == StatutTraitement.REVENU_ABIDJAN:
-                suite_breadcrumb = "Revenus à Abidjan"
-                articles = articles.filter(statut_traitement=StatutTraitement.REVENU_ABIDJAN)
-            if type_colis == StatutTraitement.ECHEC_LIVRAISON:
-                suite_breadcrumb = "Échecs de livraison"
-                articles = articles.filter(statut_traitement=StatutTraitement.ECHEC_LIVRAISON)
-            if type_colis == StatutTraitement.ANNULE:
-                suite_breadcrumb = "Annulés avant expédition"
-                articles = articles.filter(statut_traitement=StatutTraitement.ANNULE)
-            if type_colis == StatutTraitement.RETOURNE:
-                articles = articles.filter(statut_traitement=StatutTraitement.RETOURNE)
-                suite_breadcrumb = "Retournés"  
-            if type_colis == StatutTraitement.LIVRE:
-                suite_breadcrumb = "Historique" 
-                articles = articles.filter(statut_traitement__in=[
-                    StatutTraitement.LIVRE,
-                    StatutTraitement.LIVRE_PAYE,
-                    StatutTraitement.REVERSE
-                ])
-                # L'historique grossit de ~1 000 colis par jour : 60 derniers jours par défaut, ?jours=N pour élargir
-                try:
-                    jours_historique = max(1, int(request.GET.get('jours', 60)))
-                except ValueError:
-                    jours_historique = 60
-                articles = articles.filter(date_creation__gte=timezone.now() - timedelta(days=jours_historique))
-
-            # Shipping de la maquette : recherche, vendeur, ville, pages de 50 colis
-            from django.core.paginator import Paginator
-            q = request.GET.get('q', '').strip()
-            vendeur_filtre = request.GET.get('vendeur', '')
-            ville = request.GET.get('ville', '')
-            if q:
-                articles = articles.filter(Q(code__icontains=q) | Q(code_tracking__icontains=q) | Q(reference_externe__icontains=q)
-                                           | Q(nom_destinataire__icontains=q) | Q(prenom_destinataire__icontains=q)
-                                           | Q(numero_principal_destinataire__icontains=q))
-            if vendeur_filtre:
-                articles = articles.filter(vendeur__code=vendeur_filtre)
-            if ville:
-                articles = articles.filter(localite_arrivee__nom=ville)
-            vendeurs_liste = Vendeur.objects.filter(license=profil_staff.license, etat_suppression=False, etat_approbation=True).order_by('nom_store').values_list('code', 'nom_store')
-            villes = (Article.objects.filter(license=profil_staff.license, etat_suppression=False, localite_arrivee__isnull=False)
-                      .values_list('localite_arrivee__nom', flat=True).distinct().order_by('localite_arrivee__nom'))
-            articles = articles.select_related('zone_arrivee', 'agent_cod__user').order_by('-date_modification')
-            page = Paginator(articles, 50).get_page(request.GET.get('page'))
-            filtres = request.GET.copy()
-            filtres.pop('page', None)
-            filtres = filtres.urlencode()
-
-        # historique_articles = HistoriqueArticle.objects.filter(article=article, etat_validation=True, etat_suppression=False).exclude(statut_traitement=StatutTraitement.BROUILLON).order_by("date_creation")
-    except Exception as e:
-        raise Http404
+    from django.core.paginator import Paginator
+    from management.actions_colis import filtrer_colis, statuts_groupes
+    user = request.user
+    profil_staff = user.account_profil_staff
+    articles, ctx = filtrer_colis(profil_staff.license, request.GET)
+    type_colis, suite_breadcrumb, jours_historique = ctx['type_colis'], ctx['suite_breadcrumb'], ctx.get('jours_historique')
+    q, vendeur_filtre, ville, statut_filtre = ctx['q'], ctx['vendeur_filtre'], ctx['ville'], ctx['statut_filtre']
+    du, au = ctx['du'], ctx['au']
+    vendeurs_liste = Vendeur.objects.filter(license=profil_staff.license, etat_suppression=False, etat_approbation=True).order_by('nom_store').values_list('code', 'nom_store')
+    villes = (Article.objects.filter(license=profil_staff.license, etat_suppression=False, localite_arrivee__isnull=False)
+              .values_list('localite_arrivee__nom', flat=True).distinct().order_by('localite_arrivee__nom'))
+    statuts_filtre = [(v, l) for v, l in ORDRE_STATUTS_LIBELLES()]
+    page = Paginator(articles, 50).get_page(request.GET.get('page'))
+    filtres = request.GET.copy()
+    filtres.pop('page', None)
+    filtres = filtres.urlencode()
+    groupes_statuts = statuts_groupes(user)
+    peut_bouger = a_le_droit(user, 'colis_mouvements')
+    peut_corriger = a_le_droit(user, 'colis_corriger')
+    peut_unpaid = a_le_droit(user, 'paiements')
+    peut_imprimer = a_le_droit(user, 'colis_imprimer')
     return render(request, 'management/admin_liste_colis.html', locals())
+
+
+def ORDRE_STATUTS_LIBELLES():
+    libelles = dict(StatutTraitement.choices)
+    return [(v, libelles[v]) for v in ORDRE_STATUTS]
 
 
 @login_required
@@ -533,7 +471,7 @@ def admin_detail_colis(request, code):
             # Un colis d'une autre licence n'existe pas pour cet utilisateur
             article = Article.objects.filter(license=profil_staff.license).exclude(statut_traitement=StatutTraitement.BROUILLON).select_related(
                 'vendeur', 'localite_arrivee', 'localite_arrivee__zone', 'format_article').get(code=code)
-            peut_bouger = a_le_droit(user, 'colis_mouvements')
+            peut_bouger = a_le_droit(user, 'colis_mouvements') or a_le_droit(user, 'paiements')
             peut_annuler_mouvement = a_le_droit(user, 'colis_annuler_mouvement')
             peut_payer = a_le_droit(user, 'paiements')
             acomptes_article = article.acomptes.all().order_by('-date_reception')
@@ -554,6 +492,8 @@ def admin_detail_colis(request, code):
             # Statuts proposés : table de transitions unique (management/statuts.py), vérifiée aussi au POST
             dernier_historique = article.get_last_historique()
             statut_traitement_applicables = statuts_suivants(article, dernier_historique, user) if peut_bouger else []
+            statuts_corrigibles = statuts_correction(article, user)
+            peut_modifier_commande = a_le_droit(user, 'colis_modifier')
 
             # print(statut_traitement_applicables)
 
@@ -587,42 +527,53 @@ def admin_detail_colis(request, code):
                         historique_a_supprime.save()
                         article.save()
                         
-                if "submit_new_mouvement" in request.POST and request.POST["submit_new_mouvement"]:
-                    nouveau_statut = request.POST.get("mouvement_statut")
-                    commentaire_mouvement = (request.POST.get("mouvement_commentaire") or "").strip()
-                    # Règles du cahier des charges : motif écrit obligatoire pour annuler, et pour expédier un colis non confirmé
-                    if nouveau_statut == StatutTraitement.ANNULE and not commentaire_mouvement:
-                        erreur_mouvement = "Indiquez le motif de l'annulation dans le commentaire."
-                    elif nouveau_statut == StatutTraitement.EN_TRANSIT and article.etat_confirmation != EtatConfirmation.CONFIRME and not commentaire_mouvement:
-                        erreur_mouvement = "Ce colis n'est pas confirmé par le client : indiquez le motif de l'expédition dans le commentaire."
+                if request.POST.get("submit_modifier_commande"):
+                    if not a_le_droit(user, 'colis_modifier'):
+                        raise PermissionDenied("Seul le CEO modifie les données d'une commande.")
+                    from management.finance import comptabiliser, recalculer_frais_colis
+                    for champ in ('nom_destinataire', 'prenom_destinataire', 'numero_principal_destinataire',
+                                  'numero_secondaire_destinataire', 'adresse_destinataire', 'designation', 'reference_externe'):
+                        if champ in request.POST:
+                            setattr(article, champ, (request.POST.get(champ) or '').strip() or None)
+                    try:
+                        quantite = max(1, int(request.POST.get('quantite') or article.quantite or 1))
+                        valeur = Decimal(str(request.POST.get('valeur_totale') or article.valeur_totale or 0).replace(' ', '').replace(',', '.'))
+                        if valeur < 0:
+                            raise InvalidOperation
+                    except (ValueError, InvalidOperation):
+                        django_messages.error(request, "Quantité ou montant invalide.")
                     else:
-                        erreur_mouvement = None
-                    if erreur_mouvement:
-                        django_messages.error(request, erreur_mouvement)
-                    elif str(article.get_last_historique().id) == request.POST["last_mouvement"] and any(value == request.POST["mouvement_statut"] for value, _ in statut_traitement_applicables):
-                        if (article.code_tracking is None or article.code_tracking == "") and request.POST["mouvement_code_tracking"]:
-                            article.code_tracking = request.POST["mouvement_code_tracking"]
-                        article.statut_traitement = request.POST["mouvement_statut"]
-                        article.etat_validation = True
+                        article.quantite = quantite
+                        if valeur != (article.valeur_totale or 0):
+                            article.valeur_totale = valeur
+                            recalculer_frais_colis(article)
                         article.save()
+                        comptabiliser(article)
+                        django_messages.success(request, "Commande modifiée (l'ancienne et la nouvelle valeur sont gardées dans le journal d'audit).")
 
-                        histo_article = HistoriqueArticle()
-                        histo_article.article = article
-                        histo_article.date = request.POST["mouvement_date"]
-                        histo_article.statut_traitement = request.POST["mouvement_statut"]
-                        histo_article.commentaire = request.POST["mouvement_commentaire"]
-                        histo_article.license = article.license
-                        histo_article.dernier_historique_article = article.get_last_historique()
-                        histo_article.save()
+                if request.POST.get("submit_correction"):
+                    if _id_dernier(article) != request.POST.get("last_mouvement", ""):
+                        django_messages.error(request, "Le colis a bougé entre-temps : rechargez la page.")
+                    else:
+                        ok, raison = appliquer_mouvement(article, request.POST.get("correction_statut"), user,
+                                                         request.POST.get("correction_motif"), correction=True)
+                        if ok:
+                            django_messages.success(request, "Statut corrigé.")
+                        else:
+                            django_messages.error(request, raison)
 
-                        if article.etat_encaissement is False and request.POST["mouvement_statut"] == StatutTraitement.LIVRE_PAYE and article.is_option_encaissement is True:
-                            new_encaissement = Encaissement()
-                            new_encaissement.article = article
-                            new_encaissement.save()
-                            article.etat_encaissement = True
-                            article.save()
-                
-        
+                if "submit_new_mouvement" in request.POST and request.POST["submit_new_mouvement"]:
+                    if _id_dernier(article) != request.POST.get("last_mouvement", ""):
+                        django_messages.error(request, "Le colis a bougé entre-temps : rechargez la page.")
+                    else:
+                        if not article.code_tracking and request.POST.get("mouvement_code_tracking"):
+                            article.code_tracking = request.POST["mouvement_code_tracking"]
+                        ok, raison = appliquer_mouvement(article, request.POST.get("mouvement_statut"), user,
+                                                         request.POST.get("mouvement_commentaire"),
+                                                         date=request.POST.get("mouvement_date") or None)
+                        if not ok:
+                            django_messages.error(request, raison)
+
                 if "submit_annuler_reglement" in request.POST and request.POST["submit_annuler_reglement"]:
                     if str(article.get_last_reglement().id) == request.POST["last_reglement"]:
 
@@ -699,6 +650,11 @@ def admin_detail_colis(request, code):
     from management.espace_vendeur import ECHECS
     statuts_echec = [str(x) for x in ECHECS] + [StatutTraitement.ANNULE]
     return render(request, 'management/admin_detail_colis.html', locals())
+
+def _id_dernier(article):
+    dernier = article.get_last_historique()
+    return str(dernier.pk) if dernier else ''
+
 
 def do_reglement(article, paiement_date, paiement_reference, paiement_montant, paiement_reduction):
     reglement = ReglementArticle()

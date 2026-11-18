@@ -58,6 +58,26 @@
 			{% endif %}
 		</div>
 
+		{% if peut_modifier_commande and not article.etat_suppression %}
+		<div class="card">
+			<details class="dplier"><summary class="dsum"><h2>Modifier la commande</h2><span class="dinfo muted" style="font-size:12px">CEO seulement · chaque changement est gardé dans le journal d’audit</span></summary>
+			<form method="POST" class="form" style="margin-top:10px" onsubmit="return confirm('Enregistrer les modifications de la commande {{ article.code }} ?')">
+				{% csrf_token %}
+				<label class="field">Nom du client<input name="nom_destinataire" value="{{ article.nom_destinataire|default:'' }}" maxlength="100"></label>
+				<label class="field">Prénom(s)<input name="prenom_destinataire" value="{{ article.prenom_destinataire|default:'' }}" maxlength="255"></label>
+				<label class="field">Téléphone<input name="numero_principal_destinataire" value="{{ article.numero_principal_destinataire|default:'' }}" maxlength="30"></label>
+				<label class="field">Téléphone 2<input name="numero_secondaire_destinataire" value="{{ article.numero_secondaire_destinataire|default:'' }}" maxlength="30"></label>
+				<label class="field" style="grid-column:1/-1">Adresse<input name="adresse_destinataire" value="{{ article.adresse_destinataire|default:'' }}" maxlength="255"></label>
+				<label class="field">Produit<input name="designation" value="{{ article.designation|default:'' }}" maxlength="100"></label>
+				<label class="field">Quantité<input name="quantite" type="number" min="1" value="{{ article.quantite|default:1 }}"></label>
+				<label class="field">{% if article.is_option_encaissement %}Montant à encaisser (F){% else %}Valeur (F){% endif %}<input name="valeur_totale" type="number" min="0" value="{{ article.valeur_totale|default:0|floatformat:0 }}"></label>
+				<label class="field">Réf. vendeur<input name="reference_externe" value="{{ article.reference_externe|default:'' }}" maxlength="80"></label>
+				<div class="tools" style="grid-column:1/-1"><button class="btn primary sm" name="submit_modifier_commande" value="1">Enregistrer</button><span class="muted" style="font-size:12px">Un nouveau montant recalcule les frais de collecte.</span></div>
+			</form>
+			</details>
+		</div>
+		{% endif %}
+
 		<div class="card">
 			<h2>Confirmation et acompte</h2>
 			<div class="muted">{{ article.get_etat_confirmation_display }}{% if article.date_confirmation %} le {{ article.date_confirmation|date:"d/m/Y H:i" }}{% if article.confirme_par %} par {{ article.confirme_par.get_full_name|default:article.confirme_par.email }}{% endif %}{% endif %} · {{ article.nombre_appels }} appel{{ article.nombre_appels|pluralize }}{% if article.agent_cod %} · agent {{ article.agent_cod.user.get_full_name|default:article.agent_cod.user.email }}{% endif %}</div>
@@ -88,7 +108,7 @@
 				{% if reglement_article is None or article.etat_reglement is False %}<button id="btn-init-paiement" data-montrer="div-paiement" type="button" class="btn primary sm">Enregistrer un paiement</button>{% endif %}
 				<div id="div-paiement" {% if reglement_article is None or article.etat_reglement is False %}hidden{% endif %}>
 					<div class="form">
-						<label class="field">Date de paiement<input name="paiement_date" min="{{ article.date_creation|date:'Y-m-d H:i' }}" max="{% now 'Y-m-d H:i' %}" value="{{ reglement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
+						<label class="field">Date de paiement<input name="paiement_date" min="{{ article.date_creation|date:'Y-m-d\TH:i' }}" max="{% now 'Y-m-d\TH:i' %}" value="{{ reglement_article.date|date:'Y-m-d\TH:i' }}" type="datetime-local" required {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
 						<label class="field">Réduction (F)<input id="paiement_reduction" name="paiement_reduction" type="number" min="0" max="{{ article.montant_total_frais|default:0|stringformat:'d' }}" value="{{ reglement_article.montant_reduction|default:0|stringformat:'d' }}" {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
 						<label class="field">Montant payé (F)<input id="paiement_montant" name="paiement_montant" type="number" min="0" max="{{ article.montant_total_frais|default:0|stringformat:'d' }}" value="{{ reglement_article.montant_reglement|default:article.montant_total_frais|stringformat:'d' }}" required readonly></label>
 						<label class="field">Référence<input id="paiement_reference" name="paiement_reference" value="{{ reglement_article.reference|default:'' }}" type="text" {% if reglement_article or article.etat_reglement is True %}readonly{% endif %}></label>
@@ -113,7 +133,7 @@
 				{% if reversement_article is None or article.etat_reversement is False %}<button id="btn-init-reversement" data-montrer="div-reversement" type="button" class="btn primary sm">Enregistrer un reversement</button>{% endif %}
 				<div id="div-reversement" {% if reversement_article is None or article.etat_reversement is False %}hidden{% endif %}>
 					<div class="form">
-						<label class="field">Date de reversement<input name="reversement_date" min="{{ article.get_last_historique.date|date:'Y-m-d H:i' }}" max="{% now 'Y-m-d H:i' %}" value="{{ reversement_article.date|date:'Y-m-d H:i' }}" type="datetime-local" required {% if reversement_article or article.etat_reversement is True %}readonly{% endif %}></label>
+						<label class="field">Date de reversement<input name="reversement_date" min="{{ article.get_last_historique.date|date:'Y-m-d\TH:i' }}" max="{% now 'Y-m-d\TH:i' %}" value="{{ reversement_article.date|date:'Y-m-d\TH:i' }}" type="datetime-local" required {% if reversement_article or article.etat_reversement is True %}readonly{% endif %}></label>
 						<label class="field">Montant reversé (F)<input id="reversement_montant" name="reversement_montant" type="number" min="0" max="{{ article.montant_a_reverser|default:0|stringformat:'d' }}" value="{{ reversement_article.montant_reversement|default:article.montant_a_reverser|stringformat:'d' }}" required readonly></label>
 						<label class="field">Référence<input id="reversement_reference" name="reversement_reference" value="{{ reversement_article.reference|default:'' }}" type="text" {% if reversement_article or article.etat_reversement is True %}readonly{% endif %}></label>
 					</div>
@@ -149,7 +169,7 @@
 			</div>
 		</div>
 
-		{% if not article.etat_suppression and statut_traitement_applicables or not article.etat_suppression and peut_annuler_mouvement %}
+		{% if not article.etat_suppression and statut_traitement_applicables or not article.etat_suppression and peut_annuler_mouvement or not article.etat_suppression and statuts_corrigibles %}
 		<div class="card" style="margin-top:14px">
 			<h2>Faire avancer le colis</h2>
 			{% if statut_traitement_applicables %}
@@ -157,7 +177,7 @@
 				{% csrf_token %}
 				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
 				<label class="field">Nouveau statut *<select name="mouvement_statut" required>{% for value, label in statut_traitement_applicables %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
-				<label class="field">Date du mouvement *<input name="mouvement_date" min="{{ article.get_last_historique.date|date:'Y-m-d H:i' }}" max="{% now 'Y-m-d H:i' %}" value="{% now 'Y-m-d H:i' %}" type="datetime-local" required></label>
+				<label class="field">Date du mouvement *<input name="mouvement_date" min="{{ article.get_last_historique.date|date:'Y-m-d\TH:i' }}" max="{% now 'Y-m-d\TH:i' %}" value="{% now 'Y-m-d\TH:i' %}" type="datetime-local" required></label>
 				{% if not article.code_tracking %}<label class="field">Code tracking<input name="mouvement_code_tracking" type="text"></label>{% endif %}
 				<label class="field">Commentaire<input name="mouvement_commentaire" type="text" placeholder="obligatoire pour un colis non confirmé qui part"></label>
 				<button value="submit_new_mouvement" name="submit_new_mouvement" type="submit" class="btn primary">Enregistrer le mouvement</button>
@@ -169,6 +189,17 @@
 				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
 				<button value="submit_annuler_last_mouvement" name="submit_annuler_last_mouvement" type="submit" class="btn danger sm">Annuler le dernier mouvement</button>
 			</form>
+			{% endif %}
+			{% if statuts_corrigibles %}
+			<details class="dplier" style="margin-top:12px"><summary class="dsum"><b>Corriger le statut</b><span class="dinfo muted" style="font-size:12px">erreur de saisie · raison obligatoire</span></summary>
+			<form method="POST" class="form" style="grid-template-columns:1fr;margin-top:8px" onsubmit="return confirm('Corriger le statut de ce colis ? La correction et sa raison restent dans l\'historique.')">
+				{% csrf_token %}
+				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
+				<label class="field">Statut corrigé *<select name="correction_statut" required>{% for value, label in statuts_corrigibles %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+				<label class="field">Raison *<input name="correction_motif" type="text" maxlength="300" required placeholder="ex. livré par erreur, le client a refusé"></label>
+				<button value="1" name="submit_correction" type="submit" class="btn sm">Corriger</button>
+			</form>
+			</details>
 			{% endif %}
 		</div>
 		{% endif %}

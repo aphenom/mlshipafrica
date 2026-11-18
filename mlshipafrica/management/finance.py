@@ -38,6 +38,35 @@ def _d(v):
     return Decimal(str(v or 0))
 
 
+def configuration(license):
+    from core.models import Configuration
+    return Configuration.objects.filter(license=license, etat_suppression=False).order_by('-pk').first()
+
+
+def taux_collecte(license):
+    """Taux des frais de collecte (encaissement), réglé par le CEO pour tous les vendeurs. 5 % par défaut."""
+    config = configuration(license)
+    taux = getattr(config, 'taux_option_encaissement', None)
+    return _d(taux) if taux is not None else Decimal('5')
+
+
+def frais_collecte(article, taux=None):
+    """Frais de collecte d'un colis avec encaissement : taux global × montant encaissé, arrondi au franc."""
+    if not article.is_option_encaissement:
+        return ZERO
+    taux = taux_collecte(article.license) if taux is None else _d(taux)
+    return (_d(article.valeur_totale) * taux / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
+
+def recalculer_frais_colis(article, taux=None):
+    """Remet à jour les frais de collecte et les totaux du colis (sans toucher au tarif ML figé)."""
+    article.taux_option_encaissement = (taux_collecte(article.license) if taux is None else _d(taux)) if article.is_option_encaissement else None
+    article.cout_option_encaissement = frais_collecte(article, taux) if article.is_option_encaissement else None
+    article.montant_total_frais = _d(article.montant_frais) + _d(article.cout_option_recuperation) + _d(article.cout_option_encaissement)
+    article.montant_a_reverser = (_d(article.valeur_totale) - article.montant_total_frais) if article.is_option_encaissement else None
+    return article
+
+
 def attendu(article):
     """Ce qui doit être compté pour ce colis, par type d'écriture."""
     livre = article.statut_traitement in LIVRES

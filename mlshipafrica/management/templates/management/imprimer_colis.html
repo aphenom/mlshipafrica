@@ -1,0 +1,135 @@
+{% load mlcod %}<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ titre }} · ML COD Intérieur</title>
+<style>
+	:root { --ink:#14181f; --muted:#5d6675; --line:#d6dbe3; --brand:#0f5c4d; }
+	* { box-sizing:border-box; }
+	body { margin:0; background:#eef1f5; color:var(--ink); font:13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+	.bar { position:sticky; top:0; display:flex; gap:10px; align-items:center; padding:10px 16px; background:#fff; border-bottom:1px solid var(--line); }
+	.bar b { flex:1; }
+	.bar button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
+	.bar button.l { background:#fff; color:var(--brand); }
+	.page { background:#fff; max-width:1000px; margin:16px auto; padding:22px 26px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+	header.doc { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--brand); padding-bottom:10px; margin-bottom:14px; }
+	header.doc h1 { margin:0; font-size:19px; }
+	.marque { font-weight:800; color:var(--brand); font-size:15px; }
+	.muted { color:var(--muted); }
+	table { width:100%; border-collapse:collapse; }
+	th, td { border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top; }
+	th { background:#f3f5f8; font-size:11.5px; text-transform:uppercase; letter-spacing:.02em; }
+	.r { text-align:right; white-space:nowrap; }
+	.mono { font-family:ui-monospace, Menlo, Consolas, monospace; }
+	h2.ville { font-size:14px; margin:16px 0 6px; }
+	.tot td { font-weight:700; background:#f3f5f8; }
+	.sign { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:26px; }
+	.sign div { border-top:1px solid var(--ink); padding-top:5px; font-size:12px; }
+	.labels { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+	.label { border:1.5px dashed #9aa3b2; border-radius:8px; padding:10px; display:grid; grid-template-columns:96px 1fr; gap:10px; break-inside:avoid; }
+	.label .qr { width:96px; height:96px; }
+	.label .code { font:700 15px ui-monospace, Menlo, Consolas, monospace; }
+	.label .cash { font-size:16px; font-weight:800; }
+	.facture { break-after:page; page-break-after:always; }
+	.facture:last-child { break-after:auto; page-break-after:auto; }
+	@media print {
+		body { background:#fff; }
+		.bar { display:none; }
+		.page { box-shadow:none; margin:0; max-width:none; padding:0; }
+		@page { size:A4; margin:12mm; }
+	}
+	@media (max-width:640px) { .labels { grid-template-columns:1fr; } .page { padding:14px; } }
+</style>
+</head>
+<body>
+<div class="bar"><b>{{ titre }} · {{ articles|length }} colis</b><button class="l" onclick="history.length > 1 ? history.back() : window.close()">← Retour</button><button onclick="window.print()">Imprimer</button></div>
+
+{% if doc == 'feuille_route' %}
+<div class="page">
+	<header class="doc">
+		<div><div class="marque">ML COD Intérieur</div><h1>Feuille de route</h1><div class="muted">Bordereau de remise · {{ articles|length }} colis · {{ villes|length }} ville{{ villes|length|pluralize }}</div></div>
+		<div class="r muted">Édité le {{ maintenant|date:"d/m/Y H:i" }}<br>par {{ par }}<br>Livreur : ML COD Intérieur</div>
+	</header>
+	{% for ville, liste in villes %}
+	<h2 class="ville">{{ ville }} · {{ liste|length }} colis</h2>
+	<table>
+		<thead><tr><th>#</th><th>Commande</th><th>Client</th><th>Téléphone</th><th>Adresse</th><th>Produit</th><th class="r">À encaisser</th><th>Remis / signature</th></tr></thead>
+		<tbody>
+		{% for a in liste %}
+		<tr><td>{{ forloop.counter }}</td><td class="mono">{{ a.code }}{% if a.code_tracking %}<div class="muted">{{ a.code_tracking }}</div>{% endif %}</td>
+			<td>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</td>
+			<td class="mono">{{ a.numero_principal_destinataire|default:"" }}{% if a.numero_secondaire_destinataire %}<br>{{ a.numero_secondaire_destinataire }}{% endif %}</td>
+			<td>{{ a.zone_arrivee.nom|default:"" }}{% if a.adresse_destinataire %}<div class="muted">{{ a.adresse_destinataire }}</div>{% endif %}</td>
+			<td>{{ a.designation|default:"—" }} × {{ a.quantite|default:1 }}</td>
+			<td class="r">{% if a.is_option_encaissement %}{{ a.valeur_totale|fcfa }}{% else %}payé{% endif %}</td>
+			<td style="min-width:110px"></td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	{% endfor %}
+	<table style="margin-top:12px"><tr class="tot"><td>Total : {{ articles|length }} colis</td><td class="r">À encaisser : {{ a_encaisser|fcfa }}</td></tr></table>
+	<div class="sign"><div>Remis par (ML COD)</div><div>Reçu par (livreur)</div><div>Date et heure</div></div>
+</div>
+
+{% elif doc == 'preparation' %}
+<div class="page">
+	<header class="doc">
+		<div><div class="marque">ML COD Intérieur</div><h1>Fiche de préparation</h1><div class="muted">{{ articles|length }} colis · {{ quantite_totale }} article{{ quantite_totale|pluralize }} à sortir</div></div>
+		<div class="r muted">Édité le {{ maintenant|date:"d/m/Y H:i" }}<br>par {{ par }}</div>
+	</header>
+	<table>
+		<thead><tr><th>✓</th><th>Produit</th><th>Format</th><th class="r">Quantité</th><th>Commandes</th></tr></thead>
+		<tbody>{% for p in produits %}<tr><td style="width:28px"></td><td><b>{{ p.designation }}</b></td><td>{{ p.format|default:"—" }}</td><td class="r"><b>{{ p.quantite }}</b></td><td class="mono" style="font-size:11.5px">{{ p.codes|join:", " }}</td></tr>{% endfor %}
+		<tr class="tot"><td></td><td colspan="2">Total</td><td class="r">{{ quantite_totale }}</td><td></td></tr></tbody>
+	</table>
+	<div class="sign"><div>Préparé par</div><div>Vérifié par</div><div>Date et heure</div></div>
+</div>
+
+{% elif doc == 'etiquettes' %}
+<div class="page">
+	<div class="labels">
+	{% for a in articles %}
+		<div class="label">
+			<div class="qr" data-qr="{{ a.code }}"></div>
+			<div>
+				<div class="code">{{ a.code }}</div>
+				<div><b>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</b> · <span class="mono">{{ a.numero_principal_destinataire|default:"" }}</span></div>
+				<div>{{ a.localite_arrivee.nom|default:"" }}{% if a.zone_arrivee %} · {{ a.zone_arrivee.nom }}{% endif %}</div>
+				{% if a.adresse_destinataire %}<div class="muted">{{ a.adresse_destinataire|truncatechars:60 }}</div>{% endif %}
+				<div class="muted">{{ a.designation|default:"" }} × {{ a.quantite|default:1 }} · {{ a.vendeur.nom_store|default:"" }}</div>
+				<div class="cash">{% if a.is_option_encaissement %}À encaisser : {{ a.valeur_totale|fcfa }}{% else %}Déjà payé : rien à encaisser{% endif %}</div>
+				<div class="muted" style="font-size:11px">ML COD Intérieur</div>
+			</div>
+		</div>
+	{% endfor %}
+	</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+document.querySelectorAll('[data-qr]').forEach(function (el) {
+	try { new QRCode(el, { text: el.dataset.qr, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M }); }
+	catch (e) { el.textContent = el.dataset.qr; }
+});
+</script>
+
+{% elif doc == 'factures' %}
+{% for a in articles %}
+<div class="page facture">
+	<header class="doc">
+		<div><div class="marque">{{ a.vendeur.nom_store|default:"ML COD Intérieur" }}</div><div class="muted">Livraison : ML COD Intérieur</div></div>
+		<div class="r"><h1>Facture</h1><div class="mono">{{ a.code }}</div><div class="muted">{{ a.date_creation|date:"d/m/Y" }}</div></div>
+	</header>
+	<p><b>Client :</b> {{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }} · {{ a.numero_principal_destinataire|default:"" }}<br>
+	<b>Livraison :</b> {{ a.localite_arrivee.nom|default:"" }}{% if a.zone_arrivee %} · {{ a.zone_arrivee.nom }}{% endif %}{% if a.adresse_destinataire %} · {{ a.adresse_destinataire }}{% endif %}</p>
+	<table>
+		<thead><tr><th>Produit</th><th class="r">Quantité</th><th class="r">Montant</th></tr></thead>
+		<tbody><tr><td>{{ a.designation|default:"—" }}</td><td class="r">{{ a.quantite|default:1 }}</td><td class="r">{{ a.valeur_totale|fcfa }}</td></tr>
+		<tr class="tot"><td colspan="2">{% if a.is_option_encaissement %}Total à payer à la livraison{% else %}Total (déjà payé){% endif %}</td><td class="r">{{ a.valeur_totale|fcfa }}</td></tr></tbody>
+	</table>
+	<div class="sign"><div>Signature du client</div><div>Livreur</div><div>Date</div></div>
+</div>
+{% endfor %}
+{% endif %}
+</body>
+</html>

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views # import views so we can use them in urls.
+from . import actions_colis
 
 app_name = 'management'
 urlpatterns = [
@@ -17,6 +18,8 @@ urlpatterns = [
     path('admin_vendeur_profil/<str:code>/', views.admin_vendeur_profil, name='management_admin_vendeur_profil'),
     path('admin_liste_colis/', views.admin_liste_colis, name='management_admin_liste_colis'),
     path('admin_liste_colis_vendeurs/', views.admin_liste_colis_vendeurs, name='management_admin_liste_colis_vendeurs'),
+    path('admin_colis_actions/', actions_colis.admin_colis_actions, name='management_admin_colis_actions'),
+    path('admin_colis_imprimer/', actions_colis.admin_colis_imprimer, name='management_admin_colis_imprimer'),
     path('admin_detail_colis/<str:code>/', views.admin_detail_colis, name='management_admin_detail_colis'),
     path('admin_liste_paiements/', views.admin_liste_paiements, name='management_admin_liste_paiements'),
     path('admin_liste_paiements_vendeurs/', views.admin_liste_paiements_vendeurs, name='management_admin_liste_paiements_vendeurs'),

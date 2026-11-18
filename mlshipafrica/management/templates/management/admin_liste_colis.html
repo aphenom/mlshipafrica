@@ -3,30 +3,60 @@
 {% block title %}Shipping · {{ suite_breadcrumb }} · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li>Shipping</li><li class="active" aria-current="page">{{ suite_breadcrumb }}</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% elif message.tags == 'warning' %} warn{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card ml">
 	<div class="head">
 		<div>
 			<h1>{{ suite_breadcrumb|default:"Colis" }}</h1>
-			<div class="muted">{% if type_colis == 'a_sauver' %}Colis en route ou chez le client sans aucun mouvement depuis plus de 48 h : appelez, relancez ou réorientez.{% elif type_colis == 'revenu_abidjan' %}Colis revenus au bureau : le vendeur a jusqu’à J3 pour donner un nouveau client ; la garde démarre à J11.{% elif type_colis == 'livre' %}Livraisons des {{ jours_historique|default:60 }} derniers jours.{% else %}{{ page.paginator.count }} colis.{% endif %}</div>
+			<div class="muted">{% if type_colis == 'a_sauver' %}Colis en route ou chez le client sans aucun mouvement depuis plus de 48 h : appelez, relancez ou réorientez.{% elif type_colis == 'revenu_abidjan' %}Colis revenus au bureau : le vendeur a jusqu’à J3 pour donner un nouveau client ; la garde démarre à J11.{% elif type_colis == 'livre' and jours_historique %}Livraisons des {{ jours_historique }} derniers jours.{% else %}{{ page.paginator.count }} colis.{% endif %}</div>
 		</div>
 		<form method="get" class="tools">
 			<input type="hidden" name="type_colis" value="{{ type_colis }}">
 			{% if request.GET.jours %}<input type="hidden" name="jours" value="{{ request.GET.jours }}">{% endif %}
 			<label class="field"><select name="vendeur" aria-label="Vendeur"><option value="">Tous les vendeurs</option>{% for code, nom in vendeurs_liste %}<option value="{{ code }}" {% if code == vendeur_filtre %}selected{% endif %}>{{ nom }}</option>{% endfor %}</select></label>
+			<label class="field"><select name="statut" aria-label="Statut"><option value="">Tous les statuts{% if type_colis %} de l’onglet{% endif %}</option>{% for v, l in statuts_filtre %}<option value="{{ v }}" {% if v == statut_filtre %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
 			<label class="field"><select name="ville" aria-label="Ville"><option value="">Toutes les villes</option>{% for v in villes %}<option {% if v == ville %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
 			<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="N°, tracking, client, téléphone" aria-label="Rechercher" style="min-width:200px"></label>
+			<label class="field" title="Dernier mouvement à partir du">Du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+			<label class="field" title="Dernier mouvement jusqu’au">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
 			<button class="btn">Filtrer</button>
+			{% if statut_filtre or vendeur_filtre or ville or q or du or au %}<a class="btn sm" href="?type_colis={{ type_colis }}">Effacer</a>{% endif %}
 			{% if type_colis == 'livre' %}<a class="btn sm" href="?type_colis=livre&jours=180">180 jours</a>{% endif %}
 		</form>
 	</div>
 </div>
 
+<form method="post" id="selection" action="{% url 'management:management_admin_colis_actions' %}">{% csrf_token %}
+<input type="hidden" name="filtres" value="{{ filtres }}">
+<input type="hidden" name="tous" value="0" id="sel-tous">
+<input type="hidden" name="doc" value="" id="sel-doc">
+<div class="bulk" id="bulk" hidden>
+	<span class="bulk-n"><b id="sel-n">0</b> colis cochés{% if page.paginator.count > page.object_list|length %} · <button type="button" class="lien" id="sel-tout">cocher les {{ page.paginator.count }} colis du filtre</button>{% endif %}</span>
+	{% if peut_bouger %}
+	<span class="bulk-g"><select name="statut" id="bulk-statut" aria-label="Nouveau statut"><option value="">Passer au statut…</option>{% for v, l in groupes_statuts %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+		<button class="btn sm primary" name="action" value="avancer" data-besoin="statut">Appliquer</button></span>
+	{% endif %}
+	{% if peut_unpaid %}<button class="btn sm primary" name="action" value="unpaid" data-confirme="Passer les colis livrés cochés en « Unpaid » (livrés, en attente de versement) ? Cela confirme que l’argent est chez nous.">Passer en Unpaid</button>{% endif %}
+	<input name="commentaire" placeholder="Commentaire / raison" maxlength="300" aria-label="Commentaire">
+	{% if peut_corriger %}<button class="btn sm" name="action" value="corriger" data-besoin="statut,commentaire" data-confirme="Corriger le statut des colis cochés ? La raison reste dans l’historique.">Corriger</button>{% endif %}
+	{% if peut_imprimer %}
+	<span class="bulk-g">
+		<button class="btn sm" data-doc="feuille_route">Feuille de route</button>
+		<button class="btn sm" data-doc="preparation">Fiche de préparation</button>
+		<button class="btn sm" data-doc="etiquettes">Étiquettes</button>
+		<button class="btn sm" data-doc="factures">Factures client</button>
+		<button class="btn sm" data-doc="export">Export Excel</button>
+	</span>
+	{% endif %}
+	<button type="button" class="btn sm" id="sel-vider">Décocher</button>
+</div>
 <div class="tablewrap">
 	<table>
-		<thead><tr><th>Commande</th><th>Vendeur</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th>{% if 'argent' in droits %}<th class="r">Frais</th>{% endif %}<th>Statut</th><th>{% if type_colis == 'a_sauver' %}Sans mouvement{% else %}Mis à jour{% endif %}</th></tr></thead>
+		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-page" aria-label="Cocher la page"></th><th>Commande</th><th>Vendeur</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th>{% if 'argent' in droits %}<th class="r">Frais</th>{% endif %}<th>Statut</th><th>{% if type_colis == 'a_sauver' %}Sans mouvement{% else %}Mis à jour{% endif %}</th></tr></thead>
 		<tbody>
 		{% for article in page %}
 			<tr>
+				<td><input type="checkbox" name="codes" value="{{ article.code }}" class="sel" aria-label="Cocher {{ article.code }}"></td>
 				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' article.code %}">{{ article.code }}</a><div class="muted" style="font-size:11px">{{ article.date_creation|date:"d/m/Y H:i" }}{% if article.code_tracking %} · {{ article.code_tracking }}{% endif %}</div></td>
 				<td>{% if article.vendeur %}{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' article.vendeur.code %}">{{ article.vendeur.nom_store }}</a>{% else %}{{ article.vendeur.nom_store }}{% endif %}<div class="muted mono" style="font-size:11px">{{ article.vendeur.code }}</div>{% else %}—{% endif %}</td>
 				<td>{{ article.nom_destinataire|default:"" }} {{ article.prenom_destinataire|default:"" }}<div class="muted nw" style="font-size:11.5px">{{ article.numero_principal_destinataire|default:"" }}</div></td>
@@ -37,11 +67,12 @@
 				<td class="nw {% if type_colis == 'a_sauver' %}t-bad{% else %}muted{% endif %}">{% if type_colis == 'a_sauver' %}{{ article.dernier_mouvement|timesince }}{% else %}{{ article.date_modification|date:"d/m/Y H:i" }}{% endif %}</td>
 			</tr>
 		{% empty %}
-			<tr><td colspan="8" class="muted" style="padding:18px">Aucun colis pour ces filtres.</td></tr>
+			<tr><td colspan="9" class="muted" style="padding:18px">Aucun colis pour ces filtres.</td></tr>
 		{% endfor %}
 		</tbody>
 	</table>
 </div>
+</form>
 
 {% if page.paginator.num_pages > 1 %}
 <div class="pager">
@@ -53,4 +84,56 @@
 	</span>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block styles %}{{ block.super }}
+<style>
+.bulk { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; margin:0 0 10px; background:var(--surface, #fff); border:1px solid var(--line, #d6dbe3); border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.08); }
+.bulk[hidden] { display:none; }
+.bulk .bulk-g { display:inline-flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.bulk select, .bulk input[name=commentaire] { padding:6px 9px; border:1px solid var(--line, #d6dbe3); border-radius:8px; font:inherit; }
+.bulk .lien { background:none; border:0; padding:0; color:var(--brand, #0f5c4d); text-decoration:underline; cursor:pointer; font:inherit; }
+</style>
+{% endblock %}
+
+{% block scripts %}{{ block.super }}
+<script>
+(function () {
+	var form = document.getElementById('selection'); if (!form) return;
+	var bar = document.getElementById('bulk'), n = document.getElementById('sel-n'), tous = document.getElementById('sel-tous');
+	var total = {{ page.paginator.count|default:0 }};
+	function cases() { return form.querySelectorAll('input.sel'); }
+	function maj() {
+		var c = form.querySelectorAll('input.sel:checked').length;
+		n.textContent = tous.value === '1' ? total : c;
+		bar.hidden = c === 0 && tous.value !== '1';
+	}
+	form.addEventListener('change', function (e) {
+		if (e.target.id === 'sel-page') cases().forEach(function (x) { x.checked = e.target.checked; });
+		if (e.target.classList.contains('sel') && !e.target.checked) tous.value = '0';
+		maj();
+	});
+	var tout = document.getElementById('sel-tout');
+	if (tout) tout.addEventListener('click', function () { tous.value = '1'; cases().forEach(function (x) { x.checked = true; }); maj(); });
+	document.getElementById('sel-vider').addEventListener('click', function () { tous.value = '0'; document.getElementById('sel-page').checked = false; cases().forEach(function (x) { x.checked = false; }); maj(); });
+	form.addEventListener('click', function (e) {
+		var b = e.target.closest('button'); if (!b || b.type === 'button') return;
+		var doc = document.getElementById('sel-doc');
+		if (b.dataset.doc) {
+			doc.value = b.dataset.doc;
+			form.action = '{% url "management:management_admin_colis_imprimer" %}';
+			form.target = b.dataset.doc === 'export' ? '' : '_blank';
+			return;
+		}
+		doc.value = ''; form.action = '{% url "management:management_admin_colis_actions" %}'; form.target = '';
+		var besoin = (b.dataset.besoin || '').split(',').filter(Boolean);
+		for (var i = 0; i < besoin.length; i++) {
+			var champ = form.querySelector('[name=' + besoin[i] + ']');
+			if (champ && !champ.value.trim()) { e.preventDefault(); champ.focus(); alert(besoin[i] === 'statut' ? 'Choisissez le statut.' : 'Indiquez la raison.'); return; }
+		}
+		if (b.dataset.confirme && !confirm(b.dataset.confirme)) { e.preventDefault(); }
+		else if (b.value === 'avancer' && !confirm('Passer ' + n.textContent + ' colis au statut choisi ? Les colis pour lesquels le circuit ne le permet pas seront laissés tels quels.')) { e.preventDefault(); }
+	});
+})();
+</script>
 {% endblock %}

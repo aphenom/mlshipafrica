@@ -41,6 +41,10 @@ DROITS = {
     'colis_mouvements': {CEO, MANAGER, AGENT},         # faire avancer un statut
     'colis_annuler_mouvement': {CEO, MANAGER},         # revenir sur le dernier mouvement
     'colis_retours': {CEO, MANAGER},                   # revenu à Abidjan, retourné, remis en stock, abandonné
+    'colis_corriger': {CEO, MANAGER},                  # corriger un statut posté par erreur (motif obligatoire)
+    'colis_corriger_argent': {CEO},                    # corriger un colis Unpaid ou Reversé
+    'colis_modifier': {CEO},                           # modifier les données d'une commande (client, montant, produit…)
+    'colis_imprimer': {CEO, COMPTABLE, MANAGER, AGENT},  # bordereaux, feuilles de route, étiquettes, factures, export
     'stock': {CEO, MANAGER},                           # réceptions de stock, inventaire
     'confirmations': {CEO, MANAGER, AGENT},            # appeler les clients, valider l'acompte
     'acomptes': {CEO, COMPTABLE},                      # rembourser les acomptes

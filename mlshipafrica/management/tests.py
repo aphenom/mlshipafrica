@@ -150,13 +150,16 @@ class StatutsTests(TestCase):
     def test_parcours_normal_et_echec(self):
         self.mouvement(S.EN_ATTENTE_DEPOT)
         self.assertEqual(self.suivants(), [S.DEPOT, S.ANNULE])        # pas de ramassage : option non choisie
-        for statut in (S.DEPOT, S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE):
+        for statut in (S.DEPOT, S.EN_TRANSIT, S.ARRIVE, S.EN_COURS_LIVRAISON):    # ordre logique : arrivé, puis en livraison
             self.assertTrue(transition_autorisee(self.article, self.dernier, statut))
             self.mouvement(statut)
         self.assertIn(S.ECHEC_LIVRAISON, self.suivants())
-        self.assertNotIn(S.LIVRE, self.suivants())                    # encaissement → « Livré et payé »
+        self.assertIn(S.LIVRE, self.suivants())                       # l'agent pose « Livré », même avec encaissement
+        self.assertNotIn(S.LIVRE_PAYE, self.suivants())               # « Unpaid » : la comptable
         self.mouvement(S.ECHEC_LIVRAISON)
-        self.assertEqual(self.suivants(), [S.RECONDUIT, S.LIVRE_PAYE, S.EN_RETOUR])
+        self.assertEqual(self.suivants(), [S.RECONDUIT, S.EN_COURS_LIVRAISON, S.LIVRE, S.EN_RETOUR])
+        self.mouvement(S.LIVRE)
+        self.assertEqual(self.suivants(), [S.LIVRE_PAYE])             # sans utilisateur : liste brute du circuit
 
     def test_annulation_impossible_apres_expedition(self):
         self.mouvement(S.EN_ATTENTE_DEPOT)
