@@ -63,6 +63,7 @@ def context(request):
         notification_messages = None
     return {
         "notifications_non_lues": notifications_non_lues,
+        "RECETTE": getattr(settings, 'RECETTE', False),
             'configuration' : configuration, 
             'statut_vendeur' : statut_vendeur, 
             'statut_traitement': statut_traitement, 

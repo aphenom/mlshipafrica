@@ -115,7 +115,8 @@ def envoyer_file(limite=200, client=None, maintenant=None):
     SmsMessage.objects.filter(statut=SmsMessage.ENVOI, date_verrou__lt=maintenant - ENVOI_BLOQUE_APRES).update(
         statut=SmsMessage.EN_FILE, verrou='')
 
-    if not parametres.actif:
+    from django.conf import settings
+    if not parametres.actif or getattr(settings, 'RECETTE', False):   # version de test : aucun SMS ne part
         return bilan
     if parametres.pause_jusqua and parametres.pause_jusqua > maintenant:
         bilan['pause'] = True
@@ -222,6 +223,9 @@ def lire_accuses(corps):
 
 def relever_accuses(client=None, maintenant=None):
     """Interroge HSMS pour les SMS envoyés sans accusé final (secours si le webhook n'arrive pas)."""
+    from django.conf import settings
+    if getattr(settings, 'RECETTE', False) and client is None:
+        return 0
     maintenant = maintenant or timezone.now()
     parametres = SmsParametres.charger()
     client = client or client_par_defaut(parametres)

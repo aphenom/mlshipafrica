@@ -36,7 +36,14 @@ ALLOWED_HOSTS = [
     'app.mlshipcod.com',  # Optionnel pour www
     'localhost',  # Pour les tests locaux
     '127.0.0.1',  # Pour les tests locaux
-]
+] + [h.strip() for h in config('ALLOWED_HOSTS_EN_PLUS', default='').split(',') if h.strip()]
+
+# Version de test (recette) : copie de la base de production, rien ne sort (SMS, Woura, webhooks, e-mails).
+# Voir RECETTE.md. Garde-fou : la base d'une recette doit avoir « recette » dans son nom.
+RECETTE = config('RECETTE', default=False, cast=bool)
+if RECETTE and 'recette' not in config('DB_NAME', default='').lower():
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("RECETTE=True : DB_NAME doit contenir « recette » (jamais la base de production).")
 
 
 # Application definition
@@ -238,7 +245,7 @@ PHONENUMBER_DEFAULT_REGION = 'CI'
 X_FRAME_OPTIONS = 'ALLOWALL'
 
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" if RECETTE else "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.hostinger.com')
 EMAIL_PORT = config('EMAIL_PORT', default=465, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)

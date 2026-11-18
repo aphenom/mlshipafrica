@@ -263,6 +263,9 @@ def transport_par_defaut(evenement):
 
 
 def envoyer_file(transport=None, maintenant=None, limite=200):
+    from django.conf import settings
+    if getattr(settings, 'RECETTE', False) and transport is None:
+        return {'envoyes': 0, 'erreurs': 0}          # version de test : rien n'est envoyé à Woura ni aux vendeurs
     maintenant = maintenant or timezone.now()
     transport = transport or transport_par_defaut
     bilan = {'envoyes': 0, 'erreurs': 0}
