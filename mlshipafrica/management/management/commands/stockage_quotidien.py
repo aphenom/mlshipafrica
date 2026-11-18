@@ -8,4 +8,4 @@ class Command(BaseCommand):
     help = "Facture le stockage du jour (une ligne par vendeur et par jour, rejouable)."
 
     def handle(self, *args, **options):
-        self.stdout.write('Stockage facturé pour %d vendeur(s).' % facturer_stockage())
+        self.stdout.write('Stockage : %d mois compté(s) (date anniversaire des entrées).' % facturer_stockage())

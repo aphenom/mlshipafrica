@@ -6,7 +6,8 @@ Stock des vendeurs en stockage (option_stockage).
   Le vendeur crée une commande sur un produit en stock → à la validation, le stock est réservé (sortie)
   Commande annulée avant expédition → le stock revient ; relance → il ressort
   Colis revenu en bon état → « Remis en stock » ; abîmé → « Mis de côté » (hors stock disponible)
-  Chaque jour : pièces en stock × tarif du jour = coût de stockage, déduit des relevés du vendeur
+  Stockage : 300 F par pièce et par mois dès l'entrée (1er mois à la réception, puis à chaque date anniversaire
+  pour les pièces du lot encore en stock), déduit des factures de paiement du vendeur
 
 Chaque variation est une ligne MouvementStock (jamais modifiée) ; ProduitStock garde le total à jour.
 """
@@ -81,6 +82,10 @@ def valider_reception(entree, user, quantites_recues):
             references += 1
     entree.statut, entree.date_reception, entree.recu_par = StatutEntreeStock.RECUE, timezone.now(), user
     entree.save()
+    # Premier mois de stockage dès l'entrée : pièces reçues × tarif mensuel
+    tarif = tarif_stockage_mois(entree.vendeur)
+    for ligne in entree.lignes.select_related('entree__vendeur').filter(quantite_recue__gt=0):
+        facturer_lot(ligne, 0, timezone.localdate(), ligne.quantite_recue, tarif)
     vendeur = entree.vendeur
 
     def sms():
@@ -136,20 +141,63 @@ def stock_selon_mouvement(sender, instance, created, **kwargs):
         _mouvement(produit, T.MISE_DE_COTE, quantite, article=article, commentaire='Colis revenu abîmé')
 
 
-def facturer_stockage(jour=None):
-    """Tâche quotidienne : une ligne par vendeur en stockage et par jour (rejouable)."""
+def _ajouter_mois(d, k):
+    import calendar
+    from datetime import date
+    total = d.month - 1 + k
+    annee, mois = d.year + total // 12, total % 12 + 1
+    return date(annee, mois, min(d.day, calendar.monthrange(annee, mois)[1]))
+
+
+def tarif_stockage_mois(vendeur):
     from core.models import Configuration
+    config = Configuration.objects.filter(license=vendeur.license, etat_suppression=False).order_by('-pk').first()
+    return Decimal(str(getattr(config, 'tarif_stockage_mois', 300) or 0))
+
+
+def pieces_par_lot(produit):
+    """Pièces encore en stock de chaque lot reçu : les sorties consomment les lots les plus anciens d'abord."""
+    lots = list(LigneEntreeStock.objects.filter(produit=produit, entree__statut=StatutEntreeStock.RECUE, quantite_recue__gt=0)
+                .select_related('entree').order_by('-entree__date_reception', '-pk'))
+    reste, parts = max(produit.quantite_disponible, 0), {}
+    for lot in lots:                                  # le stock restant appartient aux lots les plus récents
+        parts[lot.pk] = min(reste, lot.quantite_recue)
+        reste -= parts[lot.pk]
+    return lots, parts
+
+
+def facturer_lot(ligne, rang, jour, pieces, tarif):
+    """Un mois de stockage d'un lot (rang 0 = mois de l'entrée). Rejouable : une seule écriture par lot et par mois."""
+    from django.db.models import F
+    from management.models import Ecriture
+    from mlshipafrica.enums import TypeEcriture
+    if pieces <= 0:
+        return False
+    vendeur = ligne.entree.vendeur
+    _, cree = Ecriture.objects.get_or_create(cle='stockage:lot:%s:%s' % (ligne.pk, rang), defaults={
+        'vendeur': vendeur, 'type': TypeEcriture.STOCKAGE, 'montant': pieces * tarif, 'license': vendeur.license})
+    if cree:
+        facturation, _ = FacturationStockage.objects.get_or_create(vendeur=vendeur, jour=jour, defaults={'pieces': 0, 'montant': 0})
+        FacturationStockage.objects.filter(pk=facturation.pk).update(pieces=F('pieces') + pieces, montant=F('montant') + pieces * tarif)
+    return cree
+
+
+def facturer_stockage(jour=None):
+    """
+    Stockage : 300 F (réglé par le CEO) par pièce et par mois, dès l'entrée du stock. Le premier mois est compté à la
+    réception ; ensuite, à chaque date anniversaire de l'entrée, les pièces de ce lot encore en stock sont comptées
+    pour un nouveau mois. Tâche quotidienne, rejouable (rattrape les mois manqués). Renvoie le nombre de mois comptés.
+    """
     jour = jour or timezone.localdate()
     n = 0
     for vendeur in Vendeur.objects.filter(option_stockage=True, etat_suppression=False):
-        pieces = vendeur.produits_stock.filter(quantite_disponible__gt=0).aggregate(t=Sum('quantite_disponible'))['t'] or 0
-        if not pieces:
-            continue
-        config = Configuration.objects.filter(license=vendeur.license, etat_suppression=False).order_by('-pk').first()
-        tarif = Decimal(str(getattr(config, 'tarif_stockage_jour', 10) or 0))
-        facturation, cree = FacturationStockage.objects.get_or_create(vendeur=vendeur, jour=jour,
-                                                                      defaults={'pieces': pieces, 'montant': pieces * tarif})
-        from management.finance import ecrire_stockage
-        ecrire_stockage(facturation)
-        n += cree
+        tarif = tarif_stockage_mois(vendeur)
+        for produit in vendeur.produits_stock.all():
+            lots, parts = pieces_par_lot(produit)
+            for lot in lots:
+                debut = timezone.localtime(lot.entree.date_reception).date()
+                rang = 1
+                while _ajouter_mois(debut, rang) <= jour:
+                    n += facturer_lot(lot, rang, _ajouter_mois(debut, rang), parts.get(lot.pk, 0), tarif)
+                    rang += 1
     return n

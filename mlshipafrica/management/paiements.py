@@ -215,7 +215,7 @@ REGLAGES = (
     ('garde_par_jour', "Garde par colis et par jour (F)", "Colis revenu à Abidjan et pas repris.", '500'),
     ('garde_premier_jour', "Premier jour de garde payante (J+)", "", '11'),
     ('garde_plafond', "Plafond de la garde par colis (F)", "", '10000'),
-    ('tarif_stockage_jour', "Stockage par pièce et par jour (F)", "Vendeurs avec l'option stockage.", '10'),
+    ('tarif_stockage_mois', "Stockage par pièce et par mois (F)", "Compté dès l'entrée du stock, puis chaque mois pour les pièces restantes.", '300'),
     ('montant_acompte', "Acompte client demandé à la confirmation (F, interne)", "Jamais affiché au vendeur.", '2000'),
 )
 

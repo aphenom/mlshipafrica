@@ -114,7 +114,8 @@ class Configuration(MyModelAbstract):
     garde_par_jour = models.DecimalField("garde par colis et par jour", max_digits=10, decimal_places=2, default=500)
     garde_premier_jour = models.PositiveSmallIntegerField("premier jour de garde payante (J+)", default=11)
     garde_plafond = models.DecimalField("plafond de la garde par colis", max_digits=10, decimal_places=2, default=10000)
-    tarif_stockage_jour = models.DecimalField("stockage par pièce et par jour", max_digits=10, decimal_places=2, default=10)
+    tarif_stockage_jour = models.DecimalField("stockage par pièce et par jour (ancien calcul, plus utilisé)", max_digits=10, decimal_places=2, default=10)
+    tarif_stockage_mois = models.DecimalField("stockage par pièce et par mois, dès l'entrée", max_digits=10, decimal_places=2, default=300)
     license = models.ForeignKey(License, models.SET_NULL, null=True, blank=True, related_name='license_configurations', related_query_name="license_configuration", verbose_name = "license")
     
     app_nom = models.CharField('nom plateforme', max_length=50)

@@ -342,4 +342,4 @@ Mise en ligne, après validation de la recette :
 3. `python manage.py crontab remove && python manage.py crontab add` (la tâche `releves_vendeurs` du lundi/jeudi est retirée) ;
 4. le CEO applique le taux de collecte aux colis existants (Paramètres › Frais et réglages, simulation affichée), ou `python manage.py appliquer_taux_collecte --appliquer [--inclure-factures]`.
 
-Points d'attention : le tarif de stockage du code est 10 F / pièce / jour (le CEO le règle dans Frais et réglages) ; le dossier `media/` (pièces d'identité, procurations, photos) ne doit pas être listable publiquement par le serveur web.
+Stockage : 300 F par pièce et par mois dès l'entrée (1er mois compté à la réception, puis à chaque date anniversaire du lot pour les pièces restantes ; tâche quotidienne `stockage_quotidien`, rejouable ; tarif réglé par le CEO). Point d'attention : le dossier `media/` (pièces d'identité, procurations, photos) ne doit pas être listable publiquement par le serveur web.

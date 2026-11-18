@@ -1094,7 +1094,7 @@ def vendeur_stock(request):
             django_messages.success(request, "Demande envoyée : votre commercial vous rappelle pour activer le stockage.")
             return redirect('management:management_vendeur_stock')
         from management.finance import configuration
-        tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_jour', None)
+        tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_mois', None)
         return render(request, 'management/vendeur_stock_offre.html', locals())
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1146,7 +1146,7 @@ def vendeur_stock(request):
     dernier_releve_stockage = (lignes_stockage.filter(releve__isnull=False).exclude(releve__statut=StatutReleve.ANNULE)
                                .select_related('releve').order_by('-releve__date_creation').first())
     from management.finance import configuration
-    tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_jour', None)
+    tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_mois', None)
     pieces = sum(max(p.quantite_disponible, 0) for p in produits)
     epuises = sum(1 for p in produits if p.quantite_disponible <= 0 and not p.en_route)   # un produit en route n'est pas à réapprovisionner
     de_cote = sum(p.quantite_de_cote for p in produits)

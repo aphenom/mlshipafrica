@@ -45,7 +45,7 @@
 	<div class="kpi"><span class="l">Pièces disponibles</span><span class="v">{{ pieces }}</span><span class="n">{{ produits|length }} produit{{ produits|length|pluralize }}</span></div>
 	<div class="kpi"><span class="l">Envois en attente</span><span class="v {% if envois_en_attente %}t-warn{% endif %}">{{ envois_en_attente }}</span><span class="n">pas encore comptés par le manager</span></div>
 	<div class="kpi"><span class="l">Produits épuisés</span><span class="v {% if epuises %}t-bad{% else %}t-ok{% endif %}">{{ epuises }}</span><span class="n">{% if epuises %}à réapprovisionner{% else %}tout est disponible{% endif %}</span></div>
-	<div class="kpi"><span class="l">Stockage {{ debut_mois|date:"F Y" }}</span><span class="v">{{ stockage_mois|fcfa }}</span><span class="n">{% if stockage_deduit %}déjà déduit {{ stockage_deduit|fcfa }}{% if dernier_releve_stockage %} (facture {{ dernier_releve_stockage.releve.code }}){% endif %} · {% endif %}à déduire {{ stockage_a_deduire|fcfa }}{% if tarif_stockage %} · {{ tarif_stockage|fcfa }} par pièce et par jour{% endif %}</span></div>
+	<div class="kpi"><span class="l">Stockage {{ debut_mois|date:"F Y" }}</span><span class="v">{{ stockage_mois|fcfa }}</span><span class="n">{% if stockage_deduit %}déjà déduit {{ stockage_deduit|fcfa }}{% if dernier_releve_stockage %} (facture {{ dernier_releve_stockage.releve.code }}){% endif %} · {% endif %}à déduire {{ stockage_a_deduire|fcfa }}{% if tarif_stockage %} · {{ tarif_stockage|fcfa }} par pièce et par mois, dès l’entrée{% endif %}</span></div>
 </div>
 
 <div class="card">

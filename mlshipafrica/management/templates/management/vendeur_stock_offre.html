@@ -9,7 +9,7 @@
 	<ul style="margin:0 0 0 18px;line-height:1.7">
 		<li>Vous annoncez chaque envoi (référence, produit, photo, quantité) ; le manager compte à la réception et valide.</li>
 		<li>Chaque commande « depuis mon stock » sort la quantité ; un retour en bon état revient en stock.</li>
-		<li>Stockage{% if tarif_stockage %} : {{ tarif_stockage|fcfa }} par pièce et par jour{% endif %}, déduit de vos factures de paiement ; pas de frais de garde sur vos retours.</li>
+		<li>Stockage{% if tarif_stockage %} : {{ tarif_stockage|fcfa }} par pièce et par mois, compté dès l’entrée du stock{% endif %}, déduit de vos factures de paiement ; pas de frais de garde sur vos retours.</li>
 	</ul>
 	{% if vendeur.demande_stockage_le %}
 	<div class="note">Demande envoyée le {{ vendeur.demande_stockage_le|date:"d/m/Y" }} : votre commercial vous rappelle pour l’activer.</div>
