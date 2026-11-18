@@ -28,6 +28,7 @@ from mlshipafrica.droits import a_le_droit, droit_requis
 from mlshipafrica.enums import StatutTraitement as S
 
 MAX_SELECTION = 2000
+MAX_EXPORT = 50000
 
 ONGLETS = {
     S.EN_ATTENTE_RAMASSAGE: ("En attente de ramassage", (S.EN_ATTENTE_RAMASSAGE,)),
@@ -204,6 +205,9 @@ def admin_colis_imprimer(request):
     doc = request.POST.get('doc')
     articles = _selection(request, license)[:MAX_SELECTION]
     if doc == 'export':
+        if request.POST.get('tous') == '1':          # export de toute la liste filtrée, sans plafond d'impression
+            params = {k: v[-1] for k, v in parse_qs(request.POST.get('filtres', '')).items()}
+            articles = list(filtrer_colis(license, params)[0][:MAX_EXPORT])
         return _export(articles, a_le_droit(user, 'argent'))
     if doc not in DOCUMENTS or not articles:
         messages.error(request, "Cochez au moins un colis.")
@@ -228,22 +232,20 @@ def admin_colis_imprimer(request):
 
 
 def _export(articles, avec_argent, pour_vendeur=False):
-    reponse = HttpResponse(content_type='text/csv; charset=utf-8')
-    reponse['Content-Disposition'] = 'attachment; filename="colis-%s.csv"' % timezone.localtime().strftime('%Y%m%d-%H%M')
-    reponse.write('﻿')  # Excel lit les accents
-    w = csv.writer(reponse, delimiter=';')
+    """Export Excel (.xlsx) des commandes : s'ouvre directement dans Excel, téléphones et références en texte."""
+    from management.modele_import import tableau_xlsx
     entete = ['Commande', 'Créée le', 'Tracking', 'Réf. vendeur', 'Vendeur', 'Client', 'Téléphone', 'Téléphone 2', 'Ville',
               'Zone', 'Adresse', 'Produit', 'Quantité', 'À encaisser', 'Statut', 'Confirmation', 'Agent', 'Mis à jour']
     if pour_vendeur:
         entete.remove('Agent')
     if avec_argent:
         entete += ['Frais ML', 'Frais de collecte', 'Frais de retour', 'Garde']
-    w.writerow(entete)
+    lignes = []
     for a in articles:
         ligne = [a.code, timezone.localtime(a.date_creation).strftime('%d/%m/%Y %H:%M') if a.date_creation else '',
                  a.code_tracking or '', a.reference_externe or '', a.vendeur.nom_store if a.vendeur else '',
-                 ('%s %s' % (a.nom_destinataire or '', a.prenom_destinataire or '')).strip(), a.numero_principal_destinataire or '',
-                 a.numero_secondaire_destinataire or '', a.localite_arrivee.nom if a.localite_arrivee else '',
+                 ('%s %s' % (a.nom_destinataire or '', a.prenom_destinataire or '')).strip(), str(a.numero_principal_destinataire or ''),
+                 str(a.numero_secondaire_destinataire or ''), a.localite_arrivee.nom if a.localite_arrivee else '',
                  a.zone_arrivee.nom if a.zone_arrivee else '', a.adresse_destinataire or '', a.designation or '', a.quantite or 1,
                  int(a.valeur_totale or 0) if a.is_option_encaissement else 0, a.get_statut_traitement_display(),
                  a.get_etat_confirmation_display()] + ([] if pour_vendeur else [
@@ -251,7 +253,11 @@ def _export(articles, avec_argent, pour_vendeur=False):
                  timezone.localtime(a.date_modification).strftime('%d/%m/%Y %H:%M') if a.date_modification else '']
         if avec_argent:
             ligne += [int(a.montant_frais or 0), int(a.cout_option_encaissement or 0), int(a.frais_retour or 0), int(a.frais_garde or 0)]
-        w.writerow(ligne)
+        lignes.append(ligne)
+    texte = [entete.index(c) for c in ('Tracking', 'Réf. vendeur', 'Téléphone', 'Téléphone 2')]
+    reponse = HttpResponse(tableau_xlsx(entete, lignes, 'Commandes', texte),
+                           content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    reponse['Content-Disposition'] = 'attachment; filename="commandes-%s.xlsx"' % timezone.localtime().strftime('%Y%m%d-%H%M')
     return reponse
 
 

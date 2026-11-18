@@ -31,7 +31,7 @@ DROITS = {
     'moyens_versement': {CEO, COMPTABLE},              # valider les numéros de versement des vendeurs (procuration)
     'frais_versement_regler': {CEO},                   # taux des frais de versement Mobile Money (à la charge du vendeur)
     'benefice': {CEO, COMPTABLE},                      # journal en temps réel, bénéfice, frais et coût du fichier prestataire
-    'prestataire': {CEO, COMPTABLE, MANAGER},          # fichier hebdomadaire du prestataire : commandes, statuts, commentaires
+    'prestataire': {CEO, COMPTABLE},                   # retiré au manager COD (18/11)          # fichier hebdomadaire du prestataire : commandes, statuts, commentaires
     'prestataire_supprimer': {CEO},                    # supprimer un fichier importé par erreur
     'commissions_regler': {CEO},                       # paramétrer les commissions
     'commissions_voir': {CEO, COMPTABLE},              # montants des commissions

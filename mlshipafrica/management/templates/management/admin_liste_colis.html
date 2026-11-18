@@ -9,6 +9,11 @@
 		<div>
 			<h1>{{ suite_breadcrumb|default:"Colis" }}</h1>
 			<div class="muted">{% if type_colis == 'a_sauver' %}Colis en route ou chez le client sans aucun mouvement depuis plus de 48 h : appelez, relancez ou réorientez.{% elif type_colis == 'revenu_abidjan' %}Colis revenus au bureau : le vendeur a jusqu’à J3 pour donner un nouveau client ; la garde démarre à J11.{% elif type_colis == 'livre' and jours_historique %}Livraisons des {{ jours_historique }} derniers jours.{% else %}{{ page.paginator.count }} colis.{% endif %}</div>
+			{% if peut_imprimer and page.paginator.count %}
+			<form method="post" action="{% url 'management:management_admin_colis_imprimer' %}" style="margin-top:8px">{% csrf_token %}
+				<input type="hidden" name="doc" value="export"><input type="hidden" name="tous" value="1"><input type="hidden" name="filtres" value="{{ filtres }}">
+				<button class="btn sm">Exporter les {{ page.paginator.count }} commande{{ page.paginator.count|pluralize }} (Excel)</button>
+			</form>{% endif %}
 		</div>
 		<form method="get" class="tools">
 			<input type="hidden" name="type_colis" value="{{ type_colis }}">

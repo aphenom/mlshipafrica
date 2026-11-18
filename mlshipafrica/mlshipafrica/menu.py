@@ -91,7 +91,6 @@ MENUS_EQUIPE = {
         _r('Agents COD', APPELS),
         _r('Vendeurs', VENDEURS, FICHE_VENDEUR),
         _r('Stock et produits', STOCK),
-        _r('Fichier du prestataire', PRESTATAIRE),
         _r('Mouvements des colis', MOUVEMENTS),
     ],
     R.COMPTABLE: [

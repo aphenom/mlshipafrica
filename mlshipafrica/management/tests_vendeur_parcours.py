@@ -15,6 +15,12 @@ PNG = (b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08
 
 
 @override_settings(MEDIA_ROOT=MEDIA)
+
+def texte_xlsx(contenu):
+    """Contenu d'un export .xlsx → texte, une ligne par rangée (cellules séparées par ;)."""
+    from management.fichier_prestataire import lire_xlsx
+    return '\n'.join(';'.join('' if c is None else str(c) for c in l) for l in lire_xlsx(contenu)[0]['lignes'])
+
 class ParcoursVendeur(tests_pages.RecettePages):
     test_toutes_les_pages = None
 
@@ -205,7 +211,8 @@ class ParcoursVendeur(tests_pages.RecettePages):
             r = self.client.post('/management/vendeur_imprimer/', {'doc': doc, 'codes': codes})
             self.assertEqual(r.status_code, 200)
             self.assertIn(codes[0], r.content.decode())
-        export = self.client.post('/management/vendeur_imprimer/', {'doc': 'export', 'codes': codes}).content.decode('utf-8-sig')
+        export = self.client.post('/management/vendeur_imprimer/', {'doc': 'export', 'codes': codes}).content
+        export = texte_xlsx(export)
         self.assertIn(codes[0], export)
         self.assertNotIn('Agent', export.splitlines()[0])
         from management.tests import vendeur_pour

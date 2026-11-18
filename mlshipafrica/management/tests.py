@@ -995,6 +995,8 @@ class FichierPrestataireTests(TestCase):
     def test_page_par_role(self):
         from mlshipafrica.enums import TypeProfilStaffChoice as R
         self.client.force_login(self.comptes[R.MANAGER])
+        self.assertNotEqual(self.client.get('/management/admin_fichier_prestataire/').status_code, 200)   # plus chez le manager COD
+        self.client.force_login(self.comptes[R.SUPER])
         reponse = self.client.post('/management/admin_fichier_prestataire/', {'fichier': self.fichier()})
         self.assertEqual(reponse.status_code, 302)
         page = self.client.get(reponse['Location']).content.decode()
@@ -1002,7 +1004,6 @@ class FichierPrestataireTests(TestCase):
         self.assertIn('client passe ce soir', page)
         self.assertIn('Inconnu chez nous', page)
         self.assertIn('En double dans le fichier', page)
-        self.assertNotIn('Frais ML', page)                                # le manager ne voit pas l'argent
         self.assertNotIn('ACME', page.upper())                               # ni dans le nom du fichier, ni dans les lignes
         statut = self.client.get('/management/admin_fichier_prestataire/?filtre=statut').content.decode()
         self.assertIn(self.colis[0].code, statut)                         # livré chez eux, en transit chez nous

@@ -7,6 +7,12 @@ from management.statuts import appliquer_mouvement, statuts_correction, statuts_
 from mlshipafrica.enums import StatutTraitement as S, TypeProfilStaffChoice as R
 
 
+
+def texte_xlsx(contenu):
+    """Contenu d'un export .xlsx → texte, une ligne par rangée (cellules séparées par ;)."""
+    from management.fichier_prestataire import lire_xlsx
+    return '\n'.join(';'.join('' if c is None else str(c) for c in l) for l in lire_xlsx(contenu)[0]['lignes'])
+
 class Shipping(tests_pages.RecettePages):
     test_toutes_les_pages = None  # la recette complète tourne déjà dans tests_pages
 
@@ -113,12 +119,12 @@ class Shipping(tests_pages.RecettePages):
             self.assertIn('ML COD Intérieur', page)
             self.assertNotIn('Frais ML', page)
         export = self.client.post('/management/admin_colis_imprimer/', {'doc': 'export', 'codes': codes})
-        contenu = export.content.decode('utf-8-sig')
+        contenu = texte_xlsx(export.content)
         self.assertIn(codes[0], contenu)
         self.assertNotIn('Frais ML', contenu)                              # le manager ne voit pas l'argent
         self.client.force_login(self.comptes[R.SUPER])
         export = self.client.post('/management/admin_colis_imprimer/', {'doc': 'export', 'codes': codes})
-        self.assertIn('Frais ML', export.content.decode('utf-8-sig'))
+        self.assertIn('Frais ML', texte_xlsx(export.content))
 
     def test_seul_le_ceo_modifie_la_commande(self):
         colis = self.colis(S.EN_TRANSIT)
@@ -145,3 +151,14 @@ class Shipping(tests_pages.RecettePages):
                                'mouvement_commentaire': ''})
         transit.refresh_from_db()
         self.assertEqual(transit.statut_traitement, S.ARRIVE)
+
+    def test_manager_exporte_toute_la_liste_filtree(self):
+        self.client.force_login(self.comptes[R.MANAGER])
+        page = self.client.get('/management/admin_liste_colis/?type_colis=en_cours').content.decode()
+        self.assertIn('Exporter les', page)
+        self.assertNotIn('Fichier du prestataire', page)                             # retiré du menu du manager
+        r = self.client.post('/management/admin_colis_imprimer/', {'doc': 'export', 'tous': '1', 'filtres': 'type_colis=en_cours'})
+        self.assertIn('spreadsheetml', r['Content-Type'])
+        lignes = texte_xlsx(r.content).splitlines()
+        self.assertTrue(lignes[0].startswith('Commande;'))
+        self.assertNotIn('Frais ML', lignes[0])

@@ -12,6 +12,19 @@ import zipfile
 from xml.sax.saxutils import escape
 
 LIGNES_MAX = 500
+STYLES = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+              '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+              '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/>'
+              '<name val="Calibri"/></font></fonts>'
+              '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FF1F3A5F"/><bgColor indexed="64"/></patternFill></fill></fills>'
+              '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+              '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+              '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+              '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+              '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+              '<xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+              '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>')
 
 
 def _lettre(i):
@@ -109,19 +122,14 @@ def modele_xlsx(colonnes, villes, formats, stocks):
     aide = _feuille(aide, [largeurs.get(c, 14) for c in cles], {0: 1, 11: 1, 12: 2})
 
     feuilles = [('Commandes', commandes), ('Listes', listes), ("Mode d'emploi", aide)]
-    styles = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-              '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-              '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/>'
-              '<name val="Calibri"/></font></fonts>'
-              '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
-              '<fill><patternFill patternType="solid"><fgColor rgb="FF1F3A5F"/><bgColor indexed="64"/></patternFill></fill></fills>'
-              '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
-              '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-              '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-              '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
-              '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-              '<xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
-              '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>')
+    styles = STYLES
+    return _classeur(feuilles, styles)
+
+
+
+def _classeur(feuilles, styles=None):
+    """[(nom d'onglet, xml de la feuille)] → octets d'un .xlsx."""
+    styles = styles or STYLES
     sortie = io.BytesIO()
     with zipfile.ZipFile(sortie, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('[Content_Types].xml',
@@ -153,3 +161,10 @@ def modele_xlsx(colonnes, villes, formats, stocks):
         for i, (_, xml) in enumerate(feuilles):
             z.writestr('xl/worksheets/sheet%d.xml' % (i + 1), xml)
     return sortie.getvalue()
+
+
+def tableau_xlsx(entete, lignes, onglet='Commandes', colonnes_texte=()):
+    """Un onglet : en-tête en gras figée, puis les lignes (nombres gardés en nombres, téléphones en texte)."""
+    largeurs = [max(10, min(40, max([len(str(entete[i]))] + [len(str(l[i])) for l in lignes[:200] if i < len(l)]) + 2))
+                for i in range(len(entete))]
+    return _classeur([(onglet, _feuille([entete] + list(lignes), largeurs, {0: 1}, True, '', colonnes_texte))])
