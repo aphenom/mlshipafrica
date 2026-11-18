@@ -287,7 +287,17 @@ def admin_colis_imprimer(request):
         p = produits.setdefault(cle, {'designation': cle[0], 'format': cle[1], 'quantite': 0, 'codes': []})
         p['quantite'] += a.quantite or 1
         p['codes'].append(a.code)
+    # Acompte d'acheminement reçu (2 000 F) : affiché sur l'étiquette et la facture client ; sinon « 0 F »
+    from management.models import Acompte
+    from mlshipafrica.enums import StatutAcompte
+    payes = {}
+    for ac in Acompte.objects.filter(article__in=[a.pk for a in articles], statut=StatutAcompte.RECU).order_by('date_reception'):
+        payes[ac.article_id] = ac
+    for a in articles:
+        a.acompte_paye = payes.get(a.pk)
+    maintenant = timezone.localtime()
     return render(request, 'management/imprimer_colis.html', {
+        'numero': 'FR-%s-%s' % (maintenant.strftime('%Y%m%d-%H%M'), len(articles)),
         'doc': doc, 'titre': DOCUMENTS[doc], 'articles': articles, 'a_encaisser': a_encaisser,
         'villes': sorted(villes.items()), 'produits': sorted(produits.values(), key=lambda p: -p['quantite']),
         'quantite_totale': sum(p['quantite'] for p in produits.values()), 'maintenant': timezone.now(),

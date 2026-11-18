@@ -193,3 +193,18 @@ class Shipping(tests_pages.RecettePages):
             self.assertFalse(ok)
         self.client.force_login(self.comptes[R.AGENT])
         self.assertNotIn('Format vérifié au bureau', self.client.get('/management/admin_detail_colis/%s/' % colis.code).content.decode())
+
+    def test_etiquette_acheminement_paye_ou_zero(self):
+        from management.models import Acompte
+        paye, rien = self.nouveau_depose(), self.nouveau_depose()
+        Acompte.objects.create(article=paye, montant=2000, reseau='wave', reference_depot='T-1', statut='recu', license=paye.license)
+        self.client.force_login(self.comptes[R.MANAGER])
+        page = self.client.post('/management/admin_colis_imprimer/', {'doc': 'etiquettes', 'codes': [paye.code, rien.code]}).content.decode()
+        self.assertIn('PAYÉ · Wave', page)
+        self.assertIn('Acheminement 0 F', page)
+        facture = self.client.post('/management/admin_colis_imprimer/', {'doc': 'factures', 'codes': [paye.code]}).content.decode()
+        self.assertIn('FAC-%s' % paye.code, facture)
+        route = self.client.post('/management/admin_colis_imprimer/', {'doc': 'feuille_route', 'codes': [paye.code, rien.code]}).content.decode()
+        self.assertIn('FEUILLE DE ROUTE', route)
+        for retire in ('Signature client', 'LIVRÉ', 'Acompte'):
+            self.assertNotIn(retire, route)
