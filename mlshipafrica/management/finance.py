@@ -419,7 +419,7 @@ def marquer_verse(releve, user, reference, moyen=''):
         dernier = article.get_last_historique()
         Article.objects.filter(pk=article.pk).update(statut_traitement=S.REVERSE, etat_reversement=True)
         HistoriqueArticle.objects.create(article=article, statut_traitement=S.REVERSE, date=timezone.now(),
-                                         commentaire='Relevé %s versé' % releve.code, license=article.license,
+                                         commentaire='Facture de paiement %s versée (réf. %s)' % (releve.code, releve.reference_versement), license=article.license,
                                          dernier_historique_article=dernier)
     return releve
 
