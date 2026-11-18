@@ -395,7 +395,9 @@ class Article(MyModelAbstract):
         ordering = ['-date_creation']
         # Lot 1 : index pour tenir 1 000+ colis par jour (listes par statut et par vendeur)
         constraints = [
-            models.UniqueConstraint(fields=['source', 'reference_externe'], name='article_reference_externe_unique',
+            # Une référence est propre à chaque vendeur : deux boutiques peuvent avoir chacune leur commande « 1001 ».
+            # (MySQL ignore les contraintes conditionnelles : le contrôle est aussi fait dans le code.)
+            models.UniqueConstraint(fields=['vendeur', 'source', 'reference_externe'], name='article_reference_vendeur_unique',
                                     condition=models.Q(reference_externe__isnull=False)),
         ]
         indexes = [

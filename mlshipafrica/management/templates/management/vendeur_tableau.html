@@ -3,6 +3,7 @@
 {% block title %}Tableau de bord · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card">
 	<div class="head">
 		<h1>Bonjour {{ vendeur.nom_store|default:"et bienvenue" }}</h1>

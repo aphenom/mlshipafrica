@@ -167,7 +167,8 @@ def admin_colis_actions(request):
     faits, refus = 0, []
     for article in articles:
         if action == 'unpaid' and (article.statut_traitement != S.LIVRE or not article.is_option_encaissement):
-            if article.statut_traitement != S.LIVRE_PAYE:
+            # Déjà Unpaid, ou rien à encaisser (le client avait payé le vendeur) : rien à faire, ce n'est pas une erreur
+            if article.statut_traitement not in (S.LIVRE_PAYE, S.LIVRE):
                 refus.append("%s (%s)" % (article.code, article.get_statut_traitement_display()))
             continue
         ok, raison = appliquer_mouvement(article, statut, user, commentaire, correction=correction)

@@ -16,7 +16,7 @@ La tâche `retours_quotidien` (chaque matin) est rejouable : elle recalcule la g
 de retour, sans jamais la compter deux fois.
 """
 from datetime import timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -77,7 +77,8 @@ def retours_selon_mouvement(sender, instance, created, **kwargs):
     if statut == S.EN_RETOUR:
         config = configuration_de(article)
         taux = _parametre(config, 'taux_frais_retour', 50)
-        frais = (Decimal(str(article.montant_frais or 0)) * taux / 100).quantize(Decimal('1'))
+        # Arrondi au franc supérieur à partir de 0,5 F, comme tous les autres frais (avant : 1 740,5 → 1 740)
+        frais = (Decimal(str(article.montant_frais or 0)) * taux / 100).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         Article.objects.filter(pk=article.pk).update(frais_retour=(article.frais_retour or 0) + frais)
     elif statut == S.REVENU_ABIDJAN:
         Article.objects.filter(pk=article.pk).update(date_revenu_abidjan=instance.date_creation or timezone.now(),

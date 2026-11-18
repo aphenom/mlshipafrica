@@ -120,7 +120,8 @@ def creer_commande(vendeur, donnees, source, reference_externe, test=False):
     from mlshipafrica.enums import StatutTraitement as S
     if not reference_externe:
         raise ValidationError("Référence de la commande manquante.")
-    existant = Article.objects.filter(source=source, reference_externe=reference_externe).first()
+    # Par vendeur : la commande « 1001 » d'une autre boutique n'est pas celle-ci (avant : elle était renvoyée)
+    existant = Article.objects.filter(vendeur=vendeur, source=source, reference_externe=reference_externe).first()
     if existant is not None:
         return existant, False
     cible = _normaliser(donnees.get('ville'))

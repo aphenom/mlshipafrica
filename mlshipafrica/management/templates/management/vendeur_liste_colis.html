@@ -3,6 +3,7 @@
 {% block title %}Shipping · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li class="active" aria-current="page">Shipping</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card">
 	<div class="head">
 		<h1>Suivi de mes livraisons</h1>

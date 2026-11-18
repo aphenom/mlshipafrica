@@ -46,6 +46,24 @@ class ParcoursVendeur(tests_pages.RecettePages):
         self.assertEqual(int(nouvelle.cout_option_encaissement), 750)                        # 5 % de collecte
         self.assertFalse(Article.objects.filter(reference_externe='CMD-2').exists())
 
+    def test_meme_reference_chez_deux_vendeurs_et_reimport(self):
+        from management.tests import vendeur_pour
+        csv = ('Nom du client *;Téléphone *;Ville *;Produit *;Prix unitaire (F) *;Ma référence\n'
+               'Kouassi;0707070707;Bouaké;Crème;7500;CMD-1\n')
+        fichier = lambda: SimpleUploadedFile('c.csv', csv.encode('utf-8'))
+        self.client.post('/management/vendeur_import_colis/', {'fichier': fichier()})
+        self.client.post('/management/vendeur_import_colis/', {'confirmer': '1'})
+        self.client.post('/management/vendeur_import_colis/', {'fichier': fichier()})          # même fichier une 2e fois
+        self.assertIn('déjà utilisée', self.client.get('/management/vendeur_import_colis/').content.decode())
+        self.client.post('/management/vendeur_import_colis/', {'annuler': '1'})
+        autre = vendeur_pour(self.vendeur.license, 'Autre boutique')
+        autre.etat_approbation = True
+        autre.save()
+        self.client.force_login(autre.user)
+        self.client.post('/management/vendeur_import_colis/', {'fichier': fichier()})
+        self.client.post('/management/vendeur_import_colis/', {'confirmer': '1'})
+        self.assertEqual(Article.objects.filter(reference_externe='CMD-1').count(), 2)          # une par vendeur
+
     def test_valider_puis_creer_une_autre_commande(self):
         brouillon = Article.objects.filter(vendeur=self.vendeur).first()
         brouillon_code = Article.objects.create(

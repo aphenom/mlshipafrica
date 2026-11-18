@@ -15,12 +15,12 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 
 from management.models import Article, ProduitStock, Vendeur
-from mlshipafrica.enums import StatutTraitement as S
+from mlshipafrica.enums import SourceCommande, StatutTraitement as S
 
 MAX_LIGNES = 500
 COLONNES = [
@@ -94,6 +94,9 @@ def verifier(vendeur, donnees):
     formats = {_norm(f.nom): f for f in FormatArticle.objects.filter(license=vendeur.license, etat_suppression=False)}
     format_defaut = formats.get('petit') or next(iter(formats.values()), None)
     stock = {p.reference.lower(): p for p in ProduitStock.objects.filter(vendeur=vendeur, actif=True)} if vendeur.option_stockage else {}
+    deja = set(Article.objects.filter(vendeur=vendeur, source=SourceCommande.DIRECTE, reference_externe__isnull=False,
+                                      etat_suppression=False).values_list('reference_externe', flat=True))
+    vues = set()
     lignes = []
     for d in donnees[:MAX_LIGNES]:
         erreurs = []
@@ -133,6 +136,13 @@ def verifier(vendeur, donnees):
                 erreurs.append("référence stock inconnue : %s" % ref_stock)
             elif produit_stock.quantite_disponible < quantite:
                 erreurs.append("stock insuffisant (%d disponible)" % produit_stock.quantite_disponible)
+        reference = _texte(d.get('reference'), 80)
+        if reference and reference in deja:
+            erreurs.append("référence %s déjà utilisée (commande déjà créée)" % reference)
+        elif reference and reference in vues:
+            erreurs.append("référence %s en double dans le fichier" % reference)
+        if reference:
+            vues.add(reference)
         lignes.append({
             'ligne': d['ligne'], 'erreurs': erreurs, 'nom': nom, 'prenom': _texte(d.get('prenom'), 255), 'telephone': tel,
             'telephone2': re.sub(r'[^\d+]', '', _texte(d.get('telephone2'), 30)), 'ville': ville.nom if ville else _texte(d.get('ville'), 40),
@@ -173,6 +183,8 @@ def creer(vendeur, lignes, user):
             creees.append(a)
         except ValidationError as e:
             refus.append("ligne %d : %s" % (l['ligne'], ' '.join(e.messages)))
+        except IntegrityError:
+            refus.append("ligne %d : référence %s déjà utilisée" % (l['ligne'], l['reference']))
     return creees, refus
 
 

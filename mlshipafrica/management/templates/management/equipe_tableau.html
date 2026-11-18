@@ -3,6 +3,7 @@
 {% block title %}Pilotage · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="ceo">
 	<div class="chead">
 		<div>

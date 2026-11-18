@@ -2,6 +2,7 @@
 {% block title %}Mon profil · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li class="active" aria-current="page">Mon profil</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 {% with statut=vendeur.get_statut_vendeur %}
 <div class="prof">
 	<div class="card" style="align-items:flex-start">

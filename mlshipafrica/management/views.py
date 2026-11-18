@@ -555,6 +555,10 @@ def admin_detail_colis(request, code):
                     except (ValueError, InvalidOperation):
                         django_messages.error(request, "Quantité ou montant invalide.")
                     else:
+                      nouvelle_ref = article.reference_externe
+                      if nouvelle_ref and Article.objects.filter(vendeur=article.vendeur, source=article.source, reference_externe=nouvelle_ref).exclude(pk=article.pk).exists():
+                        django_messages.error(request, "La référence %s est déjà utilisée par une autre commande de ce vendeur." % nouvelle_ref)
+                      else:
                         article.quantite = quantite
                         if valeur != (article.valeur_totale or 0):
                             article.valeur_totale = valeur

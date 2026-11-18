@@ -3,6 +3,7 @@
 {% block title %}Aujourd’hui · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li class="active" aria-current="page">Aujourd’hui</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="jour">
 	<div class="head"><div><div class="crumb">{% now "l j F Y" %}</div><h1 class="jt">Bonjour{% if user.first_name %} {{ user.first_name }}{% endif %}, voici votre journée</h1></div></div>
 

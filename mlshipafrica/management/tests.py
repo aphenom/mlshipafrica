@@ -515,7 +515,7 @@ class RetoursTests(TestCase):
         self.article.refresh_from_db()
 
     def test_frais_de_retour_50_pourcent(self):
-        self.assertEqual(int(self.article.frais_retour), round(3481 / 2))
+        self.assertEqual(int(self.article.frais_retour), 1741)
 
     def test_revenu_abidjan_reserve_au_manager(self):
         self.assertFalse(transition_autorisee(self.article, self.dernier, S.REVENU_ABIDJAN, self.agent))
@@ -586,7 +586,7 @@ class RetoursTests(TestCase):
         self.assertEqual(self.article.generation, 1)
         self.assertEqual(self.article.etat_confirmation, 'a_confirmer')
         self.assertEqual(int(self.article.montant_frais), 3481)                                 # Korhogo = zone 3
-        self.assertEqual(int(self.article.frais_retour), round(3481 / 2))                       # le retour reste dû
+        self.assertEqual(int(self.article.frais_retour), 1741)                       # le retour reste dû
         dernier = self.article.get_last_historique()
         self.assertEqual(dernier.statut_traitement, S.SUBSTITUE)
         self.assertEqual([s for s, _ in statuts_suivants(self.article, dernier)], [S.DEPOT])
@@ -759,7 +759,7 @@ class ArgentTests(TestCase):
                 attendu['frais'] += prix; attendu['livres'] += 1
             else:                                                  # échec, retour, revenu à Abidjan
                 a = self.parcours(self.colis(valeur, fmt), aller + (S.ECHEC_LIVRAISON, S.EN_RETOUR, S.REVENU_ABIDJAN))
-                attendu['retours'] += round(prix / 2)
+                attendu['retours'] += int((Decimal(prix) / 2).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
             attendu['cout'] += cout; attendu['departs'] += 1
         # Un colis annulé avant expédition : aucun argent
         self.parcours(self.colis(15000, self.petit), (S.EN_ATTENTE_DEPOT, S.ANNULE))

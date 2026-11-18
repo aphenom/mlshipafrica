@@ -2,6 +2,7 @@
 {% block title %}Vendeurs · {{ suite_breadcrumb }} · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li>Vendeurs</li><li class="active" aria-current="page">{{ suite_breadcrumb }}</li>{% endblock %}
 {% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card ml">
 	<div class="head">
 		<div>
