@@ -673,6 +673,20 @@ class AppelConfirmation(models.Model):
         ordering = ['-date']
 
 
+class RelanceVendeur(models.Model):
+    """Journal de relance du commercial : ce qu'il a fait avec le vendeur et quand le rappeler."""
+    vendeur = models.ForeignKey(Vendeur, on_delete=models.CASCADE, related_name='relances')
+    auteur = models.ForeignKey(User, models.SET_NULL, null=True, related_name='relances_vendeurs')
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+    note = models.TextField("Note")
+    rappeler_le = models.DateField("Rappeler le", null=True, blank=True, db_index=True)
+    rappel_fait = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = 'Relance vendeur'
+
+
 """ Stock des vendeurs en stockage """
 class ProduitStock(models.Model):
 

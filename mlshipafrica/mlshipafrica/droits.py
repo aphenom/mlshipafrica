@@ -25,6 +25,7 @@ ADMIN_TECH = R.ADMINISTRATEUR
 DROITS = {
     # Argent de la société : frais, règlements, reversements, montants du tableau de bord, coût partenaire
     'argent': {CEO, COMPTABLE},
+    'suivi_commercial': {CEO, COMMERCIAL},           # indicateurs vendeurs (volumes), alertes, journal de relance
     'paiements': {CEO, COMPTABLE},                     # régler les frais, reverser aux vendeurs
     'activites_argent': {CEO, COMPTABLE},              # journaux des paiements et reversements
     'releves': {CEO, COMPTABLE},                       # relevés vendeurs, versements

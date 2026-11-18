@@ -371,6 +371,7 @@ CRONJOBS = [
     ('*/15 * * * *', 'django.core.management.call_command', ['sms_accuses'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
     ('0 19 * * *', 'django.core.management.call_command', ['sms_resume_soir'], {}, '>> ' + str(LOG_DIR / 'cron_sms.log')),
     ('0 8 * * *', 'django.core.management.call_command', ['retours_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
+    ('15 7 * * *', 'django.core.management.call_command', ['alertes_commerciales'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
     ('5 7 * * *', 'django.core.management.call_command', ['stockage_quotidien'], {}, '>> ' + str(LOG_DIR / 'cron_colis.log')),
     # Plus de relevés automatiques : la comptable génère les factures de paiement (Paiements vendeurs).
     # Après le déploiement : python manage.py crontab remove && python manage.py crontab add

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from . import views # import views so we can use them in urls.
-from . import actions_colis, import_commandes, notifications, paiements
+from . import actions_colis, commercial, import_commandes, notifications, paiements
 
 app_name = 'management'
 urlpatterns = [
@@ -33,6 +33,7 @@ urlpatterns = [
     path('admin_acomptes/', views.admin_acomptes, name='management_admin_acomptes'),
     path('admin_stock/', views.admin_stock, name='management_admin_stock'),
     path('admin_releves/', paiements.admin_paiements, name='management_admin_releves'),
+    path('commercial/suivi/<str:code>/', commercial.commercial_suivi, name='management_commercial_suivi'),
     path('admin_moyens_versement/', views.admin_moyens_versement, name='management_admin_moyens_versement'),
     path('admin_benefice/', views.admin_benefice, name='management_admin_benefice'),
     path('admin_fichier_prestataire/', views.admin_fichier_prestataire, name='management_admin_fichier_prestataire'),

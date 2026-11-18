@@ -146,3 +146,52 @@ class ZonesEtTarifs(tests_pages.RecettePages):
         for role in (R.COMPTABLE, R.MANAGER, R.ADMINISTRATEUR):
             self.client.force_login(self.comptes[role])
             self.assertEqual(self.client.get('/core/zones_tarifs/').status_code, 403, role)
+
+    def test_indicateurs_alertes_et_relances_du_commercial(self):
+        from datetime import date, timedelta
+        from django.utils import timezone
+        from management import commercial as com
+        from management.models import Notification, ProduitStock, RelanceVendeur, Vendeur
+        from management.tests import vendeur_pour
+        commerciale = self.comptes[R.COMMERCIAL]
+        Vendeur.objects.filter(pk=self.vendeur.pk).update(commercial=commerciale.account_profil_staff, option_stockage=True)
+        dormant = vendeur_pour(self.vendeur.license, 'Boutique Dormante')
+        Vendeur.objects.filter(pk=dormant.pk).update(commercial=commerciale.account_profil_staff,
+                                                     date_approbation=timezone.now() - timedelta(days=5))
+        ProduitStock.objects.create(vendeur=self.vendeur, reference='EP-1', designation='Savon', quantite_disponible=0)
+        mes = Vendeur.objects.filter(commercial=commerciale.account_profil_staff)
+        v = [x for x in com.indicateurs(mes) if x.pk == self.vendeur.pk][0]
+        self.assertGreater(v.commandes_30, 0)
+        self.assertIn(v.profil, com.PROFILS)
+        types = {(a[0].pk, a[1]) for a in com.alertes(mes)}
+        self.assertIn((dormant.pk, 'sans_commande'), types)
+        self.assertIn((self.vendeur.pk, 'stock'), types)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertGreaterEqual(com.envoyer_alertes(), 2)
+        with self.captureOnCommitCallbacks(execute=True):
+            com.envoyer_alertes()                                                     # pas deux fois la même semaine
+        self.assertEqual(Notification.objects.filter(destinataire=commerciale, titre__contains='Boutique Dormante').count(), 1)
+        self.client.force_login(commerciale)
+        page = self.client.get('/').content.decode()
+        self.assertIn('Alertes sur mes vendeurs', page)
+        self.assertIn('Taux de livraison', page)
+        self.assertNotIn(' F<', page)                                                # jamais d'argent de la société
+        suivi = '/management/commercial/suivi/%s/' % dormant.code
+        self.client.post(suivi, {'note': 'Appelé, commence lundi', 'rappeler_le': timezone.localdate().isoformat()})
+        self.assertEqual(RelanceVendeur.objects.get(vendeur=dormant).note, 'Appelé, commence lundi')
+        self.assertIn('Boutique Dormante', self.client.get('/').content.decode().split('À rappeler aujourd’hui')[1][:2000])
+        autre = vendeur_pour(self.vendeur.license, 'Pas a elle')
+        self.assertEqual(self.client.get('/management/commercial/suivi/%s/' % autre.code).status_code, 404)
+        self.client.force_login(self.comptes[R.MANAGER])
+        self.assertNotEqual(self.client.get(suivi).status_code, 200)
+
+    def test_vendeur_a_proposer_au_stockage(self):
+        from management import commercial as com
+        from management.models import Vendeur
+        Vendeur.objects.filter(pk=self.vendeur.pk).update(option_stockage=False)
+        ancien = com.SEUIL_STOCKAGE
+        com.SEUIL_STOCKAGE = 1
+        try:
+            self.assertIn(self.vendeur.pk, [v.pk for v in com.a_proposer_stockage(Vendeur.objects.filter(pk=self.vendeur.pk))])
+        finally:
+            com.SEUIL_STOCKAGE = ancien

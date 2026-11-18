@@ -16,6 +16,29 @@
 	{% include "management/_cartes_resultats.html" %}
 
 	<div class="cgridm">
+		<div class="card cpanel"{% if com_alertes %} style="border-color:var(--bad)"{% endif %}>
+			<div class="head" style="align-items:center"><h2>Alertes sur mes vendeurs</h2><span class="badge {% if com_alertes %}b-bad{% else %}b-ok{% endif %}">{{ com_alertes|length }}</span></div>
+			{% for v, type, titre, detail in com_alertes %}
+			<div class="tache"><span class="pt {% if type == 'chute' or type == 'retours' %}bad{% endif %}"></span><div class="tx"><b>{{ titre }}</b><span class="muted">{{ detail }}</span></div><a class="btn sm" href="{% url 'management:management_commercial_suivi' v.code %}">Suivi</a></div>
+			{% empty %}<div class="muted">Aucune alerte : vos vendeurs vont bien.</div>{% endfor %}
+		</div>
+		<div class="card cpanel">
+			<div class="head" style="align-items:center"><h2>À rappeler aujourd’hui</h2><span class="badge {% if com_rappels %}b-warn{% else %}b-ok{% endif %}">{{ com_rappels|length }}</span></div>
+			{% for r in com_rappels %}
+			<div class="tache"><span class="pt"></span><div class="tx"><b>{{ r.vendeur.nom_store }}</b><span class="muted">prévu le {{ r.rappeler_le|date:"d/m" }} · {{ r.note|truncatechars:80 }}</span></div><a class="btn sm" href="{% url 'management:management_commercial_suivi' r.vendeur.code %}">Suivi</a></div>
+			{% empty %}<div class="muted">Aucun rappel prévu aujourd’hui.</div>{% endfor %}
+		</div>
+	</div>
+
+	{% if com_stockage %}
+	<div class="card cpanel">
+		<h2>À proposer : le stockage</h2>
+		<div class="muted" style="font-size:12.5px">Vendeurs qui envoient beaucoup et ne sont pas encore en stockage. Chaque vendeur converti paie 300 francs par pièce et par mois en plus des livraisons.</div>
+		{% for v in com_stockage %}<div class="tache"><span class="pt"></span><div class="tx"><b>{{ v.nom_store }}</b><span class="muted">{{ v.commandes_30 }} commandes en 30 jours{% if v.demande_stockage_le %} · <b class="t-ok">l’a demandé le {{ v.demande_stockage_le|date:"d/m" }}</b>{% endif %}</span></div><a class="btn sm" href="{% url 'management:management_commercial_suivi' v.code %}">Suivi</a></div>{% endfor %}
+	</div>
+	{% endif %}
+
+	<div class="cgridm">
 		<div class="card cpanel">
 			<div class="head" style="align-items:center"><h2>Demandes de collaboration</h2><a class="btn sm" href="{% url 'management:management_admin_liste_vendeurs' %}?type_vendeur=attente_approbation">Toutes</a></div>
 			{% for d in pf.demandes %}
@@ -31,8 +54,20 @@
 	</div>
 
 	<div class="card cpanel">
-		<h2>Mes vendeurs · commandes sur 30 jours</h2>
-		{% for v in pf.classement %}<div class="ctop"><span class="cr">{{ forloop.counter }}</span><span class="cn"><a href="{% url 'management:management_admin_vendeur_profil' v.code %}">{{ v.nom_store }}</a><small>{{ v.livres_30 }} livré{{ v.livres_30|pluralize }}{% if not v.agent_cod %} · <span class="t-warn">sans agent COD</span>{% endif %}</small></span><span class="ftrack"><span class="ffill" style="width:{% widthratio v.commandes_30 pf.classement_max 100 %}%"></span></span><b>{{ v.commandes_30 }}</b></div>{% empty %}<div class="muted">Pas encore de vendeur actif.</div>{% endfor %}
+		<div class="head" style="align-items:center"><h2>Mes vendeurs · indicateurs sur 30 jours</h2><span class="muted" style="font-size:12.5px">{% for lib, n in com_profils.items %}{{ lib }} {{ n }}{% if not forloop.last %} · {% endif %}{% endfor %}</span></div>
+		<div class="tablewrap"><table>
+			<thead><tr><th>Vendeur</th><th class="r">Commandes</th><th class="r">Évolution</th><th class="r">Taux de livraison</th><th class="r">Retours</th><th>Régularité</th><th>Profil</th><th></th></tr></thead>
+			<tbody>{% for v in com_vendeurs %}<tr>
+				<td><b>{{ v.nom_store }}</b>{% if not v.agent_cod_id %} <span class="t-warn" style="font-size:11.5px">sans agent COD</span>{% endif %}</td>
+				<td class="r num">{{ v.commandes_30 }}</td>
+				<td class="r num {% if v.tendance is not None and v.tendance < 0 %}t-bad{% elif v.tendance %}t-ok{% endif %}">{% if v.tendance is not None %}{% if v.tendance > 0 %}+{% endif %}{{ v.tendance }} %{% else %}—{% endif %}</td>
+				<td class="r num {% if v.taux_livraison is not None and v.taux_livraison < 75 %}t-bad{% endif %}">{% if v.taux_livraison is not None %}{{ v.taux_livraison }} %{% else %}—{% endif %}</td>
+				<td class="r num {% if v.taux_retour and v.taux_retour > 35 %}t-bad{% endif %}">{% if v.taux_retour is not None %}{{ v.taux_retour }} %{% else %}—{% endif %}</td>
+				<td>{{ v.semaines_actives }}/4 sem.</td>
+				<td><span class="badge {{ v.profil_classe }}">{{ v.profil_libelle }}</span></td>
+				<td><a class="btn sm" href="{% url 'management:management_commercial_suivi' v.code %}">Suivi</a></td></tr>
+			{% empty %}<tr><td colspan="8" class="muted" style="padding:16px">Pas encore de vendeur actif.</td></tr>{% endfor %}</tbody>
+		</table></div>
 	</div>
 </div>
 {% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base_main.html" %}
+{% block title %}Suivi · {{ v.nom_store }} · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Mon portefeuille</li><li class="active" aria-current="page">{{ v.nom_store }}</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card">
+	<div class="head"><div><div class="crumb">{{ v.code }}{% if v.numero_contact %} · <a href="tel:{{ v.numero_contact }}">{{ v.numero_contact }}</a>{% endif %}</div>
+		<h1>{{ v.nom_store }} <span class="badge {{ v.profil_classe }}">{{ v.profil_libelle }}</span></h1>
+		<div class="muted">Indicateurs sur les 30 derniers jours, comparés aux 30 jours d’avant. Volumes seulement.</div></div>
+		<span class="tools">{% if v.numero_contact %}<a class="btn primary" href="tel:{{ v.numero_contact }}">Appeler</a>{% endif %}<a class="btn" href="{% url 'management:management_admin_vendeur_profil' v.code %}">Fiche vendeur</a></span></div>
+	<div class="kpis">
+		<div class="kpi"><span class="l">Commandes (30 j)</span><span class="v">{{ v.commandes_30 }}</span><span class="n {% if v.tendance is not None and v.tendance < 0 %}t-bad{% elif v.tendance %}t-ok{% endif %}">{% if v.tendance is not None %}{% if v.tendance > 0 %}+{% endif %}{{ v.tendance }} % vs {{ v.commandes_prec }} avant{% else %}{{ v.commandes_prec }} les 30 jours d’avant{% endif %}</span></div>
+		<div class="kpi"><span class="l">Taux de livraison</span><span class="v {% if v.taux_livraison is not None and v.taux_livraison < 75 %}t-bad{% elif v.taux_livraison %}t-ok{% endif %}">{% if v.taux_livraison is not None %}{{ v.taux_livraison }} %{% else %}—{% endif %}</span><span class="n">{{ v.livres_30 }} livré{{ v.livres_30|pluralize }} · {{ v.echecs_30 }} non livré{{ v.echecs_30|pluralize }}</span></div>
+		<div class="kpi"><span class="l">Retours</span><span class="v {% if v.taux_retour and v.taux_retour > 35 %}t-bad{% endif %}">{% if v.taux_retour is not None %}{{ v.taux_retour }} %{% else %}—{% endif %}</span><span class="n">alerte au-dessus de 35 %</span></div>
+		<div class="kpi"><span class="l">Régularité</span><span class="v">{{ v.semaines_actives }}/4</span><span class="n">semaines avec des commandes{% if v.derniere %} · dernière il y a {{ v.derniere|timesince }}{% endif %}</span></div>
+	</div>
+	{% for a in alertes %}<div class="note warn"><b>{{ a.2 }}</b> · {{ a.3 }}</div>{% endfor %}
+	{% if not v.option_stockage and v.commandes_30 >= seuil_stockage %}<div class="note ml"><b>À proposer : le stockage.</b> {{ v.commandes_30 }} commandes en 30 jours : il gagnerait du temps en laissant son stock chez nous (300 francs par pièce et par mois).{% if v.demande_stockage_le %} Il l’a déjà demandé le {{ v.demande_stockage_le|date:"d/m/Y" }}.{% endif %}</div>{% endif %}
+</div>
+
+<div class="card">
+	<h2>Journal de relance</h2>
+	<form method="post" class="form" style="grid-template-columns:1fr 200px auto;align-items:end">{% csrf_token %}
+		<label class="field">Ce qui s’est dit *<input name="note" maxlength="2000" required placeholder="ex. appelé, attend son stock jeudi, veut un tarif pour Bouaké"></label>
+		<label class="field">Rappeler le<input type="date" name="rappeler_le" min="{{ aujourdhui|date:'Y-m-d' }}"></label>
+		<button class="btn primary">Noter</button>
+	</form>
+	<div class="tablewrap" style="margin-top:12px"><table>
+		<thead><tr><th>Date</th><th>Par</th><th>Note</th><th>Rappel</th></tr></thead>
+		<tbody>{% for r in relances %}<tr><td class="nw">{{ r.date|date:"d/m/Y H:i" }}</td><td>{{ r.auteur.get_full_name|default:r.auteur.email }}</td><td>{{ r.note }}</td>
+			<td class="nw">{% if r.rappeler_le %}{% if r.rappel_fait %}<span class="muted">{{ r.rappeler_le|date:"d/m" }} · fait</span>{% else %}<b class="{% if r.rappeler_le <= aujourdhui %}t-bad{% endif %}">{{ r.rappeler_le|date:"d/m/Y" }}</b>
+			<form method="post" style="display:inline">{% csrf_token %}<button class="btn sm" name="fait" value="{{ r.pk }}">Fait</button></form>{% endif %}{% else %}—{% endif %}</td></tr>
+		{% empty %}<tr><td colspan="4" class="muted" style="padding:16px">Aucune relance notée.</td></tr>{% endfor %}</tbody>
+	</table></div>
+</div>
+{% endblock %}

@@ -69,6 +69,16 @@ def index(request):
                     from management import tableaux_equipe as te
                     from management.views import vendeurs_visibles
                     pf = te.portefeuille_commercial(vendeurs_visibles(user))
+                    from management import commercial as com
+                    mes = vendeurs_visibles(user)
+                    com_alertes = com.alertes(mes)
+                    com_rappels = list(com.rappels_du_jour(user))
+                    com_stockage = com.a_proposer_stockage(mes)[:10]
+                    com_vendeurs = sorted(com.indicateurs(mes.filter(etat_approbation=True, etat_suppression=False)),
+                                          key=lambda v: -v.commandes_30)
+                    com_profils = {}
+                    for v in com_vendeurs:
+                        com_profils[v.profil_libelle] = com_profils.get(v.profil_libelle, 0) + 1
                     return render(request, 'management/commercial_tableau.html', locals())
                 if role in (R.MANAGER, R.SUPER, R.COMPTABLE):
                     from management import tableaux_equipe as te
