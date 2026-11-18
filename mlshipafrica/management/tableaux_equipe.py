@@ -164,6 +164,13 @@ def journee_comptable(license, debut=None, fin=None):
     if livres_non_valides:
         a_faire.append(('warn', '%d colis livré(s) à valider pour paiement' % livres_non_valides, None,
                         'passent « Livré et payé » avant le prochain relevé', 'management:management_admin_liste_colis', 'Ouvrir'))
+    from management.stock import mois_a_charger, nom_mois
+    for debut_mois, lignes, retard in mois_a_charger(license):
+        a_faire.insert(0 if retard else len(a_faire), (
+            'bad' if retard else 'warn',
+            ('En retard : stockage de %s non chargé' if retard else 'Stockage de %s à charger') % nom_mois(debut_mois),
+            sum((l['montant'] for l in lignes), 0), '%d vendeur%s en stock' % (len(lignes), 's' if len(lignes) > 1 else ''),
+            'management:management_admin_releves', 'Charger'))
     calendrier = []
     for i in range(1, 8):
         d = aujourdhui + timedelta(days=i)

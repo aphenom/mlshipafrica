@@ -195,29 +195,65 @@ def cle_stockage_mois(vendeur, debut):
     return 'stockage:mois:%s:%s' % (vendeur.pk, debut.strftime('%Y-%m'))
 
 
+def _debut_dt(jour):
+    return timezone.make_aware(timezone.datetime.combine(jour, timezone.datetime.min.time()))
+
+
+def pieces_au(produit, debut_dt):
+    """Pièces physiquement chez nous (disponibles + mises de côté) à un instant passé : le stock d'aujourd'hui moins
+    tous les mouvements faits depuis (une mise de côté ajoute des pièces abîmées, les autres mouvements le disponible)."""
+    total = max(produit.quantite_disponible, 0) + max(produit.quantite_de_cote, 0)
+    for type_, q in MouvementStock.objects.filter(produit=produit, date__gte=debut_dt).values_list('type', 'quantite'):
+        total -= abs(q) if type_ == T.MISE_DE_COTE else q
+    return max(total, 0)
+
+
 def stockage_a_valider(license, jour=None):
     """
-    Charge de stockage du mois à valider par la comptable (le 1er du mois, rappel) : pour chaque vendeur, les pièces
-    encore chez nous × tarif. Les pièces reçues ce mois-ci sont exclues : elles ont déjà payé ce mois à la réception.
+    Charge de stockage d'un mois (celui de `jour`, ce mois-ci par défaut) : pour chaque vendeur, les pièces chez nous
+    le 1er de ce mois × tarif. Les pièces reçues pendant le mois n'y sont pas : elles ont payé ce mois à la réception.
     Un vendeur déjà chargé pour ce mois n'apparaît plus. Rien n'est écrit.
     """
-    from django.db.models import Sum
     from management.models import Ecriture
     debut = (jour or timezone.localdate()).replace(day=1)
-    debut_dt = timezone.make_aware(timezone.datetime.combine(debut, timezone.datetime.min.time()))
+    debut_dt = _debut_dt(debut)
     lignes = []
     for vendeur in Vendeur.objects.filter(license=license, option_stockage=True, etat_suppression=False).order_by('nom_store'):
         if Ecriture.objects.filter(cle=cle_stockage_mois(vendeur, debut)).exists():
             continue
-        pieces = 0
-        for produit in vendeur.produits_stock.all():
-            recu_ce_mois = LigneEntreeStock.objects.filter(produit=produit, entree__statut=StatutEntreeStock.RECUE,
-                                                           entree__date_reception__gte=debut_dt).aggregate(t=Sum('quantite_recue'))['t'] or 0
-            pieces += max(max(produit.quantite_disponible, 0) + max(produit.quantite_de_cote, 0) - recu_ce_mois, 0)
+        pieces = sum(pieces_au(p, debut_dt) for p in vendeur.produits_stock.all())
         if pieces > 0:
             tarif = tarif_stockage_mois(vendeur)
             lignes.append({'vendeur': vendeur, 'pieces': pieces, 'tarif': tarif, 'montant': pieces * tarif})
     return debut, lignes
+
+
+def premier_mois_mensuel():
+    """Premier mois facturé avec cette règle (réglage STOCKAGE_MENSUEL_DEPUIS = 'AAAA-MM', le mois de mise en ligne)."""
+    from datetime import date
+    from django.conf import settings
+    a, m = (getattr(settings, 'STOCKAGE_MENSUEL_DEPUIS', '2026-11') or '2026-11').split('-')
+    return date(int(a), int(m), 1)
+
+
+def mois_a_charger(license, jour=None):
+    """
+    Tous les mois pas encore chargés, du plus ancien au mois en cours (12 mois au plus) : [(1er du mois, lignes, en_retard)].
+    Un mois oublié reste à charger (en retard) tant que la comptable ne l'a pas fait : rien n'est perdu.
+    """
+    aujourdhui = (jour or timezone.localdate()).replace(day=1)
+    debut = max(premier_mois_mensuel(), _ajouter_mois(aujourdhui, -11))
+    resultat = []
+    while debut <= aujourdhui:
+        _, lignes = stockage_a_valider(license, debut)
+        if lignes:
+            resultat.append((debut, lignes, debut < aujourdhui))
+        debut = _ajouter_mois(debut, 1)
+    return resultat
+
+
+def mois_en_retard(license, jour=None):
+    return [(d, l) for d, l, retard in mois_a_charger(license, jour) if retard]
 
 
 @transaction.atomic
@@ -243,16 +279,20 @@ def valider_stockage_mois(license, codes, user, jour=None):
 
 
 def rappel_stockage(jour=None):
-    """Le 1er du mois : rappel à la comptable (et au CEO, pour information) de valider la charge de stockage."""
+    """
+    Chaque matin : le 1er du mois, rappel de valider le stockage du mois ; tous les jours, tant qu'un mois passé n'est
+    pas chargé, rappel « en retard » à la comptable et au CEO. Renvoie le nombre de rappels.
+    """
     from core.models import License
-    from management.notifications import stockage_a_valider_rappel
+    from management.notifications import stockage_a_valider_rappel, stockage_en_retard_rappel
     jour = jour or timezone.localdate()
-    if jour.day != 1:
-        return 0
     n = 0
     for license in License.objects.all():
-        debut, lignes = stockage_a_valider(license, jour)
-        if lignes:
-            stockage_a_valider_rappel(license, debut, lignes)
-            n += 1
+        for debut, lignes, retard in mois_a_charger(license, jour):
+            if retard:
+                stockage_en_retard_rappel(license, debut, lignes, jour)
+                n += 1
+            elif jour.day == 1:
+                stockage_a_valider_rappel(license, debut, lignes)
+                n += 1
     return n

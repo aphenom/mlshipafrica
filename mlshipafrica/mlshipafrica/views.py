@@ -82,6 +82,9 @@ def index(request):
                         journee = te.journee_comptable(profil_staff.license, debut, fin)
                         return render(request, 'management/comptable_jour.html', locals())
                     pil = te.pilotage(profil_staff.license, debut, fin)
+                    if role == R.SUPER:
+                        from management.stock import mois_en_retard, nom_mois
+                        stockage_retard = [(nom_mois(d), sum((x['montant'] for x in l), 0)) for d, l in mois_en_retard(profil_staff.license)]
                     if a_le_droit(user, 'argent'):
                         argent = te.argent_ceo(profil_staff.license, debut, fin)
                     return render(request, 'management/equipe_tableau.html', locals())

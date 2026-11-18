@@ -49,14 +49,21 @@ def admin_paiements(request):
                     len(crees), 's' if len(crees) > 1 else '', 's' if len(crees) > 1 else ''))
                 return redirect(reverse('management:management_admin_releves') + '?etape=factures')
             if action == 'stockage':
+                from datetime import datetime as dt_
                 from management.stock import nom_mois, valider_stockage_mois
-                faites = valider_stockage_mois(license, request.POST.getlist('vendeurs'), user)
+                try:
+                    mois = dt_.strptime(request.POST.get('mois', ''), '%Y-%m').date()
+                except ValueError:
+                    mois = timezone.localdate().replace(day=1)
+                faites = valider_stockage_mois(license, request.POST.getlist('vendeurs'), user, mois)
                 if not faites:
                     raise ValidationError("Cochez au moins un vendeur.")
                 messages.success(request, "Stockage de %s chargé pour %d vendeur%s (%s F) : déduit de leur prochaine facture." % (
-                    nom_mois(timezone.localdate()), len(faites), 's' if len(faites) > 1 else '',
+                    nom_mois(mois), len(faites), 's' if len(faites) > 1 else '',
                     '{:,.0f}'.format(sum(l['montant'] for l in faites)).replace(',', '\u202f')))
-                return redirect(reverse('management:management_admin_releves') + '?etape=a_payer')
+                from management.stock import mois_a_charger
+                reste = mois_a_charger(license)
+                return redirect(reverse('management:management_admin_releves') + ('?etape=stockage' if reste else '?etape=a_payer'))
             releve = releves.get(pk=request.POST.get('releve'))
             if action == 'annuler':
                 annuler_releve(releve, user, request.POST.get('motif', ''))
@@ -85,8 +92,10 @@ def admin_paiements(request):
     ctx['kpi_sans_coordonnees'] = Vendeur.objects.filter(license=license, etat_suppression=False).filter(
         Q(versement_valide=False) & ~Q(compte_versement=None) & ~Q(compte_versement='')).count()
     debut_mois = timezone.make_aware(timezone.datetime.combine(timezone.localdate().replace(day=1), timezone.datetime.min.time()))
-    from management.stock import stockage_a_valider
-    ctx['kpi_stockage_vendeurs'] = len(stockage_a_valider(license)[1])
+    from management.stock import mois_a_charger
+    _mois = mois_a_charger(license)
+    ctx['kpi_stockage_vendeurs'] = sum(len(l) for _, l, _ in _mois)
+    ctx['kpi_stockage_retard'] = any(r for _, _, r in _mois)
     ctx['kpi_verses_mois'] = releves.filter(statut=StatutReleve.VERSE, date_versement__gte=debut_mois).aggregate(
         t=Sum('montant_verse'), n=Count('id'))
 
@@ -109,10 +118,10 @@ def admin_paiements(request):
         ctx['vendeurs_a_payer'] = a_payer_par_vendeur(license)
         ctx['total_a_payer'] = sum((v['net'] for v in ctx['vendeurs_a_payer'] if v['net'] > 0 and not v['bloque']), 0)
     elif etape == 'stockage':
-        from management.stock import nom_mois, stockage_a_valider
-        debut, ctx['stockage_lignes'] = stockage_a_valider(license)
-        ctx['stockage_mois_nom'] = nom_mois(debut)
-        ctx['stockage_total'] = sum((l['montant'] for l in ctx['stockage_lignes']), 0)
+        from management.stock import mois_a_charger, nom_mois
+        ctx['stockage_mois'] = [{'debut': d, 'cle': d.strftime('%Y-%m'), 'nom': nom_mois(d), 'lignes': l, 'retard': r,
+                                 'total': sum((x['montant'] for x in l), 0)} for d, l, r in mois_a_charger(license)]
+        ctx['stockage_mois_nom'] = nom_mois(timezone.localdate())
     elif etape in ('factures', 'verses'):
         liste = (a_verser if etape == 'factures' else releves.filter(statut__in=(StatutReleve.VERSE, StatutReleve.ANNULE)))
         # Période : date d'émission pour les factures à verser, date de versement pour l'historique

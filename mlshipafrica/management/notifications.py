@@ -272,3 +272,13 @@ def stockage_charge(lignes, debut, par):
                  "%d vendeur%s · %s, par %s." % (len(lignes), 's' if len(lignes) > 1 else '', _f(sum(l['montant'] for l in lignes)),
                                                  par.get_full_name() or par.email),
                  reverse('management:management_admin_releves') + '?etape=stockage', 'stockage-charge:%s:%s' % (license.pk, debut.strftime('%Y-%m')))
+
+
+def stockage_en_retard_rappel(license, debut, lignes, jour):
+    """Tous les jours tant qu'un mois passé n'est pas chargé : la comptable et le CEO."""
+    from management.stock import nom_mois
+    total = sum(l['montant'] for l in lignes)
+    notifier(_equipe(license, R.COMPTABLE, R.SUPER), 'paiement', "En retard : stockage de %s non chargé" % nom_mois(debut),
+             "%d vendeur%s · %s à charger. Rien n'est perdu tant que vous le chargez." % (len(lignes), 's' if len(lignes) > 1 else '', _f(total)),
+             reverse('management:management_admin_releves') + '?etape=stockage',
+             'retard-stockage:%s:%s' % (debut.strftime('%Y-%m'), jour.isoformat()))

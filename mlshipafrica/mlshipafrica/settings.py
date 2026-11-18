@@ -359,6 +359,9 @@ LOGGING['loggers']['integrations'] = {'handlers': LOG_HANDLERS, 'level': 'INFO',
 # Tâches planifiées (django-crontab) : après chaque déploiement, lancer
 #   python manage.py crontab add
 # Heures du serveur = UTC = heure d'Abidjan.
+# Premier mois de stockage facturé au mois (300 F la pièce le 1er) : le mois de mise en ligne, 'AAAA-MM'
+STOCKAGE_MENSUEL_DEPUIS = os.environ.get('STOCKAGE_MENSUEL_DEPUIS', '2026-11')
+
 CRONTAB_LOCK_JOBS = True  # une tâche ne démarre pas si la précédente tourne encore
 CRONTAB_COMMAND_SUFFIX = '2>&1'
 # Fréquences : le plus rapide est toutes les 2 minutes (cron ne descend jamais sous la minute). Chaque ligne

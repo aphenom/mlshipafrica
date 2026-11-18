@@ -148,7 +148,7 @@ class Paiements(tests_pages.RecettePages):
         ProduitStock.objects.create(vendeur=self.vendeur, reference='ST-1', designation='Savon', quantite_disponible=7)
         self.client.force_login(self.comptes[R.COMPTABLE])
         page = self.client.get('/management/admin_releves/?etape=stockage').content.decode()
-        self.assertIn('Charger le stockage des vendeurs cochés', page)
+        self.assertIn('Charger le stockage de', page)
         self.assertIn(self.vendeur.code, page)
         r = self.client.post('/management/admin_releves/', {'action': 'stockage', 'vendeurs': [self.vendeur.code]})
         self.assertEqual(r['Location'], '/management/admin_releves/?etape=a_payer')
@@ -174,3 +174,32 @@ class Paiements(tests_pages.RecettePages):
         self.assertNotIn(code, self.client.get('/management/admin_releves/?etape=factures&du=2001-01-01&au=2001-01-31').content.decode())
         self.assertEqual(self.client.get('/management/admin_releves/?etape=verses&p=hier').status_code, 200)
         self.assertEqual(self.client.get('/management/admin_benefice/?periode=hier').status_code, 200)
+
+
+    def test_mois_de_stockage_oublie_reste_a_charger(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from management.models import MouvementStock, Notification, ProduitStock
+        from management.stock import mois_a_charger, rappel_stockage
+        from mlshipafrica.enums import TypeMouvementStock as TM
+        self.vendeur.option_stockage = True
+        self.vendeur.save()
+        produit = ProduitStock.objects.create(vendeur=self.vendeur, reference='ST-2', designation='Savon', quantite_disponible=4)
+        # 6 pièces vendues depuis le 1er du mois : le 1er, il y en avait 10
+        m = MouvementStock.objects.create(produit=produit, type=TM.SORTIE, quantite=-6)
+        license = self.vendeur.license
+        mois_suivant = (timezone.localdate().replace(day=1) + timedelta(days=32)).replace(day=1)
+        a_charger = mois_a_charger(license, mois_suivant + timedelta(days=4))       # novembre oublié, on est le 5 décembre
+        self.assertEqual([(d, r) for d, _, r in a_charger][0], (timezone.localdate().replace(day=1), True))
+        self.assertEqual(a_charger[0][1][0]['pieces'], 10)                          # pièces du 1er du mois oublié
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertGreaterEqual(rappel_stockage(mois_suivant + timedelta(days=4)), 1)   # rappel même hors du 1er
+        self.assertTrue(Notification.objects.filter(titre__startswith='En retard : stockage de').exists())
+        self.client.force_login(self.comptes[R.COMPTABLE])
+        page = self.client.get('/management/admin_releves/?etape=stockage').content.decode()
+        self.assertIn('Charger le stockage de', page)
+        self.client.post('/management/admin_releves/', {'action': 'stockage', 'mois': timezone.localdate().strftime('%Y-%m'),
+                                                        'vendeurs': [self.vendeur.code]})
+        self.assertTrue(Ecriture.objects.filter(cle__endswith=':' + timezone.localdate().strftime('%Y-%m'), type=T.STOCKAGE,
+                                                vendeur=self.vendeur, montant=3000).exists())
+        self.assertEqual([d for d, _, r in mois_a_charger(license, mois_suivant + timedelta(days=4)) if r], [])

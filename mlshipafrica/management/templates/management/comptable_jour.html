@@ -33,7 +33,7 @@
 		<div class="card">
 			<div class="head" style="align-items:baseline"><h2>À faire</h2><span class="muted" style="font-size:13px">{{ journee.a_faire|length }} tâche{{ journee.a_faire|length|pluralize }} · par urgence</span></div>
 			{% for niveau, titre, montant, detail, url, bouton in journee.a_faire %}
-			<div class="tache"><span class="pt {% if niveau == 'bad' %}bad{% endif %}"></span><div class="tx"><b>{{ titre }}{% if montant %} · {{ montant|fcfa }}{% endif %}</b><span class="muted">{{ detail }}</span></div><a class="btn sm {% if niveau == 'bad' %}dark{% endif %}" href="{% url url %}{% if url == 'management:management_admin_liste_colis' %}?type_colis=livre{% endif %}">{{ bouton }}</a></div>
+			<div class="tache"><span class="pt {% if niveau == 'bad' %}bad{% endif %}"></span><div class="tx"><b>{{ titre }}{% if montant %} · {{ montant|fcfa }}{% endif %}</b><span class="muted">{{ detail }}</span></div><a class="btn sm {% if niveau == 'bad' %}dark{% endif %}" href="{% url url %}{% if url == 'management:management_admin_liste_colis' %}?type_colis=livre{% elif bouton == 'Charger' %}?etape=stockage{% endif %}">{{ bouton }}</a></div>
 			{% empty %}<div class="muted">Rien à faire pour l’instant.</div>{% endfor %}
 		</div>
 		<div class="card">

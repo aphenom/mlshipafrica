@@ -15,7 +15,7 @@
 		<a class="kpi" href="?etape=verses"><span class="l">4 · Versés ce mois</span><span class="v">{{ kpi_verses_mois.t|default:0|fcfa }}</span><span class="n t-ok">{{ kpi_verses_mois.n|default:0 }} versement{{ kpi_verses_mois.n|pluralize }}</span></a>
 	</div>
 	{% if kpi_sans_coordonnees %}<div class="note warn">{{ kpi_sans_coordonnees }} numéro{{ kpi_sans_coordonnees|pluralize }} de paiement à valider : ces vendeurs sont bloqués. {% if 'moyens_versement' in droits %}<a href="{% url 'management:management_admin_moyens_versement' %}">Valider dans Moyens de paiement</a>{% endif %}</div>{% endif %}
-	<nav class="ctabs" aria-label="Étapes">{% for v, l in etapes %}<a href="?etape={{ v }}"{% if etape == v %} aria-selected="true"{% endif %}>{{ l }}{% if v == 'stockage' and kpi_stockage_vendeurs %} <span class="badge b-warn">{{ kpi_stockage_vendeurs }}</span>{% endif %}</a>{% endfor %}</nav>
+	<nav class="ctabs" aria-label="Étapes">{% for v, l in etapes %}<a href="?etape={{ v }}"{% if etape == v %} aria-selected="true"{% endif %}>{{ l }}{% if v == 'stockage' and kpi_stockage_vendeurs %} <span class="badge {% if kpi_stockage_retard %}b-bad{% else %}b-warn{% endif %}">{{ kpi_stockage_vendeurs }}</span>{% endif %}</a>{% endfor %}</nav>
 </div>
 
 {% if releve_detail %}
@@ -66,24 +66,29 @@
 {% if page.paginator.num_pages > 1 %}<div class="pager"><span class="muted">{{ page.start_index }} à {{ page.end_index }} sur {{ page.paginator.count }}</span><span class="tools">{% if page.has_previous %}<a class="btn sm" href="?etape=unpaid&{{ filtres }}&page={{ page.previous_page_number }}">‹</a>{% endif %}<span class="muted">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?etape=unpaid&{{ filtres }}&page={{ page.next_page_number }}">›</a>{% endif %}</span></div>{% endif %}
 
 {% elif etape == 'stockage' %}
-<form method="post" onsubmit="return confirm('Charger le stockage de {{ stockage_mois_nom }} aux vendeurs cochés ? Il sera déduit de leur prochaine facture de paiement.')">{% csrf_token %}
-	<input type="hidden" name="action" value="stockage">
-	<div class="card">
-		<div class="head"><div><h2>Stockage de {{ stockage_mois_nom }} à valider</h2><div class="muted">Le 1er du mois, vous recevez un rappel. Chaque vendeur paie ses pièces encore chez nous × tarif du mois, jusqu’à épuisement de son stock. Les pièces reçues ce mois-ci ne sont pas recomptées : elles ont payé ce mois dès que le stock a été accepté.</div></div>
-			<span class="tools"><button class="btn primary"{% if not stockage_lignes %} disabled{% endif %}>Charger le stockage des vendeurs cochés</button></span></div>
+{% for m in stockage_mois %}
+<form method="post" onsubmit="return confirm('Charger le stockage de {{ m.nom }} aux vendeurs cochés ? Il sera déduit de leur prochaine facture de paiement.')">{% csrf_token %}
+	<input type="hidden" name="action" value="stockage"><input type="hidden" name="mois" value="{{ m.cle }}">
+	<div class="card"{% if m.retard %} style="border-color:var(--bad)"{% endif %}>
+		<div class="head"><div><h2>{% if m.retard %}<span class="badge b-bad">En retard</span> Stockage de {{ m.nom }} non chargé{% else %}Stockage de {{ m.nom }} à valider{% endif %}</h2>
+			<div class="muted">{% if m.retard %}Ce mois n’a pas été chargé. Rien n’est perdu : les pièces sont celles qui étaient chez nous le 1er {{ m.nom }}. Chargez-le maintenant, il sera déduit de la prochaine facture.{% else %}Le 1er du mois, vous recevez un rappel. Chaque vendeur paie les pièces chez nous le 1er du mois × tarif, jusqu’à épuisement de son stock. Les pièces reçues pendant le mois ne sont pas recomptées : elles ont payé ce mois dès que le stock a été accepté.{% endif %}</div></div>
+			<span class="tools"><button class="btn {% if m.retard %}dark{% else %}primary{% endif %}">Charger le stockage de {{ m.nom }}</button></span></div>
 		<div class="tablewrap"><table>
-			<thead><tr><th><input type="checkbox" checked aria-label="Tout cocher" onclick="document.querySelectorAll('.sto').forEach(c => c.checked = this.checked)"></th><th>Vendeur</th><th class="r">Pièces chez nous</th><th class="r">Tarif</th><th class="r">Stockage du mois</th></tr></thead>
+			<thead><tr><th><input type="checkbox" checked aria-label="Tout cocher" onclick="this.closest('table').querySelectorAll('.sto').forEach(c => c.checked = this.checked)"></th><th>Vendeur</th><th class="r">Pièces le 1er {{ m.nom }}</th><th class="r">Tarif</th><th class="r">Stockage du mois</th></tr></thead>
 			<tbody>
-			{% for l in stockage_lignes %}
+			{% for l in m.lignes %}
 				<tr><td><input type="checkbox" class="sto" name="vendeurs" value="{{ l.vendeur.code }}" checked aria-label="{{ l.vendeur.nom_store }}"></td>
 					<td><b>{{ l.vendeur.nom_store }}</b> <span class="muted mono">{{ l.vendeur.code }}</span></td>
 					<td class="r num">{{ l.pieces }}</td><td class="r num nw">{{ l.tarif|fcfa }}</td><td class="r num nw"><b>{{ l.montant|fcfa }}</b></td></tr>
-			{% empty %}<tr><td colspan="5" class="muted" style="padding:18px">Rien à valider : le stockage de {{ stockage_mois_nom }} est déjà chargé pour tous les vendeurs en stock.</td></tr>{% endfor %}
+			{% endfor %}
 			</tbody>
-			{% if stockage_lignes %}<tfoot><tr><td></td><td><b>Total</b></td><td></td><td></td><td class="r num nw"><b>{{ stockage_total|fcfa }}</b></td></tr></tfoot>{% endif %}
+			<tfoot><tr><td></td><td><b>Total</b></td><td></td><td></td><td class="r num nw"><b>{{ m.total|fcfa }}</b></td></tr></tfoot>
 		</table></div>
 	</div>
 </form>
+{% empty %}
+<div class="card"><h2>Stockage à jour</h2><div class="muted">Rien à charger : le stockage de {{ stockage_mois_nom }} et des mois précédents est chargé pour tous les vendeurs en stock.</div></div>
+{% endfor %}
 {% elif etape == 'a_payer' %}
 <form method="post" onsubmit="return confirm('Générer les factures de paiement des vendeurs cochés ? Chaque vendeur reçoit sa facture dans « Mon argent ».')">{% csrf_token %}
 	<input type="hidden" name="action" value="generer">

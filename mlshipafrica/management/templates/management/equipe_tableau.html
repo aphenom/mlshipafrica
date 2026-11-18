@@ -3,6 +3,7 @@
 {% block title %}Pilotage · ML COD Intérieur{% endblock %}
 {% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
 {% block content %}
+{% if stockage_retard %}<div class="note bad"><b>Stockage non chargé :</b> {% for nom, montant in stockage_retard %}{{ nom }} ({{ montant|fcfa }}){% if not forloop.last %}, {% endif %}{% endfor %}. La comptable doit le charger dans Paiements vendeurs › Stockage du mois. <a href="{% url 'management:management_admin_releves' %}?etape=stockage">Voir</a></div>{% endif %}
 {% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="ceo">
 	<div class="chead">
