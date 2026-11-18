@@ -50,6 +50,9 @@ class Paiements(tests_pages.RecettePages):
         self.assertEqual(releve.genere_par, self.comptes[R.COMPTABLE])
         self.assertTrue(releve.ecritures.filter(article=self.livre, type=T.FRAIS_COLLECTE).exists())
         self.assertEqual(generer_releves(vendeurs=[self.vendeur]), [])          # rien n'est facturé deux fois
+        self.livre.refresh_from_db()
+        self.assertEqual(self.livre.statut_traitement, S.PAYE)                  # Shipping : Unpaid → Paid
+        self.assertEqual(self.livre.get_last_historique().statut_traitement, S.PAYE)
         # Le vendeur voit sa facture et l'imprime ligne par ligne
         self.client.force_login(self.vendeur.user)
         mon_argent = self.client.get('/management/vendeur_releves/').content.decode()
@@ -75,10 +78,29 @@ class Paiements(tests_pages.RecettePages):
         self.client.post('/management/admin_releves/', {'action': 'annuler', 'releve': releve.pk, 'motif': 'Généré par erreur'})
         releve.refresh_from_db()
         self.assertEqual(releve.statut, StatutReleve.ANNULE)
+        self.livre.refresh_from_db()
+        self.assertEqual(self.livre.statut_traitement, S.LIVRE_PAYE)            # facture annulée : le colis revient en Unpaid
         self.assertFalse(releve.ecritures.exists())
         self.assertTrue(any(v['vendeur'] == self.vendeur for v in a_payer_par_vendeur(self.vendeur.license)))
         self.client.force_login(self.vendeur.user)
         self.assertNotIn(releve.code + '<div', self.client.get('/management/vendeur_releves/').content.decode())
+
+    def test_shipping_suit_unpaid_paid_verse(self):
+        from management.finance import marquer_verse
+        Article.objects.filter(pk=self.livre.pk).update(statut_traitement=S.LIVRE_PAYE)
+        releve = generer_releves(vendeurs=[self.vendeur])[0]
+        self.client.force_login(self.comptes[R.MANAGER])
+        page = self.client.get('/management/admin_liste_colis/?statut=paye').content.decode()
+        self.assertIn(self.livre.code, page)
+        self.assertIn('Paid (facture émise, à verser)', page)
+        self.vendeur.versement_valide, self.vendeur.moyen_valide, self.vendeur.compte_valide = True, 'wave', '0707070707'
+        self.vendeur.save()
+        marquer_verse(releve, self.comptes[R.COMPTABLE], 'WV-1')
+        self.livre.refresh_from_db()
+        self.assertEqual(self.livre.statut_traitement, S.REVERSE)
+        etapes = list(self.livre.article_historiquearticles.filter(etat_suppression=False).order_by('date_creation')
+                      .values_list('statut_traitement', flat=True))
+        self.assertEqual(etapes[-2:], [S.PAYE, S.REVERSE])
 
     def test_vendeur_bloque_sans_numero_valide(self):
         Article.objects.filter(pk=self.livre.pk).update(statut_traitement=S.LIVRE_PAYE)

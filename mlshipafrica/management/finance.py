@@ -28,7 +28,7 @@ from django.utils import timezone
 from management.models import Article, Depart, Ecriture, HistoriqueArticle, Releve
 from mlshipafrica.enums import MoyenVersement, StatutReleve, StatutTraitement as S, TypeEcriture as T
 
-LIVRES = (S.LIVRE, S.LIVRE_PAYE, S.REVERSE)
+LIVRES = (S.LIVRE, S.LIVRE_PAYE, S.PAYE, S.REVERSE)
 TYPES_VENDEUR_DEBIT = (T.FRAIS, T.FRAIS_COLLECTE, T.FRAIS_RETOUR, T.GARDE, T.STOCKAGE)
 ZERO = Decimal('0')
 STATUTS_EN_ROUTE = (S.EN_TRANSIT, S.EN_COURS_LIVRAISON, S.ARRIVE, S.ECHEC_LIVRAISON, S.RECONDUIT, S.EN_RETOUR)
@@ -265,8 +265,19 @@ def generer_releves(arrete=None, vendeurs=None, license=None, par=None):
             vendeur=vendeur, date_arrete=arrete, total_collecte=t['collecte'], total_frais=t['frais'],
             total_retours=t['retours'], total_garde=t['garde'], total_stockage=t['stockage'], net=t['net'], genere_par=par)
         lignes.update(releve=releve)
+        _statut_colis_du_releve(releve, S.LIVRE_PAYE, S.PAYE, 'Facture de paiement %s émise' % releve.code)
         crees.append(releve)
     return crees
+
+
+def _statut_colis_du_releve(releve, avant, apres, commentaire, ecritures=None):
+    """Fait suivre le statut des colis encaissés d'une facture : Unpaid → Paid (émise), Paid → Unpaid (annulée)."""
+    ids = (ecritures if ecritures is not None else releve.ecritures).filter(article__isnull=False).values_list('article', flat=True)
+    for article in Article.objects.filter(pk__in=list(ids), statut_traitement=avant):
+        dernier = article.get_last_historique()
+        Article.objects.filter(pk=article.pk).update(statut_traitement=apres)
+        HistoriqueArticle.objects.create(article=article, statut_traitement=apres, date=timezone.now(), commentaire=commentaire,
+                                         license=article.license, dernier_historique_article=dernier)
 
 
 @transaction.atomic
@@ -277,7 +288,9 @@ def annuler_releve(releve, par, motif):
         raise ValidationError("Seule une facture pas encore versée peut être annulée.")
     if not (motif or '').strip():
         raise ValidationError("Indiquez le motif de l'annulation.")
+    lignes = Ecriture.objects.filter(pk__in=list(releve.ecritures.values_list('pk', flat=True)))
     releve.ecritures.update(releve=None)
+    _statut_colis_du_releve(releve, S.PAYE, S.LIVRE_PAYE, 'Facture %s annulée : %s' % (releve.code, motif.strip()[:200]), lignes)
     releve.statut, releve.annule_par, releve.date_annulation = StatutReleve.ANNULE, par, timezone.now()
     releve.motif_annulation = motif.strip()[:300]
     releve.save()
@@ -402,7 +415,7 @@ def marquer_verse(releve, user, reference, moyen=''):
     # Les colis du relevé sont réglés : frais payés, collecte reversée (statut « Reversé »)
     articles = Article.objects.filter(ecritures__releve=releve).distinct()
     articles.update(etat_reglement=True)
-    for article in articles.filter(statut_traitement=S.LIVRE_PAYE):
+    for article in articles.filter(statut_traitement__in=(S.LIVRE_PAYE, S.PAYE)):
         dernier = article.get_last_historique()
         Article.objects.filter(pk=article.pk).update(statut_traitement=S.REVERSE, etat_reversement=True)
         HistoriqueArticle.objects.create(article=article, statut_traitement=S.REVERSE, date=timezone.now(),

@@ -1224,7 +1224,7 @@ def admin_benefice(request):
 
 
 FAMILLES_NOTRE_STATUT = {
-    StatutTraitement.LIVRE: 'livre', StatutTraitement.LIVRE_PAYE: 'livre', StatutTraitement.REVERSE: 'livre',
+    StatutTraitement.LIVRE: 'livre', StatutTraitement.LIVRE_PAYE: 'livre', StatutTraitement.PAYE: 'livre', StatutTraitement.REVERSE: 'livre',
     StatutTraitement.EN_TRANSIT: 'transit', StatutTraitement.ARRIVE: 'arrive', StatutTraitement.EN_COURS_LIVRAISON: 'livraison',
     StatutTraitement.RECONDUIT: 'livraison', StatutTraitement.ECHEC_LIVRAISON: 'echec', StatutTraitement.EN_RETOUR: 'retour',
     StatutTraitement.REVENU_ABIDJAN: 'retour', StatutTraitement.RETOURNE: 'retour', StatutTraitement.REMIS_EN_STOCK: 'retour',

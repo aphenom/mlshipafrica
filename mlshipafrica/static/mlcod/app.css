@@ -110,7 +110,7 @@ a.chip:hover { color: var(--ink); border-color: var(--muted); }
 .st-preparation { background: #ede9fe; color: #6d28d9; } .st-transit { background: #dbeafe; color: #1d4ed8; }
 .st-arrive { background: #cffafe; color: #0e7490; } .st-livraison { background: #ffedd5; color: #c2410c; }
 .st-livre { background: #dcfce7; color: #15803d; } .st-unpaid { background: #fef08a; color: #854d0e; }
-.st-verse { background: #166534; color: #ffffff; } .st-echec { background: #fee2e2; color: #b91c1c; }
+.st-verse { background: #166534; color: #ffffff; } .st-paid { background: #bfdbfe; color: #1e3a8a; } .st-echec { background: #fee2e2; color: #b91c1c; }
 .st-reconduit { background: #fce7f3; color: #be185d; } .st-retour { background: #f1e4d3; color: #7c4a1e; }
 .st-retourne { background: #991b1b; color: #ffffff; } .st-substitue { background: #ccfbf1; color: #0f766e; }
 .st-annule { background: #e5e7eb; color: #374151; text-decoration: line-through; }

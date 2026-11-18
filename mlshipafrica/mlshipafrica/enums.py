@@ -14,6 +14,7 @@ class StatutTraitement(models.TextChoices):
     ECHEC_LIVRAISON = 'echec_livraison', 'Échec de livraison'
     LIVRE = 'livre', 'Livré'
     LIVRE_PAYE = 'livre_paye', 'Unpaid (livré, en attente de versement)'
+    PAYE = 'paye', 'Paid (facture émise, à verser)'
     REVERSE = 'reverse', 'Versé au vendeur'
     RECONDUIT = 'reconduit', 'Reconduit (nouvelle tentative)'
     EN_RETOUR = 'en_retour', 'En retour vers Abidjan'
@@ -38,6 +39,7 @@ STATUT_TRAITEMENT_COULEURS = {
     'echec_livraison': 'danger',
     'livre': 'success',
     'livre_paye': 'success',
+    'paye': 'success',
     'reverse': 'dark',
     'en_retour': 'light',
     'retourne': 'dark',
@@ -65,6 +67,7 @@ STATUT_TRAITEMENT_CLASSES = {
     'echec_livraison': 'st-echec',
     'livre': 'st-livre',
     'livre_paye': 'st-unpaid',
+    'paye': 'st-paid',
     'reverse': 'st-verse',
     'en_retour': 'st-retour',
     'revenu_abidjan': 'st-retourne',
@@ -234,6 +237,7 @@ array_statut_traitement_en_cours = [
 array_statut_traitement_livre = [
     StatutTraitement.LIVRE,
     StatutTraitement.LIVRE_PAYE,
+    StatutTraitement.PAYE,
     StatutTraitement.REVERSE
 ]
 

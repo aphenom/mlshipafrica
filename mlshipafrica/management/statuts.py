@@ -10,7 +10,8 @@ Ordre logique (le colis quitte Abidjan pour la ville du client) ; l'équipe peut
     Revenu à Abidjan ─► Substitué | Retourné au vendeur | Remis en stock | Abandonné (après 30 jours)
     Avant le départ, tout colis peut être « Annulé avant expédition », puis relancé.
 
-Argent (comptable et CEO seulement) : Livré ─► Unpaid (livré, en attente de versement) ─► Reversé (relevé versé).
+Argent (comptable et CEO seulement) : Livré ─► Unpaid (argent confirmé) ─► Paid (facture de paiement émise, posé
+par la facture) ─► Versé (facture versée). Une facture annulée remet ses colis en Unpaid.
 Correction (manager et CEO) : n'importe quel statut, motif obligatoire ; un colis Unpaid ou Reversé : CEO seulement.
 """
 from django.utils import timezone
@@ -39,11 +40,11 @@ TRANSITIONS = {
 
 # Ordre d'affichage des statuts (filtres, listes)
 ORDRE = (S.EN_ATTENTE_RAMASSAGE, S.EN_ATTENTE_DEPOT, S.RAMASSE, S.DEPOT, S.EN_TRANSIT, S.ARRIVE, S.EN_COURS_LIVRAISON,
-         S.ECHEC_LIVRAISON, S.RECONDUIT, S.LIVRE, S.LIVRE_PAYE, S.REVERSE, S.EN_RETOUR, S.REVENU_ABIDJAN, S.SUBSTITUE,
+         S.ECHEC_LIVRAISON, S.RECONDUIT, S.LIVRE, S.LIVRE_PAYE, S.PAYE, S.REVERSE, S.EN_RETOUR, S.REVENU_ABIDJAN, S.SUBSTITUE,
          S.RETOURNE, S.REMIS_EN_STOCK, S.MIS_DE_COTE, S.ABANDONNE, S.ANNULE)
 
 # Statuts d'argent : seuls la comptable et le CEO les posent
-STATUTS_ARGENT = (S.LIVRE_PAYE, S.REVERSE)
+STATUTS_ARGENT = (S.LIVRE_PAYE, S.PAYE, S.REVERSE)
 
 # Statuts « pas encore expédié » : une annulation y est possible et donne « Annulé avant expédition »
 STATUTS_AVANT_EXPEDITION = (S.EN_ATTENTE_RAMASSAGE, S.EN_ATTENTE_DEPOT, S.RAMASSE, S.DEPOT)
@@ -123,6 +124,7 @@ def statuts_correction(article, user):
         exclus.update(STATUTS_ARGENT)
     if not article.is_option_encaissement:
         exclus.add(S.LIVRE_PAYE)
+    exclus.add(S.PAYE)                    # Paid est posé par la facture de paiement, jamais à la main
     return [(x, libelles[x]) for x in ORDRE if x not in exclus]
 
 

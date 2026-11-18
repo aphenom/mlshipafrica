@@ -230,7 +230,7 @@ def etapes_a_venir(article):
     """Étapes qui restent sur le parcours normal (attente → reçu → transit → arrivé → livraison → livré → versé)."""
     parcours = [S.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation else S.EN_ATTENTE_DEPOT,
                 S.RAMASSE if article.is_option_recuperation else S.DEPOT,
-                S.EN_TRANSIT, S.ARRIVE, S.EN_COURS_LIVRAISON, S.LIVRE, S.LIVRE_PAYE, S.REVERSE]
+                S.EN_TRANSIT, S.ARRIVE, S.EN_COURS_LIVRAISON, S.LIVRE, S.LIVRE_PAYE, S.PAYE, S.REVERSE]
     if article.statut_traitement not in parcours:
         return []
     return [S(s).label for s in parcours[parcours.index(article.statut_traitement) + 1:]]
