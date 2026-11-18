@@ -90,10 +90,9 @@ def valider_reception(entree, user, quantites_recues):
     vendeur = entree.vendeur
 
     def sms():
-        from sms.service import mettre_en_file
-        mettre_en_file('v_stock', vendeur.numero_sms or vendeur.numero_contact,
-                       {'nb': pieces, 'refs': references, 'id': entree.code},
-                       cle_dedoublonnage='v_stock:%s' % entree.code, vendeur=vendeur)
+        from sms.messages_auto import pour_vendeur
+        pour_vendeur('v_stock', vendeur, {'nb': pieces, 'pieces': pieces, 'refs': references, 'id': entree.code},
+                     'v_stock:%s' % entree.code)
     transaction.on_commit(sms)
     return entree
 

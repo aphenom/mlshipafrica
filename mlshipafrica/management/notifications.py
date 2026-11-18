@@ -197,7 +197,10 @@ def mes_notifications(request):
 # --------------------------------------------------------------------------------------------- autres évènements
 
 def releves_emis(releves, par):
+    from sms.messages_auto import apres_validation, pour_vendeur
+    from sms.texte import montant_f
     for r in releves:
+        apres_validation(pour_vendeur, 'v_facture', r.vendeur, {'facture': r.code, 'montant': montant_f(r.net)}, 'v_facture:%s' % r.pk)
         if r.vendeur.user_id:
             notifier([r.vendeur.user], 'paiement', "Facture de paiement %s émise" % r.code,
                      "Votre paiement est en préparation : voir le détail colis par colis.",
@@ -216,6 +219,12 @@ def releves_emis(releves, par):
 
 
 def releve_verse(releve):
+    from sms.messages_auto import apres_validation, pour_vendeur
+    from sms.texte import montant_f
+    moyen = releve.get_moyen_versement_display() if hasattr(releve, 'get_moyen_versement_display') and getattr(releve, 'moyen_versement', '') else 'Mobile Money'
+    apres_validation(pour_vendeur, 'v_verse', releve.vendeur, {
+        'facture': releve.code, 'montant': montant_f(releve.net), 'montant_envoye': montant_f(releve.montant_verse or releve.net),
+        'moyen': moyen, 'reference': releve.reference_versement or ''}, 'v_verse:%s' % releve.pk)
     if releve.vendeur.user_id:
         notifier([releve.vendeur.user], 'paiement', "Paiement envoyé · facture %s" % releve.code,
                  "Référence %s" % releve.reference_versement,
@@ -260,8 +269,12 @@ def stockage_a_valider_rappel(license, debut, lignes):
 
 def stockage_charge(lignes, debut, par):
     from management.stock import nom_mois
+    from sms.messages_auto import apres_validation, pour_vendeur
+    from sms.texte import montant_f
     for l in lignes:
         v = l['vendeur']
+        apres_validation(pour_vendeur, 'v_stockage', v, {'mois': nom_mois(debut), 'pieces': l['pieces'], 'montant': montant_f(l['montant'])},
+                         'v_stockage:%s:%s' % (v.pk, debut.strftime('%Y-%m')))
         if v.user_id:
             notifier([v.user], 'stock', "Stockage de %s : %s" % (nom_mois(debut), _f(l['montant'])),
                      "%d pièce%s chez nous × %s, déduit de votre prochain paiement." % (l['pieces'], 's' if l['pieces'] > 1 else '', _f(l['tarif'])),

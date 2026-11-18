@@ -55,7 +55,8 @@ REVERSEMENTS = [_p('Reversements à faire', M + 'admin_liste_reversements', 'pai
                 _p('Historique', M + 'admin_liste_reversements', 'paiements', type_reversements='historique')]
 RELEVES = [_p('Paiements vendeurs', M + 'admin_releves', 'releves')]
 FACTURE_PAIEMENT = (M + 'facture_paiement',)
-REGLAGES = [_p('Frais et réglages', M + 'admin_reglages_frais', 'parametres_configuration')]
+REGLAGES = [_p('Frais et réglages', M + 'admin_reglages_frais', 'parametres_configuration'),
+            _p('Messages automatiques', 'sms:messages_auto', 'messages_auto')]
 MOYENS = [_p('Moyens de paiement', M + 'admin_moyens_versement', 'moyens_versement')]
 # Ancien circuit (colis par colis) : seulement l'historique, pour consultation. Les vendeurs sont payés par les factures de paiement.
 ANCIENS_PAIEMENTS = [_p('Anciens frais réglés', M + 'admin_liste_paiements', 'paiements', type_paiements='historique'),

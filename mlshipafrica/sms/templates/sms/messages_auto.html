@@ -1,0 +1,106 @@
+{% extends "base_main.html" %}
+{% block title %}Messages automatiques · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Paramètres</li><li class="active" aria-current="page">Messages automatiques</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card">
+	<div class="head"><div><h1>Messages automatiques</h1>
+		<div class="muted">Pour chaque évènement : SMS et/ou e-mail (e-mail au vendeur seulement), le texte, et les informations à insérer en un clic. Activez seulement ce qui sert : chaque SMS est payé.</div></div></div>
+	<form method="post" class="tools" style="align-items:flex-end">{% csrf_token %}<input type="hidden" name="global" value="1">
+		<label class="field inline"><input type="checkbox" name="sms_global" {% if parametres.actif %}checked{% endif %}> Envoi des SMS activé (interrupteur général)</label>
+		<label class="field">Téléphone du service client {tel}<input name="tel_service" value="{{ parametres.tel_service }}" maxlength="30"></label>
+		<button class="btn">Enregistrer</button>
+		{% if parametres.solde_sms is not None %}<span class="muted">Solde SMS : <b>{{ parametres.solde_sms }}</b> au {{ parametres.date_solde|date:"d/m H:i" }}</span>{% endif %}
+	</form>
+</div>
+
+{% for r in rubriques %}
+<div class="card">
+	<h2>{{ r.libelle }}</h2>
+	{% for m in r.modeles %}
+	<details class="msg" id="m-{{ m.cle }}">
+		<summary>
+			<span class="t"><b>{{ m.libelle }}</b><span class="muted">{{ m.get_destinataire_display }}</span></span>
+			<span class="badge {% if m.actif %}b-ok{% else %}b-mute{% endif %}">SMS {% if m.actif %}actif{% else %}désactivé{% endif %}</span>
+			{% if m.destinataire == 'vendeur' %}<span class="badge {% if m.email_actif %}b-ok{% else %}b-mute{% endif %}">E-mail {% if m.email_actif %}actif{% else %}désactivé{% endif %}</span>{% endif %}
+			<span class="chev">Modifier ▾</span>
+		</summary>
+		<form method="post" class="msgform">{% csrf_token %}<input type="hidden" name="cle" value="{{ m.cle }}">
+			<div class="cols">
+				<div class="col">
+					<label class="field inline"><input type="checkbox" name="actif" {% if m.actif %}checked{% endif %}> <b>Envoyer le SMS</b></label>
+					<label class="field">Texte du SMS<textarea name="texte" rows="4" class="js-sms" maxlength="612">{{ m.texte }}</textarea></label>
+					<div class="muted compteur" style="font-size:12px"></div>
+					<div class="apercu"><span class="muted" style="font-size:11.5px">Aperçu</span><div class="js-apercu">{{ m.apercu }}</div></div>
+				</div>
+				{% if m.destinataire == 'vendeur' %}
+				<div class="col">
+					<label class="field inline"><input type="checkbox" name="email_actif" {% if m.email_actif %}checked{% endif %}> <b>Envoyer l’e-mail au vendeur</b></label>
+					<label class="field">Objet<input name="email_objet" value="{{ m.email_objet }}" maxlength="200"></label>
+					<label class="field">Texte de l’e-mail<textarea name="email_texte" rows="7">{{ m.email_texte }}</textarea></label>
+				</div>
+				{% endif %}
+			</div>
+			<div class="infos"><span class="muted" style="font-size:12px">Informations à insérer (cliquez, elles vont là où est le curseur) :</span>
+				{% for cle, lib in r.infos %}<button type="button" class="chipv" data-v="{{ cle }}">{{ lib }}</button>{% endfor %}</div>
+			<div class="tools" style="align-items:flex-end">
+				<button class="btn primary">Enregistrer</button>
+				<label class="field">Numéro pour un SMS de test<input name="numero_test" placeholder="07 00 00 00 00" style="max-width:170px"></label>
+				<button class="btn" name="test" value="1">Envoyer un test{% if m.destinataire == 'vendeur' %} (SMS + e-mail à moi){% endif %}</button>
+			</div>
+		</form>
+	</details>
+	{% endfor %}
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block styles %}{{ block.super }}
+<style>
+.msg { border-top:1px solid var(--line); }
+.msg summary { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 0; cursor:pointer; list-style:none; }
+.msg summary::-webkit-details-marker { display:none; }
+.msg summary .t { flex:1; min-width:220px; display:flex; flex-direction:column; }
+.msg summary .chev { font-size:12.5px; color:var(--brand, #0f5c4d); font-weight:700; }
+.msgform { display:flex; flex-direction:column; gap:10px; padding:0 0 14px; }
+.msgform .cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; }
+.msgform .col { display:flex; flex-direction:column; gap:8px; }
+.msgform textarea { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; }
+.apercu { background:var(--soft, #f3f5f8); border-radius:8px; padding:8px 10px; font-size:13px; }
+.infos { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.chipv { font:inherit; font-size:12.5px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
+.chipv:hover { border-color:var(--brand, #0f5c4d); }
+</style>
+{% endblock %}
+
+{% block scripts %}{{ block.super }}
+<script>
+(function () {
+	var EX = {{ exemple_json|safe }};
+	var GSM = /^[A-Za-z0-9 \n\r@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-.\/:;<=>?¡ÄÖÑÜ§¿äöñüà^{}\\\[~\]|€]*$/;
+	function remplir(t) { return t.replace(/\{(\w+)\}/g, function (m, k) { return EX[k] !== undefined ? EX[k] : m; }); }
+	function maj(ta) {
+		var form = ta.closest('form'), t = remplir(ta.value), uni = !GSM.test(t), n = t.length;
+		var nb = uni ? (n <= 70 ? 1 : Math.ceil(n / 67)) : (n <= 160 ? 1 : Math.ceil(n / 153));
+		form.querySelector('.compteur').innerHTML = n + ' caractères · <b class="' + (nb > 1 || uni ? 't-bad' : 't-ok') + '">' + nb + ' SMS</b>' +
+			(uni ? ' · un caractère spécial (accent, apostrophe courbe…) fait passer en SMS Unicode : plus cher' : '');
+		form.querySelector('.js-apercu').textContent = t;
+	}
+	var dernier = null;
+	document.querySelectorAll('.msgform textarea, .msgform input[name=email_objet]').forEach(function (el) {
+		el.addEventListener('focus', function () { dernier = el; });
+	});
+	document.querySelectorAll('.js-sms').forEach(function (ta) { ta.addEventListener('input', function () { maj(ta); }); maj(ta); });
+	document.querySelectorAll('.chipv').forEach(function (b) {
+		b.addEventListener('click', function () {
+			var form = b.closest('form'), cible = (dernier && form.contains(dernier)) ? dernier : form.querySelector('.js-sms');
+			var v = '{' + b.dataset.v + '}', d = cible.selectionStart || cible.value.length, f = cible.selectionEnd || d;
+			cible.value = cible.value.slice(0, d) + v + cible.value.slice(f);
+			cible.focus(); cible.selectionStart = cible.selectionEnd = d + v.length;
+			if (cible.classList.contains('js-sms')) maj(cible);
+		});
+	});
+	if (location.hash) { var d = document.querySelector(location.hash); if (d && d.tagName === 'DETAILS') d.open = true; }
+})();
+</script>
+{% endblock %}

@@ -36,3 +36,27 @@ def sms_apres_mouvement(sender, instance, created, **kwargs):
             logger.exception('SMS non préparé pour le mouvement %s', instance.pk)
 
     transaction.on_commit(mettre_en_file)
+
+
+# ----------------------------------------------------------------------------- compte vendeur
+from django.db.models.signals import pre_save  # noqa: E402
+
+from management.models import Vendeur  # noqa: E402
+
+
+@receiver(pre_save, sender=Vendeur, dispatch_uid='sms_vendeur_avant')
+def vendeur_avant(sender, instance, **kwargs):
+    instance._approuve_avant = (Vendeur.objects.filter(pk=instance.pk).values_list('etat_approbation', flat=True).first()
+                                if instance.pk else None)
+
+
+@receiver(post_save, sender=Vendeur, dispatch_uid='sms_vendeur_apres')
+def vendeur_apres(sender, instance, created, **kwargs):
+    """Inscription : bienvenue (compte en cours d'approbation). Approbation : compte approuvé. SMS et/ou e-mail."""
+    if kwargs.get('raw'):
+        return
+    from sms.messages_auto import apres_validation, pour_vendeur
+    if created and not instance.etat_approbation:
+        apres_validation(pour_vendeur, 'v_bienvenue', instance, {}, 'v_bienvenue:%s' % instance.pk)
+    elif instance.etat_approbation and getattr(instance, '_approuve_avant', None) is False:
+        apres_validation(pour_vendeur, 'v_approuve', instance, {}, 'v_approuve:%s' % instance.pk)

@@ -21,9 +21,18 @@ from sms.texte import montant_f
 SMS_CLIENT_PAR_STATUT = {
     S.RAMASSE: 'cl_recu',
     S.DEPOT: 'cl_recu',
+    S.EN_TRANSIT: 'cl_transit',
     S.ARRIVE: 'cl_arrive',
+    S.EN_COURS_LIVRAISON: 'cl_en_livraison',
+    S.LIVRE: 'cl_livre',
     S.ECHEC_LIVRAISON: 'cl_echec',
     S.ANNULE: 'cl_annule',
+}
+# Messages au vendeur (SMS et/ou e-mail, selon les réglages du CEO) ; « revenu à Abidjan » : calendrier des retours
+MESSAGE_VENDEUR_PAR_STATUT = {
+    S.RAMASSE: 'v_recu', S.DEPOT: 'v_recu', S.EN_TRANSIT: 'v_transit', S.ARRIVE: 'v_arrive',
+    S.EN_COURS_LIVRAISON: 'v_en_livraison', S.LIVRE: 'v_livre', S.ECHEC_LIVRAISON: 'v_echec',
+    S.ANNULE: 'v_annule_av', S.RETOURNE: 'v_retourne',
 }
 
 
@@ -57,36 +66,35 @@ def sms_pour_historique(historique, maintenant=None):
     statut = historique.statut_traitement
     crees = []
 
+    from sms.messages_auto import pour_vendeur, variables_colis
+    localite = article.localite_arrivee
+    zone = localite.zone if localite is not None else None
+    montant = montant_a_encaisser(article)
+    variables = variables_colis(article, date_livraison_prevue(
+        timezone.localtime(maintenant).date(), (zone.delai_max_jours if zone and zone.delai_max_jours else 4)))
+    generation = ':g%d' % article.generation if article.generation else ''
+
     cle_client = SMS_CLIENT_PAR_STATUT.get(statut)
     if cle_client:
-        localite = article.localite_arrivee
-        zone = localite.zone if localite is not None else None
-        montant = montant_a_encaisser(article)
-        variables = {
-            'boutique': (vendeur.nom_store if vendeur else '') or 'ML COD Interieur',
-            'montant': montant_f(montant),
-            'ville': localite.nom if localite else '',
-            'date': date_livraison_prevue(timezone.localtime(maintenant).date(), (zone.delai_max_jours if zone and zone.delai_max_jours else 4)),
-            'ref': article.code,
-        }
         message = mettre_en_file(
             cle_client, article.numero_principal_destinataire, variables,
             # une fois par colis et par type de SMS (le 1er échec seulement, une seule confirmation…)
             # (après une substitution, le nouveau client repart avec son propre parcours SMS)
-            cle_dedoublonnage='%s:%s%s' % (cle_client, article.code, ':g%d' % article.generation if article.generation else ''),
+            cle_dedoublonnage='%s:%s%s' % (cle_client, article.code, generation),
             article=article, historique=historique, vendeur=vendeur,
             post_traitement=texte_deja_paye if not montant else None, maintenant=maintenant)
         if message:
             crees.append(message)
 
-    if statut == S.ANNULE and vendeur is not None:
-        message = mettre_en_file(
-            'v_annule_av', vendeur.numero_sms or vendeur.numero_contact, {'ref': article.code},
-            # une annulation peut revenir après une relance : un SMS par annulation
-            cle_dedoublonnage='v_annule_av:%s:%s' % (article.code, historique.pk),
-            article=article, historique=historique, vendeur=vendeur, maintenant=maintenant)
-        if message:
-            crees.append(message)
+    cle_vendeur = MESSAGE_VENDEUR_PAR_STATUT.get(statut)
+    if cle_vendeur and vendeur is not None:
+        # une annulation peut revenir après une relance : un message par annulation ; les autres, une fois par colis
+        dedoublonnage = ('%s:%s:%s' % (cle_vendeur, article.code, historique.pk) if statut == S.ANNULE
+                         else '%s:%s%s' % (cle_vendeur, article.code, generation))
+        from sms.models import SmsMessage
+        avant = set(SmsMessage.objects.filter(cle_dedoublonnage=dedoublonnage).values_list('pk', flat=True))
+        pour_vendeur(cle_vendeur, vendeur, variables, dedoublonnage, article=article, historique=historique, maintenant=maintenant)
+        crees.extend(SmsMessage.objects.filter(cle_dedoublonnage=dedoublonnage).exclude(pk__in=avant))
     return crees
 
 

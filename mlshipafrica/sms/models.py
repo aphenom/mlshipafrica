@@ -65,7 +65,13 @@ class SmsModele(models.Model):
     destinataire = models.CharField(max_length=10, choices=DESTINATAIRES)
     texte = models.TextField(
         "Texte", help_text="Sans accents de préférence : un seul caractère spécial double le prix du SMS.")
-    actif = models.BooleanField("Actif", default=True)
+    actif = models.BooleanField("SMS actif", default=True)
+    categorie = models.CharField("Rubrique", max_length=20, default='livraison', choices=(
+        ('compte', 'Compte vendeur'), ('livraison', 'Livraison'), ('retours', 'Retours'), ('paiement', 'Paiements et stock')))
+    ordre = models.PositiveSmallIntegerField(default=50)
+    email_actif = models.BooleanField("E-mail actif", default=False)
+    email_objet = models.CharField("Objet de l'e-mail", max_length=200, blank=True, default='')
+    email_texte = models.TextField("Texte de l'e-mail", blank=True, default='')
     priorite = models.PositiveSmallIntegerField(
         "Priorité", default=5, help_text="1 = part même pendant les heures calmes (codes) · 5 = normal · 9 = peut attendre.")
     date_modification = models.DateTimeField(auto_now=True)
@@ -73,7 +79,7 @@ class SmsModele(models.Model):
     class Meta:
         verbose_name = 'Modèle de SMS'
         verbose_name_plural = 'Modèles de SMS'
-        ordering = ['destinataire', 'cle']
+        ordering = ['categorie', 'ordre', 'destinataire', 'cle']
 
     def __str__(self):
         return self.libelle
@@ -131,3 +137,21 @@ class SmsMessage(models.Model):
 
     def __str__(self):
         return '%s → %s (%s)' % (self.modele_cle, self.destinataire, self.get_statut_display())
+
+
+
+class EmailAuto(models.Model):
+    """Trace de chaque e-mail automatique envoyé à un vendeur (un seul par évènement)."""
+    modele_cle = models.CharField(max_length=40, db_index=True)
+    destinataire = models.CharField(max_length=200)
+    objet = models.CharField(max_length=200)
+    texte = models.TextField()
+    cle_dedoublonnage = models.CharField(max_length=150, unique=True)
+    envoye = models.BooleanField(default=False)
+    erreur = models.CharField(max_length=255, blank=True, default='')
+    vendeur = models.ForeignKey('management.Vendeur', models.SET_NULL, null=True, blank=True, related_name='emails_auto')
+    date_creation = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-date_creation']
+        verbose_name = 'E-mail automatique'
