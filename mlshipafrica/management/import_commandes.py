@@ -1,5 +1,5 @@
 """
-Import de commandes par le vendeur, au format de la plateforme (modèle Excel / CSV téléchargeable).
+Import de commandes par le vendeur, au format de la plateforme (modèle Excel .xlsx propre au vendeur, ou CSV).
 
   1. Le vendeur télécharge le modèle, le remplit (une ligne par commande) et l'envoie.
   2. La plateforme vérifie chaque ligne (ville desservie, téléphone, produit, prix, stock) et affiche un aperçu.
@@ -100,7 +100,7 @@ def verifier(vendeur, donnees):
     lignes = []
     for d in donnees[:MAX_LIGNES]:
         erreurs = []
-        nom, tel = _texte(d.get('nom'), 100), re.sub(r'[^\d+]', '', _texte(d.get('telephone'), 30))
+        nom, tel = _texte(d.get('nom'), 100), _telephone(d.get('telephone'))
         if not nom:
             erreurs.append("nom manquant")
         if len(re.sub(r'\D', '', tel)) < 8:
@@ -145,7 +145,7 @@ def verifier(vendeur, donnees):
             vues.add(reference)
         lignes.append({
             'ligne': d['ligne'], 'erreurs': erreurs, 'nom': nom, 'prenom': _texte(d.get('prenom'), 255), 'telephone': tel,
-            'telephone2': re.sub(r'[^\d+]', '', _texte(d.get('telephone2'), 30)), 'ville': ville.nom if ville else _texte(d.get('ville'), 40),
+            'telephone2': _telephone(d.get('telephone2')), 'ville': ville.nom if ville else _texte(d.get('ville'), 40),
             'ville_id': ville.pk if ville else None, 'adresse': _texte(d.get('adresse'), 255), 'produit': produit,
             'quantite': quantite, 'prix': str(prix), 'total': str(prix * quantite), 'format_id': fmt.pk if fmt else None,
             'format': fmt.nom if fmt else '', 'encaisser': _oui(d.get('encaisser'), True),
@@ -188,6 +188,24 @@ def creer(vendeur, lignes, user):
     return creees, refus
 
 
+def modele_vendeur(vendeur):
+    """Le modèle Excel avec les villes desservies, les formats et les références de stock de ce vendeur."""
+    from core.models import FormatArticle, Localite
+    from management.modele_import import modele_xlsx
+    villes = list(Localite.objects.filter(license=vendeur.license, is_arrivee=True, etat_validation=True, etat_suppression=False)
+                  .order_by('nom').values_list('nom', flat=True))
+    formats = list(FormatArticle.objects.filter(license=vendeur.license, etat_suppression=False).order_by('pk').values_list('nom', flat=True))
+    stocks = [(p.reference, p.designation, p.quantite_disponible) for p in
+              ProduitStock.objects.filter(vendeur=vendeur, actif=True).order_by('reference')] if vendeur.option_stockage else []
+    return modele_xlsx(COLONNES, villes, formats, stocks)
+
+
+def _telephone(valeur):
+    """Excel lit 0707070707 comme le nombre 707070707 : on remet le 0 perdu (numéros ivoiriens à 10 chiffres)."""
+    tel = re.sub(r'[^\d+]', '', _texte(valeur, 30))
+    return '0' + tel if len(tel) == 9 and tel.isdigit() else tel
+
+
 def _vendeur(request):
     vendeur = Vendeur.objects.filter(user=request.user).first()
     if vendeur is None or request.user.is_staff or not vendeur.etat_approbation:
@@ -198,15 +216,16 @@ def _vendeur(request):
 @login_required
 def vendeur_import_colis(request):
     vendeur = _vendeur(request)
-    if request.GET.get('modele'):
+    if request.GET.get('modele') == 'csv':
         reponse = HttpResponse(content_type='text/csv; charset=utf-8')
         reponse['Content-Disposition'] = 'attachment; filename="modele-commandes-ml-cod.csv"'
-        reponse.write('﻿')
-        w = csv.writer(reponse, delimiter=';')
-        w.writerow([libelle for _, libelle, _ in COLONNES])
-        w.writerow(['Kouassi', 'Aya', '0707070707', '', 'Bouaké', 'Quartier Commerce', 'Crème visage', 2, 7500, 'Petit', 'oui',
-                    'non', 'CMD-001', ''])
+        reponse.write('\ufeff')
+        csv.writer(reponse, delimiter=';').writerow([libelle for _, libelle, _ in COLONNES])
         return reponse
+    if request.GET.get('modele'):
+        return HttpResponse(modele_vendeur(vendeur), headers={
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': 'attachment; filename="modele-commandes-ml-cod.xlsx"'})
     lignes = request.session.get('import_colis')
     if request.method == 'POST':
         if request.POST.get('confirmer') and lignes:

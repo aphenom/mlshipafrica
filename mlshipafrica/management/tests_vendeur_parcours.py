@@ -28,7 +28,7 @@ class ParcoursVendeur(tests_pages.RecettePages):
         self.client.force_login(self.vendeur.user)
 
     def test_import_de_commandes_au_format_de_la_plateforme(self):
-        modele = self.client.get('/management/vendeur_import_colis/?modele=1').content.decode('utf-8-sig')
+        modele = self.client.get('/management/vendeur_import_colis/?modele=csv').content.decode('utf-8-sig')
         self.assertIn('Nom du client *', modele)
         csv = ('Nom du client *;Téléphone *;Ville *;Produit *;Quantité;Prix unitaire (F) *;Ma référence\n'
                'Kouassi;0707070707;Bouaké;Crème;2;7500;CMD-1\n'
@@ -45,6 +45,42 @@ class ParcoursVendeur(tests_pages.RecettePages):
         self.assertEqual(int(nouvelle.valeur_totale), 15000)
         self.assertEqual(int(nouvelle.cout_option_encaissement), 750)                        # 5 % de collecte
         self.assertFalse(Article.objects.filter(reference_externe='CMD-2').exists())
+
+    def test_modele_excel_rempli_puis_reimporte(self):
+        import io, re, zipfile
+        from core.models import Localite
+        from management.fichier_prestataire import lire_xlsx
+        ProduitStock.objects.create(vendeur=self.vendeur, reference='CR-50', designation='Crème', quantite_disponible=4)
+        self.vendeur.option_stockage = True
+        self.vendeur.save()
+        r = self.client.get('/management/vendeur_import_colis/?modele=1')
+        self.assertIn('spreadsheetml', r['Content-Type'])
+        onglets = lire_xlsx(r.content)
+        self.assertEqual([o['nom'] for o in onglets], ['Commandes', 'Listes', "Mode d'emploi"])
+        self.assertEqual(len(onglets[0]['lignes']), 1)                                # en-têtes seuls : l'exemple n'est pas importable
+        listes = [l for l in onglets[1]['lignes'][1:]]
+        ville = Localite.objects.filter(license=self.vendeur.license, is_arrivee=True, etat_validation=True, etat_suppression=False).first()
+        self.assertIn(ville.nom, [l[0] for l in listes])
+        self.assertIn('CR-50', [l[2] for l in listes])
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        feuille = z.read('xl/worksheets/sheet1.xml').decode()
+        self.assertIn('dataValidation', feuille)                                     # listes déroulantes
+        # le vendeur remplit la ligne 2 ; Excel enregistre le téléphone comme un nombre (le 0 disparaît)
+        ligne = ('<row r="2"><c r="A2" t="inlineStr"><is><t>Kouassi</t></is></c><c r="C2"><v>707070707</v></c>'
+                 '<c r="E2" t="inlineStr"><is><t>%s</t></is></c><c r="G2" t="inlineStr"><is><t>Crème</t></is></c>'
+                 '<c r="H2"><v>2</v></c><c r="I2"><v>7500</v></c><c r="M2" t="inlineStr"><is><t>XL-1</t></is></c>'
+                 '<c r="N2" t="inlineStr"><is><t>CR-50</t></is></c></row>') % ville.nom
+        feuille = feuille.replace('</row></sheetData>', '</row>%s</sheetData>' % ligne)
+        sortie = io.BytesIO()
+        with zipfile.ZipFile(sortie, 'w') as nz:
+            for n in z.namelist():
+                nz.writestr(n, feuille if n == 'xl/worksheets/sheet1.xml' else z.read(n))
+        self.client.post('/management/vendeur_import_colis/', {'fichier': SimpleUploadedFile('rempli.xlsx', sortie.getvalue())})
+        self.client.post('/management/vendeur_import_colis/', {'confirmer': '1'})
+        commande = Article.objects.get(vendeur=self.vendeur, reference_externe='XL-1')
+        self.assertTrue(re.sub(r'\D', '', str(commande.numero_principal_destinataire)).endswith('0707070707'))
+        self.assertEqual(commande.produit_stock.reference, 'CR-50')
+        self.assertEqual(int(commande.valeur_totale), 15000)
 
     def test_meme_reference_chez_deux_vendeurs_et_reimport(self):
         from management.tests import vendeur_pour

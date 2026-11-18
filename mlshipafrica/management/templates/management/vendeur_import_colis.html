@@ -6,15 +6,21 @@
 {% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card">
 	<div class="head"><div><h1>Importer des commandes</h1><div class="muted">Une ligne par commande, au format de la plateforme. Chaque ligne est vérifiée avant l’envoi ; rien n’est créé tant que vous n’avez pas confirmé.</div></div>
-		<span class="tools"><a class="btn" href="?modele=1">Télécharger le modèle (Excel)</a><a class="btn" href="{% url 'management:management_vendeur_edit_colis' %}">Saisir à la main</a></span></div>
+		<span class="tools"><a class="btn" href="{% url 'management:management_vendeur_edit_colis' %}">Saisir à la main</a></span></div>
 	{% if not lignes %}
+	<ol class="etapes-import">
+		<li><b>Téléchargez le modèle</b> : il contient déjà vos villes desservies, les formats{% if vendeur.option_stockage %} et vos références de stock{% endif %} en listes déroulantes.
+			<div class="tools" style="margin-top:6px"><a class="btn primary" href="?modele=1" download>Télécharger le modèle Excel (.xlsx)</a><a class="btn sm" href="?modele=csv" download>Version CSV</a></div></li>
+		<li><b>Remplissez l’onglet « Commandes »</b> : une ligne par commande, sans toucher aux en-têtes. L’onglet « Mode d’emploi » montre un exemple.</li>
+		<li><b>Envoyez le fichier</b> : chaque ligne est vérifiée, vous voyez l’aperçu, puis vous confirmez.</li>
+	</ol>
 	<form method="post" enctype="multipart/form-data" class="tools">{% csrf_token %}
-		<input type="file" name="fichier" accept=".xlsx,.csv,text/csv" required>
+		<input type="file" name="fichier" accept=".xlsx,.csv,text/csv" required aria-label="Fichier de commandes rempli">
 		<button class="btn primary">Vérifier le fichier</button>
 	</form>
 	<details class="note ml"><summary style="cursor:pointer;font-weight:700">Colonnes du modèle</summary>
 		<ul style="margin:6px 0 0 18px;font-size:12.5px;line-height:1.6">{% for cle, libelle, alias in colonnes %}<li>{{ libelle }}</li>{% endfor %}</ul>
-		<div style="font-size:12.5px;margin-top:6px">* obligatoire. Format vide = Petit. Encaisser vide = oui. Ramassage vide = non (dépôt au bureau). « Référence stock » : seulement si vos produits sont en stock chez nous.</div>
+		<div style="font-size:12.5px;margin-top:6px">* obligatoire. Téléphone avec le 0 du début (ex. 0707070707). Format vide = Petit. Encaisser vide = oui. Ramassage vide = non (dépôt au bureau). « Référence stock » : seulement si vos produits sont en stock chez nous.</div>
 	</details>
 	{% endif %}
 </div>
@@ -46,4 +52,8 @@
 	</table></div>
 </form>
 {% endif %}
+{% endblock %}
+
+{% block styles %}{{ block.super }}
+<style>.etapes-import { margin:4px 0 12px 18px; padding:0; display:flex; flex-direction:column; gap:8px; font-size:13.5px; line-height:1.5; }</style>
 {% endblock %}
