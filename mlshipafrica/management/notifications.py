@@ -244,3 +244,31 @@ def stockage_demande(vendeur):
 def numero_a_valider(vendeur):
     notifier(_equipe(vendeur.license, R.COMPTABLE), 'paiement', "Nouveau numéro de paiement à valider",
              vendeur.nom_store or vendeur.code, reverse('management:management_admin_moyens_versement'))
+
+
+def _f(montant):
+    return '{:,.0f}'.format(montant).replace(',', '\u202f') + ' F'
+
+
+def stockage_a_valider_rappel(license, debut, lignes):
+    from management.stock import nom_mois
+    total = sum(l['montant'] for l in lignes)
+    notifier(_equipe(license, R.COMPTABLE, R.SUPER), 'paiement', "Stockage de %s à valider" % nom_mois(debut),
+             "%d vendeur%s · %s à charger sur les paiements en cours." % (len(lignes), 's' if len(lignes) > 1 else '', _f(total)),
+             reverse('management:management_admin_releves') + '?etape=stockage', 'rappel-stockage:%s' % debut.strftime('%Y-%m'))
+
+
+def stockage_charge(lignes, debut, par):
+    from management.stock import nom_mois
+    for l in lignes:
+        v = l['vendeur']
+        if v.user_id:
+            notifier([v.user], 'stock', "Stockage de %s : %s" % (nom_mois(debut), _f(l['montant'])),
+                     "%d pièce%s chez nous × %s, déduit de votre prochain paiement." % (l['pieces'], 's' if l['pieces'] > 1 else '', _f(l['tarif'])),
+                     reverse('management:management_vendeur_stock'), 'stockage-mois:%s:%s' % (v.pk, debut.strftime('%Y-%m')))
+    if lignes:
+        license = lignes[0]['vendeur'].license
+        notifier([u for u in _equipe(license, R.SUPER) if u != par], 'paiement', "Stockage de %s chargé" % nom_mois(debut),
+                 "%d vendeur%s · %s, par %s." % (len(lignes), 's' if len(lignes) > 1 else '', _f(sum(l['montant'] for l in lignes)),
+                                                 par.get_full_name() or par.email),
+                 reverse('management:management_admin_releves') + '?etape=stockage', 'stockage-charge:%s:%s' % (license.pk, debut.strftime('%Y-%m')))

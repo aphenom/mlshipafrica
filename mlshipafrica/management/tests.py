@@ -686,22 +686,29 @@ class StockTests(TestCase):
         self.assertEqual((produit.quantite_disponible, produit.quantite_de_cote), (3, 1))
 
     def test_stockage_300_par_piece_et_par_mois_des_l_entree(self):
-        from datetime import timedelta
+        from datetime import date, timedelta
         from django.utils import timezone
-        from management.models import Ecriture, FacturationStockage
-        from management.stock import _ajouter_mois, facturer_stockage
+        from management.models import Ecriture, Notification
+        from management.stock import rappel_stockage, stockage_a_valider, valider_stockage_mois
         from mlshipafrica.enums import TypeEcriture
         produit = self.recevoir(30, 30)
         stockage = lambda: sum(Ecriture.objects.filter(vendeur=self.vendeur, type=TypeEcriture.STOCKAGE).values_list('montant', flat=True))
-        self.assertEqual(int(stockage()), 30 * 300)                     # 1er mois compté dès l'entrée
-        aujourdhui = timezone.localdate()
-        self.assertEqual(facturer_stockage(aujourdhui + timedelta(days=20)), 0)   # pas par jour : rien avant un mois
-        produit.__class__.objects.filter(pk=produit.pk).update(quantite_disponible=12)   # 18 pièces sorties entre-temps
-        mois_suivant = _ajouter_mois(aujourdhui, 1)
-        self.assertEqual(facturer_stockage(mois_suivant), 1)
-        self.assertEqual(facturer_stockage(mois_suivant), 0)                      # rejouable : pas de doublon
-        self.assertEqual(int(stockage()), 30 * 300 + 12 * 300)                     # 2e mois : seulement les 12 pièces restantes
-        self.assertEqual(int(FacturationStockage.objects.get(vendeur=self.vendeur, jour=mois_suivant).montant), 3600)
+        self.assertEqual(int(stockage()), 30 * 300)                     # stock accepté : le mois en cours, 300 F la pièce
+        license = self.vendeur.license
+        self.assertEqual(stockage_a_valider(license)[1], [])            # pièces reçues ce mois : pas recomptées
+        produit.__class__.objects.filter(pk=produit.pk).update(quantite_disponible=12)   # 18 pièces sorties
+        mois_suivant = (timezone.localdate().replace(day=1) + timedelta(days=32)).replace(day=1)
+        from management.models import EntreeStock
+        EntreeStock.objects.filter(vendeur=self.vendeur).update(date_reception=timezone.now() - timedelta(days=40))
+        self.assertEqual(rappel_stockage(mois_suivant + timedelta(days=1)), 0)             # rappel seulement le 1er
+        self.assertEqual(rappel_stockage(mois_suivant), 1)
+        _, lignes = stockage_a_valider(license, mois_suivant)
+        self.assertEqual([(l['pieces'], int(l['montant'])) for l in lignes], [(12, 3600)])
+        with self.captureOnCommitCallbacks(execute=True):
+            valider_stockage_mois(license, [self.vendeur.code], self.manager, mois_suivant)
+        valider_stockage_mois(license, [self.vendeur.code], self.manager, mois_suivant)   # rejouable : pas de doublon
+        self.assertEqual(int(stockage()), 30 * 300 + 12 * 300)
+        self.assertTrue(Notification.objects.filter(destinataire=self.vendeur.user, titre__startswith='Stockage de').exists())
 
     def test_pages(self):
         self.client.force_login(self.vendeur.user)

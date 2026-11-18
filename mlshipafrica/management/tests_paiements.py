@@ -140,3 +140,20 @@ class Paiements(tests_pages.RecettePages):
         self.assertNotIn('name="compte_versement"', mon_argent)
         self.assertIn('/management/vendeur_paiement/', mon_argent)
         self.assertIn('name="compte_versement"', self.client.get('/management/vendeur_paiement/').content.decode())
+
+    def test_comptable_charge_le_stockage_du_mois_en_un_bloc(self):
+        from management.models import ProduitStock
+        self.vendeur.option_stockage = True
+        self.vendeur.save()
+        ProduitStock.objects.create(vendeur=self.vendeur, reference='ST-1', designation='Savon', quantite_disponible=7)
+        self.client.force_login(self.comptes[R.COMPTABLE])
+        page = self.client.get('/management/admin_releves/?etape=stockage').content.decode()
+        self.assertIn('Charger le stockage des vendeurs cochés', page)
+        self.assertIn(self.vendeur.code, page)
+        r = self.client.post('/management/admin_releves/', {'action': 'stockage', 'vendeurs': [self.vendeur.code]})
+        self.assertEqual(r['Location'], '/management/admin_releves/?etape=a_payer')
+        ligne = Ecriture.objects.get(vendeur=self.vendeur, type=T.STOCKAGE, cle__startswith='stockage:mois:')
+        self.assertEqual(int(ligne.montant), 7 * 300)
+        self.assertNotIn(self.vendeur.code, self.client.get('/management/admin_releves/?etape=stockage').content.decode())
+        self.client.force_login(self.comptes[R.MANAGER])
+        self.assertNotEqual(self.client.get('/management/admin_releves/?etape=stockage').status_code, 200)   # comptable et CEO seulement

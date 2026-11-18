@@ -6,8 +6,9 @@ Stock des vendeurs en stockage (option_stockage).
   Le vendeur crée une commande sur un produit en stock → à la validation, le stock est réservé (sortie)
   Commande annulée avant expédition → le stock revient ; relance → il ressort
   Colis revenu en bon état → « Remis en stock » ; abîmé → « Mis de côté » (hors stock disponible)
-  Stockage : 300 F par pièce et par mois dès l'entrée (1er mois à la réception, puis à chaque date anniversaire
-  pour les pièces du lot encore en stock), déduit des factures de paiement du vendeur
+  Stockage : 300 F par pièce et par mois. Stock accepté → le mois en cours est compté tout de suite ; le 1er de chaque
+  mois, rappel à la comptable qui valide en un bloc la charge du mois (pièces encore chez nous), jusqu'à épuisement.
+  Déduit des factures de paiement du vendeur.
 
 Chaque variation est une ligne MouvementStock (jamais modifiée) ; ProduitStock garde le total à jour.
 """
@@ -82,7 +83,7 @@ def valider_reception(entree, user, quantites_recues):
             references += 1
     entree.statut, entree.date_reception, entree.recu_par = StatutEntreeStock.RECUE, timezone.now(), user
     entree.save()
-    # Premier mois de stockage dès l'entrée : pièces reçues × tarif mensuel
+    # Stock accepté : le mois en cours est compté tout de suite (pièces reçues × tarif mensuel)
     tarif = tarif_stockage_mois(entree.vendeur)
     for ligne in entree.lignes.select_related('entree__vendeur').filter(quantite_recue__gt=0):
         facturer_lot(ligne, 0, timezone.localdate(), ligne.quantite_recue, tarif)
@@ -182,22 +183,76 @@ def facturer_lot(ligne, rang, jour, pieces, tarif):
     return cree
 
 
-def facturer_stockage(jour=None):
+MOIS_FR = ('janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre',
+           'décembre')
+
+
+def nom_mois(jour):
+    return '%s %d' % (MOIS_FR[jour.month - 1], jour.year)
+
+
+def cle_stockage_mois(vendeur, debut):
+    return 'stockage:mois:%s:%s' % (vendeur.pk, debut.strftime('%Y-%m'))
+
+
+def stockage_a_valider(license, jour=None):
     """
-    Stockage : 300 F (réglé par le CEO) par pièce et par mois, dès l'entrée du stock. Le premier mois est compté à la
-    réception ; ensuite, à chaque date anniversaire de l'entrée, les pièces de ce lot encore en stock sont comptées
-    pour un nouveau mois. Tâche quotidienne, rejouable (rattrape les mois manqués). Renvoie le nombre de mois comptés.
+    Charge de stockage du mois à valider par la comptable (le 1er du mois, rappel) : pour chaque vendeur, les pièces
+    encore chez nous × tarif. Les pièces reçues ce mois-ci sont exclues : elles ont déjà payé ce mois à la réception.
+    Un vendeur déjà chargé pour ce mois n'apparaît plus. Rien n'est écrit.
     """
-    jour = jour or timezone.localdate()
-    n = 0
-    for vendeur in Vendeur.objects.filter(option_stockage=True, etat_suppression=False):
-        tarif = tarif_stockage_mois(vendeur)
+    from django.db.models import Sum
+    from management.models import Ecriture
+    debut = (jour or timezone.localdate()).replace(day=1)
+    debut_dt = timezone.make_aware(timezone.datetime.combine(debut, timezone.datetime.min.time()))
+    lignes = []
+    for vendeur in Vendeur.objects.filter(license=license, option_stockage=True, etat_suppression=False).order_by('nom_store'):
+        if Ecriture.objects.filter(cle=cle_stockage_mois(vendeur, debut)).exists():
+            continue
+        pieces = 0
         for produit in vendeur.produits_stock.all():
-            lots, parts = pieces_par_lot(produit)
-            for lot in lots:
-                debut = timezone.localtime(lot.entree.date_reception).date()
-                rang = 1
-                while _ajouter_mois(debut, rang) <= jour:
-                    n += facturer_lot(lot, rang, _ajouter_mois(debut, rang), parts.get(lot.pk, 0), tarif)
-                    rang += 1
+            recu_ce_mois = LigneEntreeStock.objects.filter(produit=produit, entree__statut=StatutEntreeStock.RECUE,
+                                                           entree__date_reception__gte=debut_dt).aggregate(t=Sum('quantite_recue'))['t'] or 0
+            pieces += max(max(produit.quantite_disponible, 0) + max(produit.quantite_de_cote, 0) - recu_ce_mois, 0)
+        if pieces > 0:
+            tarif = tarif_stockage_mois(vendeur)
+            lignes.append({'vendeur': vendeur, 'pieces': pieces, 'tarif': tarif, 'montant': pieces * tarif})
+    return debut, lignes
+
+
+@transaction.atomic
+def valider_stockage_mois(license, codes, user, jour=None):
+    """La comptable lance en un bloc la charge de stockage du mois pour les vendeurs cochés. Rejouable sans doublon."""
+    from management.models import Ecriture
+    from mlshipafrica.enums import TypeEcriture
+    debut, lignes = stockage_a_valider(license, jour)
+    faites = []
+    for l in lignes:
+        v = l['vendeur']
+        if v.code not in codes:
+            continue
+        _, cree = Ecriture.objects.get_or_create(cle=cle_stockage_mois(v, debut), defaults={
+            'vendeur': v, 'type': TypeEcriture.STOCKAGE, 'montant': l['montant'], 'license': v.license})
+        if cree:
+            f, _ = FacturationStockage.objects.get_or_create(vendeur=v, jour=debut, defaults={'pieces': 0, 'montant': 0})
+            FacturationStockage.objects.filter(pk=f.pk).update(pieces=F('pieces') + l['pieces'], montant=F('montant') + l['montant'])
+            faites.append(l)
+    from management.notifications import stockage_charge
+    stockage_charge(faites, debut, user)
+    return faites
+
+
+def rappel_stockage(jour=None):
+    """Le 1er du mois : rappel à la comptable (et au CEO, pour information) de valider la charge de stockage."""
+    from core.models import License
+    from management.notifications import stockage_a_valider_rappel
+    jour = jour or timezone.localdate()
+    if jour.day != 1:
+        return 0
+    n = 0
+    for license in License.objects.all():
+        debut, lignes = stockage_a_valider(license, jour)
+        if lignes:
+            stockage_a_valider_rappel(license, debut, lignes)
+            n += 1
     return n

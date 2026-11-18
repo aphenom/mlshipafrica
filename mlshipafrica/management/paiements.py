@@ -26,7 +26,7 @@ from mlshipafrica.droits import a_le_droit, droit_requis
 from mlshipafrica.enums import MoyenVersement, StatutReleve
 
 ETAPES = (('unpaid', '1 · Livrés à valider'), ('a_payer', '2 · À payer'), ('factures', '3 · Factures à verser'),
-          ('verses', '4 · Versés'))
+          ('verses', '4 · Versés'), ('stockage', 'Stockage du mois'))
 
 
 @login_required
@@ -48,6 +48,15 @@ def admin_paiements(request):
                 messages.success(request, "%d facture%s de paiement générée%s : les vendeurs les voient dans « Mon argent »." % (
                     len(crees), 's' if len(crees) > 1 else '', 's' if len(crees) > 1 else ''))
                 return redirect(reverse('management:management_admin_releves') + '?etape=factures')
+            if action == 'stockage':
+                from management.stock import nom_mois, valider_stockage_mois
+                faites = valider_stockage_mois(license, request.POST.getlist('vendeurs'), user)
+                if not faites:
+                    raise ValidationError("Cochez au moins un vendeur.")
+                messages.success(request, "Stockage de %s chargé pour %d vendeur%s (%s F) : déduit de leur prochaine facture." % (
+                    nom_mois(timezone.localdate()), len(faites), 's' if len(faites) > 1 else '',
+                    '{:,.0f}'.format(sum(l['montant'] for l in faites)).replace(',', '\u202f')))
+                return redirect(reverse('management:management_admin_releves') + '?etape=a_payer')
             releve = releves.get(pk=request.POST.get('releve'))
             if action == 'annuler':
                 annuler_releve(releve, user, request.POST.get('motif', ''))
@@ -76,6 +85,8 @@ def admin_paiements(request):
     ctx['kpi_sans_coordonnees'] = Vendeur.objects.filter(license=license, etat_suppression=False).filter(
         Q(versement_valide=False) & ~Q(compte_versement=None) & ~Q(compte_versement='')).count()
     debut_mois = timezone.make_aware(timezone.datetime.combine(timezone.localdate().replace(day=1), timezone.datetime.min.time()))
+    from management.stock import stockage_a_valider
+    ctx['kpi_stockage_vendeurs'] = len(stockage_a_valider(license)[1])
     ctx['kpi_verses_mois'] = releves.filter(statut=StatutReleve.VERSE, date_versement__gte=debut_mois).aggregate(
         t=Sum('montant_verse'), n=Count('id'))
 
@@ -97,6 +108,11 @@ def admin_paiements(request):
     elif etape == 'a_payer':
         ctx['vendeurs_a_payer'] = a_payer_par_vendeur(license)
         ctx['total_a_payer'] = sum((v['net'] for v in ctx['vendeurs_a_payer'] if v['net'] > 0 and not v['bloque']), 0)
+    elif etape == 'stockage':
+        from management.stock import nom_mois, stockage_a_valider
+        debut, ctx['stockage_lignes'] = stockage_a_valider(license)
+        ctx['stockage_mois_nom'] = nom_mois(debut)
+        ctx['stockage_total'] = sum((l['montant'] for l in ctx['stockage_lignes']), 0)
     elif etape in ('factures', 'verses'):
         liste = (a_verser if etape == 'factures' else releves.filter(statut__in=(StatutReleve.VERSE, StatutReleve.ANNULE)))
         liste = list(liste[:500])
