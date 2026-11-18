@@ -66,7 +66,7 @@
 			<h2>Mes bordereaux</h2>
 			{% for e in entrees %}
 			<div style="border-top:1px solid var(--line);padding-top:8px">
-				<div class="head" style="align-items:center"><b class="mono">{{ e.code }}</b><span class="badge {% if e.date_reception %}b-ok{% else %}b-warn{% endif %}">{{ e.get_statut_display }}{% if e.date_reception %} le {{ e.date_reception|date:"d/m" }}{% endif %}</span></div>
+				<div class="head" style="align-items:center"><b class="mono">{{ e.code }}</b><a class="btn sm" href="{% url 'management:management_vendeur_bordereau_stock' e.code %}" target="_blank" rel="noopener">Imprimer</a><span class="badge {% if e.date_reception %}b-ok{% else %}b-warn{% endif %}">{{ e.get_statut_display }}{% if e.date_reception %} le {{ e.date_reception|date:"d/m" }}{% endif %}</span></div>
 				<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px">{% for l in e.lignes.all %}<li>{{ l.reference }} : annoncé {{ l.quantite_annoncee }}{% if l.quantite_recue is not None %}, reçu {{ l.quantite_recue }}{% if l.quantite_recue != l.quantite_annoncee %} <b class="t-bad">(écart {{ l.quantite_recue|add:"0"|stringformat:"d" }} / {{ l.quantite_annoncee }})</b>{% endif %}{% endif %}</li>{% endfor %}</ul>
 			</div>
 			{% empty %}<div class="muted">Aucun envoi annoncé.</div>{% endfor %}

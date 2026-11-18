@@ -111,6 +111,56 @@ class ParcoursVendeur(tests_pages.RecettePages):
         page = self.client.get('/?periode=dates&du=2001-01-01&au=2001-01-31').content.decode()
         self.assertIn('Encaissé sur la période', page)
 
+    def donnees_commande(self, **extra):
+        a = self.articles[0]
+        d = {'nom_destinataire': 'Kouassi', 'numero_principal_destinataire': '+2250707070707', 'localite_arrivee': a.localite_arrivee_id,
+             'adresse_destinataire': 'Commerce', 'designation': 'Crème', 'valeur': '10000', 'quantite': '2',
+             'format_article': a.format_article_id, 'produits': ['cosmetiques'], 'is_option_encaissement': 'True', 'action': 'valider'}
+        d.update(extra)
+        return d
+
+    def test_valider_d_un_clic_depuis_mon_stock_puis_commande_suivante(self):
+        produit = ProduitStock.objects.create(vendeur=self.vendeur, reference='CR-9', designation='Crème 50 ml', quantite_disponible=5)
+        page = self.client.get('/management/vendeur_edit_colis/').content.decode()
+        self.assertIn('Depuis mon stock ML COD Intérieur', page)
+        self.assertIn('Valider la commande', page)
+        r = self.client.post('/management/vendeur_edit_colis/', self.donnees_commande(type_colis='stock', produit_stock=produit.pk, designation=''))
+        commande = Article.objects.filter(vendeur=self.vendeur, produit_stock=produit).get()
+        self.assertEqual(r['Location'], '/management/vendeur_edit_colis/?apres=%s' % commande.code)
+        self.assertEqual(commande.statut_traitement, S.EN_ATTENTE_DEPOT)
+        self.assertEqual(commande.designation, 'Crème 50 ml')                       # repris du produit
+        produit.refresh_from_db()
+        self.assertEqual(produit.quantite_disponible, 3)                            # 2 pièces sorties du stock
+        self.assertIn('enregistrée et envoyée', self.client.get(r['Location']).content.decode())
+
+    def test_stock_choisi_sans_produit_refuse(self):
+        avant = Article.objects.count()
+        page = self.client.post('/management/vendeur_edit_colis/', self.donnees_commande(type_colis='stock')).content.decode()
+        self.assertIn('Choisissez le produit de votre stock', page)
+        self.assertEqual(Article.objects.count(), avant)
+
+    def test_ramassage_d_un_clic(self):
+        self.client.post('/management/vendeur_edit_colis/', self.donnees_commande(type_colis='ramassage', designation='Sac'))
+        self.assertEqual(Article.objects.filter(vendeur=self.vendeur, designation='Sac').get().statut_traitement, S.EN_ATTENTE_RAMASSAGE)
+
+    def test_shipping_vendeur_suivi_et_impressions(self):
+        page = self.client.get('/management/vendeur_liste_colis/').content.decode()
+        self.assertNotIn('Nouvelle commande</a>', page)
+        self.assertIn('Bordereau de dépôt', page)
+        codes = [a.code for a in self.articles[:3]]
+        for doc in ('bordereau', 'factures', 'etiquettes'):
+            r = self.client.post('/management/vendeur_imprimer/', {'doc': doc, 'codes': codes})
+            self.assertEqual(r.status_code, 200)
+            self.assertIn(codes[0], r.content.decode())
+        export = self.client.post('/management/vendeur_imprimer/', {'doc': 'export', 'codes': codes}).content.decode('utf-8-sig')
+        self.assertIn(codes[0], export)
+        self.assertNotIn('Agent', export.splitlines()[0])
+        from management.tests import vendeur_pour
+        autre = vendeur_pour(self.vendeur.license, 'Autre')
+        self.client.force_login(autre.user)
+        r = self.client.post('/management/vendeur_imprimer/', {'doc': 'bordereau', 'codes': codes})
+        self.assertEqual(r.status_code, 302)                                         # pas les colis d'un autre vendeur
+
     def test_bouton_retour(self):
         self.assertIn('← Retour', self.client.get('/management/vendeur_releves/').content.decode())
         self.assertNotIn('← Retour', self.client.get('/').content.decode())

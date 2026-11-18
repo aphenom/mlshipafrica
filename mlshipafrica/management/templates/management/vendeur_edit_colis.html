@@ -45,16 +45,26 @@
 		<div class="card">
 			<div class="head">
 				<h2>2 · Le colis</h2>
-				{% if configuration.enable_option_recuperation %}
-				<div class="seg" role="radiogroup" aria-label="Origine du colis">
-					<label><input type="radio" name="is_option_recuperation" value="False" {% if rec != 'True' %}checked{% endif %}> Je dépose le colis</label>
-					<label><input type="radio" name="is_option_recuperation" value="True" {% if rec == 'True' %}checked{% endif %}> ML COD Intérieur vient le récupérer</label>
+			</div>
+			<div class="field">Type de colis *
+				<div class="seg" role="radiogroup" aria-label="Type de colis" id="c-type" style="align-self:flex-start;flex-wrap:wrap">
+					{% if form.produit_stock %}<label><input type="radio" name="type_colis" value="stock" {% if type_colis == 'stock' %}checked{% endif %}> Depuis mon stock ML COD Intérieur</label>{% endif %}
+					<label><input type="radio" name="type_colis" value="depot" {% if type_colis == 'depot' %}checked{% endif %}> Je dépose le colis au bureau</label>
+					{% if configuration.enable_option_recuperation %}<label><input type="radio" name="type_colis" value="ramassage" {% if type_colis == 'ramassage' %}checked{% endif %}> ML COD Intérieur vient le récupérer</label>{% endif %}
 				</div>
-				{% else %}<input type="hidden" name="is_option_recuperation" value="False">{% endif %}
+				<input type="hidden" name="is_option_recuperation" id="c-rec" value="{% if type_colis == 'ramassage' %}True{% else %}False{% endif %}">
+				<span class="hint" id="c-type-aide">{% if form.produit_stock %}Stock : nous préparons le colis depuis vos produits gardés à Abidjan. {% endif %}Dépôt : vous apportez le colis avec son bordereau. Ramassage : nous passons le prendre.</span>
 			</div>
 			<div class="form">
 				{% if form.produit_stock %}
-				<label class="field full">Depuis mon stock ML COD Intérieur{{ form.produit_stock }}<span class="hint">Facultatif. La quantité sort de votre stock quand vous validez la commande.</span><span class="errs">{{ form.produit_stock.errors|striptags }}</span></label>
+				<label class="field full" id="bloc-stock"{% if type_colis != 'stock' %} hidden{% endif %}>Produit de mon stock *
+					<select name="produit_stock" id="c-stock">
+						<option value="">Choisir le produit</option>
+						{% for p in form.fields.produit_stock.queryset %}<option value="{{ p.pk }}" data-nom="{{ p.designation }}" data-dispo="{{ p.quantite_disponible }}" {% if form.produit_stock.value|stringformat:'s' == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.reference }} · {{ p.designation }} ({{ p.quantite_disponible }} disponible{{ p.quantite_disponible|pluralize }})</option>{% endfor %}
+					</select>
+					<span class="hint">La quantité sort de votre stock à la validation. Il ne reste que les produits disponibles.</span>
+					<span class="errs">{{ form.produit_stock.errors|striptags }}</span>
+				</label>
 				{% endif %}
 				<label class="field full">Désignation *{{ form.designation }}<span class="errs">{{ form.designation.errors|striptags }}</span></label>
 				<label class="field">Prix unitaire (F) *<input class="num" inputmode="numeric" name="valeur" id="c-valeur" value="{{ form.valeur.value|default_if_none:''|floatformat:'0u' }}" required><span class="errs">{{ form.valeur.errors|striptags }}</span></label>
@@ -98,12 +108,13 @@
 		<div class="muted" style="font-size:12.5px" id="r-explique">Payé sur votre facture de paiement du lundi ou du jeudi, une fois la commande livrée.</div>
 		<div class="errs" id="r-sans-tarif" hidden>Pas encore de tarif pour cette ville et ce format : choisissez un autre format ou contactez le support.</div>
 		<div class="note"><b>Deux filtres, un seul discours.</b> Vous validez d’abord votre client selon la méthode ML COD, puis l’équipe ML COD Intérieur filtre chaque commande avant l’envoi. Un client bien préparé, c’est un colis livré.</div>
-		<button type="submit" class="btn primary">Continuer : vérifier la commande</button>
-		<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Quitter sans enregistrer</a>
+		<button type="submit" name="action" value="valider" class="btn primary">Valider la commande</button>
+		<div class="muted" style="font-size:12px">La commande part tout de suite et un formulaire vierge s’ouvre pour la suivante.</div>
+		<button type="submit" name="action" value="brouillon" class="btn">Enregistrer en brouillon</button>
+		<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Quitter</a>
 		{% if article.statut_traitement == statut_traitement.BROUILLON and article.pk %}
 		<button type="submit" name="submit_suppression" value="1" class="btn danger" onclick="return confirm('Supprimer ce brouillon ?')">Supprimer ce brouillon</button>
 		{% endif %}
-		<div class="muted" style="font-size:12px">Vous vérifiez la commande à l’étape suivante avant de l’envoyer.</div>
 	</aside>
 </div>
 </form>
@@ -154,6 +165,19 @@
 		document.getElementById('r-net').textContent = fcfa(enc ? total - tous : tous);
 		document.getElementById('r-explique').textContent = enc ? 'Payé sur votre facture de paiement du lundi ou du jeudi, une fois la commande livrée.' : 'Le client vous paie directement : les frais sont retenus sur votre facture de paiement.';
 	}
+	// Type de colis : stock, dépôt ou ramassage
+	var blocStock = document.getElementById('bloc-stock'), selStock = document.getElementById('c-stock'), auto = '';
+	function typeColis() {
+		var t = val('type_colis');
+		document.getElementById('c-rec').value = t === 'ramassage' ? 'True' : 'False';
+		if (blocStock) { blocStock.hidden = t !== 'stock'; selStock.required = t === 'stock'; }
+	}
+	if (selStock) selStock.addEventListener('change', function () {
+		var o = selStock.options[selStock.selectedIndex], d = f.querySelector('[name="designation"]');
+		if (o && o.dataset.nom && (!d.value || d.value === auto)) { d.value = o.dataset.nom; auto = o.dataset.nom; }
+	});
+	f.querySelectorAll('[name="type_colis"]').forEach(function (r) { r.addEventListener('change', function () { typeColis(); calc(); }); });
+	typeColis();
 	f.addEventListener('input', calc);
 	f.addEventListener('change', calc);
 	if (window.jQuery) jQuery(f).find('select').on('change', calc);  // select2 de la ville

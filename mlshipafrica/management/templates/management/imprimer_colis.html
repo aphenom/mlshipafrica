@@ -45,7 +45,7 @@
 </style>
 </head>
 <body>
-<div class="bar"><b>{{ titre }} · {{ articles|length }} colis</b><button class="l" onclick="history.length > 1 ? history.back() : window.close()">← Retour</button><button onclick="window.print()">Imprimer</button></div>
+<div class="bar"><b>{{ titre }}{% if articles %} · {{ articles|length }} colis{% endif %}</b><button class="l" onclick="history.length > 1 ? history.back() : window.close()">← Retour</button><button onclick="window.print()">Imprimer</button></div>
 
 {% if doc == 'feuille_route' %}
 <div class="page">
@@ -73,6 +73,57 @@
 	<table style="margin-top:12px"><tr class="tot"><td>Total : {{ articles|length }} colis</td><td class="r">À encaisser : {{ a_encaisser|fcfa }}</td></tr></table>
 	<div class="sign"><div>Remis par (ML COD)</div><div>Reçu par (livreur)</div><div>Date et heure</div></div>
 </div>
+
+{% elif doc == 'bordereau_depot' %}
+<div class="page">
+	<header class="doc">
+		<div><div class="marque">ML COD Intérieur</div><h1>Bordereau de dépôt</h1><div class="muted">{{ vendeur.nom_store|default:vendeur.code }} · {{ vendeur.code }}{% if vendeur.numero_contact %} · {{ vendeur.numero_contact }}{% endif %}</div></div>
+		<div class="r muted">Édité le {{ maintenant|date:"d/m/Y H:i" }}<br>{{ articles|length }} colis</div>
+	</header>
+	<table>
+		<thead><tr><th>#</th><th>Commande</th><th>Client</th><th>Téléphone</th><th>Ville</th><th>Produit</th><th class="r">À encaisser</th><th>Reçu ✓</th></tr></thead>
+		<tbody>{% for a in articles %}<tr><td>{{ forloop.counter }}</td><td class="mono">{{ a.code }}{% if a.reference_externe %}<div class="muted">{{ a.reference_externe }}</div>{% endif %}</td><td>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</td><td class="mono">{{ a.numero_principal_destinataire|default:"" }}</td><td>{{ a.localite_arrivee.nom|default:"" }}</td><td>{{ a.designation|default:"—" }} × {{ a.quantite|default:1 }}{% if a.produit_stock_id %}<div class="muted">depuis le stock</div>{% endif %}</td><td class="r">{% if a.is_option_encaissement %}{{ a.valeur_totale|fcfa }}{% else %}payé{% endif %}</td><td style="width:60px"></td></tr>{% endfor %}
+		<tr class="tot"><td colspan="6">Total : {{ articles|length }} colis</td><td class="r">{{ a_encaisser|fcfa }}</td><td></td></tr></tbody>
+	</table>
+	<p class="muted" style="font-size:12px;margin-top:10px">À imprimer en 2 exemplaires : un pour le vendeur, un pour ML COD Intérieur. Signé à la remise des colis, il sert de décharge.</p>
+	<div class="sign"><div>Remis par (vendeur)</div><div>Reçu par ML COD Intérieur (nom)</div><div>Date et heure</div></div>
+</div>
+
+{% elif doc == 'bordereau_stock' %}
+<div class="page">
+	<header class="doc">
+		<div><div class="marque">ML COD Intérieur</div><h1>Bordereau d'envoi de stock</h1><div class="muted">{{ vendeur.nom_store|default:vendeur.code }} · {{ vendeur.code }}</div></div>
+		<div class="r"><div class="mono">{{ entree.code }}</div><div class="muted">Annoncé le {{ entree.date_annonce|date:"d/m/Y H:i" }}<br>{{ entree.get_statut_display }}{% if entree.date_reception %} le {{ entree.date_reception|date:"d/m/Y" }}{% endif %}</div></div>
+	</header>
+	<table>
+		<thead><tr><th>Référence</th><th>Produit</th><th class="r">Annoncé</th><th class="r">Compté à l'arrivée</th></tr></thead>
+		<tbody>{% for l in entree.lignes.all %}<tr><td class="mono">{{ l.reference }}</td><td>{{ l.designation }}</td><td class="r">{{ l.quantite_annoncee }}</td><td class="r">{% if l.quantite_recue is not None %}{{ l.quantite_recue }}{% else %}&nbsp;{% endif %}</td></tr>{% endfor %}</tbody>
+	</table>
+	{% if entree.commentaire %}<p class="muted">{{ entree.commentaire }}</p>{% endif %}
+	<p class="muted" style="font-size:12px;margin-top:10px">À imprimer en 2 exemplaires. Le manager compte les pièces à l'arrivée ; les écarts sont visibles dans l'espace du vendeur.</p>
+	<div class="sign"><div>Remis par (vendeur)</div><div>Compté et reçu par ML COD Intérieur</div><div>Date et heure</div></div>
+</div>
+
+{% elif doc == 'factures_vendeur' %}
+{% for a in articles %}
+<div class="page facture">
+	<header class="doc">
+		<div><div class="marque">ML COD Intérieur</div><div class="muted">{{ vendeur.nom_store|default:vendeur.code }} · {{ vendeur.code }}</div></div>
+		<div class="r"><h1>Facture</h1><div class="mono">{{ a.code }}</div><div class="muted">{{ a.date_creation|date:"d/m/Y" }} · {{ a.get_statut_traitement_display }}</div></div>
+	</header>
+	<p><b>Client :</b> {{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }} · {{ a.numero_principal_destinataire|default:"" }} · {{ a.localite_arrivee.nom|default:"" }}</p>
+	<table>
+		<thead><tr><th>Produit</th><th class="r">Quantité</th><th class="r">Montant</th></tr></thead>
+		<tbody><tr><td>{{ a.designation|default:"—" }}</td><td class="r">{{ a.quantite|default:1 }}</td><td class="r">{{ a.valeur_totale|fcfa }}</td></tr>
+		<tr><td colspan="2">Frais de livraison</td><td class="r">− {{ a.montant_frais|fcfa }}</td></tr>
+		{% if a.cout_option_recuperation %}<tr><td colspan="2">Ramassage</td><td class="r">− {{ a.cout_option_recuperation|fcfa }}</td></tr>{% endif %}
+		{% if a.is_option_encaissement %}<tr><td colspan="2">Frais de collecte de fonds ({{ a.taux_option_encaissement|default:5|floatformat:"-2" }} %)</td><td class="r">− {{ a.cout_option_encaissement|default:0|fcfa }}</td></tr>
+		<tr class="tot"><td colspan="2">Vous recevez (si livré)</td><td class="r">{{ a.montant_a_reverser|fcfa }}</td></tr>
+		{% else %}<tr class="tot"><td colspan="2">Frais à votre charge</td><td class="r">{{ a.montant_total_frais|fcfa }}</td></tr>{% endif %}</tbody>
+	</table>
+	<p class="muted" style="font-size:11.5px">Frais de collecte prélevés seulement si le colis est livré ; s'il revient, 50 % des frais de livraison.</p>
+</div>
+{% endfor %}
 
 {% elif doc == 'preparation' %}
 <div class="page">

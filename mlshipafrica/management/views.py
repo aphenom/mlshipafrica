@@ -115,33 +115,63 @@ def vendeur_edit_colis(request):
         except Exception as e:
             raise Http404
 
+        if request.method == 'POST' and not request.POST.get('type_colis'):
+            # Envoi sans le choix (ancien formulaire) : on suit les champs envoyés, jamais « stock » par défaut
+            type_colis = ('stock' if request.POST.get('produit_stock') else
+                          'ramassage' if request.POST.get('is_option_recuperation') == 'True' else 'depot')
+        else:
+            type_colis = request.POST.get('type_colis') or (
+                'stock' if article.produit_stock_id else 'ramassage' if article.is_option_recuperation
+                else 'stock' if (vendeur.option_stockage and not article.pk) else 'depot')
+        if type_colis == 'stock' and not vendeur.option_stockage:
+            type_colis = 'depot'
         if request.method == 'POST':
+            donnees = request.POST.copy()
+            donnees['is_option_recuperation'] = 'True' if type_colis == 'ramassage' else 'False'
+            if type_colis != 'stock':
+                donnees['produit_stock'] = ''
             with transaction.atomic():
                 if "submit_suppression" in request.POST and request.POST["submit_suppression"]:
                     # rediriger vers details colis
                     article.etat_suppression =  True
                     article.save()
                     return redirect('index')
-                form = VendeurColisForm(data=(request.POST or None), files=(request.FILES or None), instance=article)
+                form = VendeurColisForm(data=donnees, files=(request.FILES or None), instance=article)
+                if form.is_valid() and type_colis == 'stock' and not form.cleaned_data.get('produit_stock'):
+                    form.add_error(None, "Choisissez le produit de votre stock, ou un autre type de colis.")
                 if form.is_valid():
                     article = form.save(commit=False)
+                    if article.produit_stock_id and not article.designation:
+                        article.designation = article.produit_stock.designation[:100]
                     try:
                         with transaction.atomic():
                             article.save()
+                            if request.POST.get('action') == 'valider':
+                                valider_commande_vendeur(article, user)
                     except ValidationError as erreur:
                         # Pas de tarif pour cette destination / ce format : on le dit au vendeur
                         form.add_error(None, erreur.messages)
                         contexte = locals()
                         _ecran_commande(form, vendeur, localite_depart, contexte)
                         return render(request, 'management/vendeur_edit_colis.html', contexte)
+                    if request.POST.get('action') == 'valider':
+                        django_messages.success(request, "Commande %s enregistrée et envoyée. Saisissez la suivante." % article.code)
+                        return HttpResponseRedirect(reverse('management:management_vendeur_edit_colis') + '?apres=' + article.code)
                     return redirect('management:management_vendeur_facture_colis', article.code)
-                    # Tu peux aussi faire : return redirect('management:vendeur_profil')
         else:
             form = VendeurColisForm(instance=article)
         contexte = locals()
         _ecran_commande(form, vendeur, localite_depart, contexte)
         return render(request, 'management/vendeur_edit_colis.html', contexte)
     return redirect('index')
+
+
+def valider_commande_vendeur(article, user):
+    """Le vendeur valide sa commande : le produit sort de son stock (s'il y en a un) et la commande part."""
+    from management.stock import reserver_pour_commande
+    reserver_pour_commande(article, user)
+    article.statut_traitement = StatutTraitement.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation is True else StatutTraitement.EN_ATTENTE_DEPOT
+    article.save()
 
 
 def _ecran_commande(form, vendeur, localite_depart, contexte):
@@ -166,9 +196,7 @@ def vendeur_facture_colis(request, code):
                 from management.stock import reserver_pour_commande
                 try:
                     with transaction.atomic():
-                        reserver_pour_commande(article, user)
-                        article.statut_traitement =  StatutTraitement.EN_ATTENTE_RAMASSAGE if article.is_option_recuperation is True else StatutTraitement.EN_ATTENTE_DEPOT
-                        article.save()
+                        valider_commande_vendeur(article, user)
                 except ValidationError as erreur:
                     django_messages.error(request, ' '.join(erreur.messages))
                     return redirect('management:management_vendeur_facture_colis', article.code)
@@ -243,6 +271,8 @@ def vendeur_liste_colis(request):
     filtres = request.GET.copy()
     filtres.pop('page', None)
     filtres = filtres.urlencode()
+    aujourdhui = timezone.localdate()
+    hier, semaine = aujourdhui - timedelta(days=1), aujourdhui - timedelta(days=6)
     return render(request, 'management/vendeur_liste_colis.html', locals())
 
 

@@ -227,13 +227,15 @@ def admin_colis_imprimer(request):
     })
 
 
-def _export(articles, avec_argent):
+def _export(articles, avec_argent, pour_vendeur=False):
     reponse = HttpResponse(content_type='text/csv; charset=utf-8')
     reponse['Content-Disposition'] = 'attachment; filename="colis-%s.csv"' % timezone.localtime().strftime('%Y%m%d-%H%M')
     reponse.write('﻿')  # Excel lit les accents
     w = csv.writer(reponse, delimiter=';')
     entete = ['Commande', 'Créée le', 'Tracking', 'Réf. vendeur', 'Vendeur', 'Client', 'Téléphone', 'Téléphone 2', 'Ville',
               'Zone', 'Adresse', 'Produit', 'Quantité', 'À encaisser', 'Statut', 'Confirmation', 'Agent', 'Mis à jour']
+    if pour_vendeur:
+        entete.remove('Agent')
     if avec_argent:
         entete += ['Frais ML', 'Frais de collecte', 'Frais de retour', 'Garde']
     w.writerow(entete)
@@ -244,10 +246,66 @@ def _export(articles, avec_argent):
                  a.numero_secondaire_destinataire or '', a.localite_arrivee.nom if a.localite_arrivee else '',
                  a.zone_arrivee.nom if a.zone_arrivee else '', a.adresse_destinataire or '', a.designation or '', a.quantite or 1,
                  int(a.valeur_totale or 0) if a.is_option_encaissement else 0, a.get_statut_traitement_display(),
-                 a.get_etat_confirmation_display(),
-                 (a.agent_cod.user.get_full_name() or a.agent_cod.user.email) if a.agent_cod and a.agent_cod.user else '',
+                 a.get_etat_confirmation_display()] + ([] if pour_vendeur else [
+                 (a.agent_cod.user.get_full_name() or a.agent_cod.user.email) if a.agent_cod and a.agent_cod.user else '']) + [
                  timezone.localtime(a.date_modification).strftime('%d/%m/%Y %H:%M') if a.date_modification else '']
         if avec_argent:
             ligne += [int(a.montant_frais or 0), int(a.cout_option_encaissement or 0), int(a.frais_retour or 0), int(a.frais_garde or 0)]
         w.writerow(ligne)
     return reponse
+
+
+# ------------------------------------------------------------------------------------------- vendeur
+
+DOCUMENTS_VENDEUR = {
+    'bordereau': "Bordereau de dépôt",
+    'factures': "Factures",
+    'etiquettes': "Étiquettes colis",
+}
+
+
+def _vendeur_connecte(request):
+    from django.http import Http404
+    from management.models import Vendeur
+    vendeur = Vendeur.objects.filter(user=request.user).first()
+    if vendeur is None or request.user.is_staff:
+        raise Http404
+    return vendeur
+
+
+@login_required
+@require_POST
+def vendeur_imprimer(request):
+    """Le vendeur imprime ses bordereaux de dépôt, ses factures, ses étiquettes ou exporte ses colis cochés."""
+    vendeur = _vendeur_connecte(request)
+    doc = request.POST.get('doc')
+    articles = list(Article.objects.filter(vendeur=vendeur, etat_suppression=False, code__in=request.POST.getlist('codes'))
+                    .exclude(statut_traitement=S.BROUILLON)
+                    .select_related('localite_arrivee', 'zone_arrivee', 'format_article', 'produit_stock')
+                    .order_by('localite_arrivee__nom', 'code')[:MAX_SELECTION])
+    if not articles:
+        messages.error(request, "Cochez au moins une commande.")
+        return redirect('management:management_vendeur_liste_colis')
+    if doc == 'export':
+        return _export(articles, True, pour_vendeur=True)
+    if doc not in DOCUMENTS_VENDEUR:
+        return redirect('management:management_vendeur_liste_colis')
+    a_encaisser = sum((a.valeur_totale or 0) for a in articles if a.is_option_encaissement)
+    return render(request, 'management/imprimer_colis.html', {
+        'doc': {'bordereau': 'bordereau_depot', 'factures': 'factures_vendeur'}.get(doc, doc), 'titre': DOCUMENTS_VENDEUR[doc],
+        'articles': articles, 'a_encaisser': a_encaisser, 'vendeur': vendeur, 'maintenant': timezone.now(),
+        'par': vendeur.nom_store or vendeur.code, 'retour': '/management/vendeur_liste_colis/',
+    })
+
+
+@login_required
+def vendeur_bordereau_stock(request, code):
+    """Bordereau d'un envoi de stock, à imprimer et faire signer à la remise des produits."""
+    from django.shortcuts import get_object_or_404
+    from management.models import EntreeStock
+    vendeur = _vendeur_connecte(request)
+    entree = get_object_or_404(EntreeStock.objects.prefetch_related('lignes'), vendeur=vendeur, code=code)
+    return render(request, 'management/imprimer_colis.html', {
+        'doc': 'bordereau_stock', 'titre': "Bordereau d'envoi de stock %s" % entree.code, 'entree': entree, 'articles': [],
+        'vendeur': vendeur, 'maintenant': timezone.now(), 'par': vendeur.nom_store or vendeur.code,
+        'retour': '/management/vendeur_stock/'})

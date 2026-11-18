@@ -6,7 +6,7 @@
 {% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card">
 	<div class="head">
-		<h1>Suivi de mes livraisons</h1>
+		<div><h1>Suivi de mes livraisons</h1><div class="muted">Suivez le statut de vos colis, et imprimez vos bordereaux et factures par jour ou par période.</div></div>
 		<form method="get" class="tools">
 			{% if etape %}<input type="hidden" name="etape" value="{{ etape }}">{% endif %}
 			<label class="field" style="flex-direction:row;align-items:center;gap:6px">Du <input type="date" name="du" value="{{ request.GET.du }}"></label>
@@ -17,8 +17,14 @@
 			</select></label>
 			<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="N°, client, téléphone" aria-label="Rechercher" style="min-width:190px"></label>
 			<button class="btn">Filtrer</button>
-			<a class="btn primary" href="{% url 'management:management_vendeur_edit_colis' %}">+ Nouvelle commande</a>
 		</form>
+	</div>
+	<div class="tools" style="gap:6px">
+		<span class="muted" style="font-size:12.5px">Créées :</span>
+		<a class="btn sm" href="?du={{ aujourdhui|date:'Y-m-d' }}&au={{ aujourdhui|date:'Y-m-d' }}">Aujourd’hui</a>
+		<a class="btn sm" href="?du={{ hier|date:'Y-m-d' }}&au={{ hier|date:'Y-m-d' }}">Hier</a>
+		<a class="btn sm" href="?du={{ semaine|date:'Y-m-d' }}&au={{ aujourdhui|date:'Y-m-d' }}">7 derniers jours</a>
+		{% if request.GET.du or request.GET.au or ville or q or etape %}<a class="btn sm" href="?">Tout voir</a>{% endif %}
 	</div>
 	<div class="chips" role="group" aria-label="Statut">
 		{% for p in puces %}
@@ -27,28 +33,39 @@
 	</div>
 </div>
 
+<form method="post" action="{% url 'management:management_vendeur_imprimer' %}" target="_blank" id="sel-v">{% csrf_token %}
+<div class="bulk" id="bulk-v" hidden>
+	<span class="sel-compte"><b id="sel-n">0</b> colis cochés</span>
+	<button class="btn sm primary" name="doc" value="bordereau">Bordereau de dépôt</button>
+	<button class="btn sm" name="doc" value="factures">Factures</button>
+	<button class="btn sm" name="doc" value="etiquettes">Étiquettes</button>
+	<button class="btn sm" name="doc" value="export" formtarget="_self">Export Excel</button>
+	<span class="muted" style="font-size:12px">Le bordereau se signe à la remise des colis (dépôt au bureau ou ramassage) : gardez votre exemplaire.</span>
+</div>
 <div class="tablewrap">
 	<table>
-		<thead><tr><th>Commande</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th><th class="r">Frais</th><th>Origine</th><th>Statut</th><th>Mis à jour</th><th></th></tr></thead>
+		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-page" aria-label="Cocher la page"></th><th>Commande</th><th>Client</th><th>Ville</th><th class="r">À encaisser</th><th class="r">Frais</th><th>Origine</th><th>Statut</th><th>Mis à jour</th><th></th></tr></thead>
 		<tbody>
 		{% for c in page %}
 			<tr>
+				<td>{% if c.statut_traitement != statut_traitement.BROUILLON %}<input type="checkbox" class="sel" name="codes" value="{{ c.code }}" aria-label="Cocher {{ c.code }}">{% endif %}</td>
 				<td class="nw"><a class="linkcode" href="{% if c.statut_traitement == statut_traitement.BROUILLON %}{% url 'management:management_vendeur_edit_colis' %}?current_article={{ c.code }}{% else %}{% url 'management:management_vendeur_detail_colis' c.code %}{% endif %}">{{ c.code }}</a><div class="muted" style="font-size:11.5px">{{ c.date_creation|date:"d/m/Y H:i" }}</div></td>
 				<td>{{ c.nom_destinataire|default:"" }} {{ c.prenom_destinataire|default:"" }}<div class="muted" style="font-size:11.5px">{{ c.numero_principal_destinataire|default:"" }}</div></td>
 				<td>{{ c.localite_arrivee.nom|default:"—" }}{% if c.zone_arrivee %}<div class="muted" style="font-size:11.5px">{{ c.zone_arrivee.nom }}</div>{% endif %}</td>
 				<td class="r num nw">{% if c.is_option_encaissement %}<b>{{ c.valeur_totale|fcfa }}</b>{% else %}<span class="muted">Déjà payé</span>{% endif %}</td>
 				<td class="r num nw">{{ c.montant_total_frais|fcfa }}</td>
-				<td><span class="badge b-mute">{% if c.produit_stock_id %}Stock{% elif c.is_option_recuperation %}Ramassage{% else %}Dépôt{% endif %}</span></td>
+				<td><span class="badge b-mute">{% if c.produit_stock_id %}Mon stock ML COD{% elif c.is_option_recuperation %}Ramassage{% else %}Dépôt{% endif %}</span></td>
 				<td><span class="badge {{ c.statut_traitement|st_classe }}">{{ c.get_statut_traitement_display }}</span></td>
 				<td class="muted nw">{{ c.date_modification|date:"d/m/Y H:i" }}</td>
 				<td class="nw">{% if c.statut_traitement != statut_traitement.BROUILLON %}<a class="btn sm" href="{% url 'management:management_vendeur_facture_colis' c.code %}">Facture</a>{% endif %}</td>
 			</tr>
 		{% empty %}
-			<tr><td colspan="9" class="muted" style="padding:18px">Aucune commande pour ces filtres.</td></tr>
+			<tr><td colspan="10" class="muted" style="padding:18px">Aucune commande pour ces filtres.</td></tr>
 		{% endfor %}
 		</tbody>
 	</table>
 </div>
+</form>
 
 {% if page.paginator.num_pages > 1 %}
 <div class="pager">
@@ -60,4 +77,22 @@
 	</span>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block styles %}{{ block.super }}
+<style>
+.bulk { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; margin:10px 0; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.08); }
+</style>
+{% endblock %}
+
+{% block scripts %}{{ block.super }}
+<script>
+(function () {
+	var f = document.getElementById('sel-v'); if (!f) return;
+	var bar = document.getElementById('bulk-v'), n = document.getElementById('sel-n');
+	function maj() { var c = f.querySelectorAll('input.sel:checked').length; n.textContent = c; bar.hidden = c === 0; }
+	f.addEventListener('change', function (e) { if (e.target.id === 'sel-page') f.querySelectorAll('input.sel').forEach(function (x) { x.checked = e.target.checked; }); maj(); });
+	maj();
+})();
+</script>
 {% endblock %}
