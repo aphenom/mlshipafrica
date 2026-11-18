@@ -57,6 +57,7 @@
 
 			<main class="work">
 				<ol class="crumbs{% if user.is_authenticated and user.account_vendeur and user.account_vendeur.etat_approbation is False %} d-none{% endif %}">
+					{% if request.path != '/' %}<li class="back-li"><a class="back" href="{% url 'index' %}" data-retour>← Retour</a></li>{% endif %}
 					<li><a href="{% url 'index' %}">ML COD</a></li>
 					{% block breadcrumb-li %}<li class="active" aria-current="page">Tableau de bord</li>{% endblock %}
 				</ol>
@@ -65,6 +66,13 @@
 				{% endif %}
 				{% block content %}{% endblock %}
 			</main>
+			<script>
+			// Bouton Retour : page précédente du site si on vient d'ici, sinon l'accueil
+			(function () { var b = document.querySelector('[data-retour]'); if (!b) return;
+				b.addEventListener('click', function (e) {
+					try { if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) { e.preventDefault(); history.back(); } } catch (x) {}
+				}); })();
+			</script>
 		</div>
 	</div>
 

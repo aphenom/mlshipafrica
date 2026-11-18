@@ -165,6 +165,7 @@ class Vendeur(MyModelAbstract):
     versement_valide_le = models.DateTimeField("Validé le", null=True, blank=True)
     versement_valide_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='versements_valides')
     versement_modifie_le = models.DateTimeField("Coordonnées modifiées le", null=True, blank=True)
+    demande_stockage_le = models.DateTimeField("Stockage demandé le", null=True, blank=True)
     versement_refus_motif = models.CharField("Motif du dernier refus", max_length=200, blank=True, default='')
 
     # Suivi par l'équipe : le commercial qui a activé le vendeur, l'agent COD qui confirme ses commandes
@@ -678,6 +679,7 @@ class ProduitStock(models.Model):
     designation = models.CharField("Désignation", max_length=150)
     quantite_disponible = models.IntegerField("Disponible", default=0)
     quantite_de_cote = models.IntegerField("Mis de côté (abîmés)", default=0)
+    photo = models.ImageField("Photo", upload_to='stock/%Y/%m/', null=True, blank=True)
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
@@ -717,6 +719,7 @@ class LigneEntreeStock(models.Model):
     designation = models.CharField("Désignation", max_length=150)
     quantite_annoncee = models.PositiveIntegerField("Annoncé")
     quantite_recue = models.PositiveIntegerField("Reçu", null=True, blank=True)
+    photo = models.ImageField("Photo", upload_to='stock/%Y/%m/', null=True, blank=True)
     produit = models.ForeignKey(ProduitStock, models.SET_NULL, null=True, blank=True, related_name='lignes_entree')
 
 

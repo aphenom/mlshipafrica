@@ -11,8 +11,10 @@
 		<div><h1>Vérifiez puis validez la commande</h1><div class="muted">Tant qu’elle n’est pas validée, elle reste en brouillon et ne part pas.</div></div>
 		<form method="post" class="tools">
 			{% csrf_token %}
+			<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Quitter</a>
 			<button type="submit" name="submit_modification" value="1" class="btn">Modifier</button>
-			<button type="submit" name="submit_validation" value="1" class="btn primary">Valider la commande</button>
+			<button type="submit" name="submit_validation" value="terminer" class="btn">Valider et terminer</button>
+			<button type="submit" name="submit_validation" value="continuer" class="btn primary">Valider et créer une autre commande</button>
 		</form>
 	</div>
 </div>
@@ -49,12 +51,19 @@
 		</tr></tbody>
 	</table></div>
 
-	<div class="recap" style="max-width:420px;margin-left:auto;width:100%">
+	<div class="recap" style="max-width:440px;margin-left:auto;width:100%">
+		{% if article.frais_retour and article.statut_traitement not in statuts_livres %}
+		<div class="rl"><span>Frais de retour (colis non livré, {{ taux_retour|floatformat:"-2" }} % des frais de livraison)</span><span class="num">{{ article.frais_retour|fcfa }}</span></div>
+		{% if article.frais_garde %}<div class="rl"><span>Garde du colis revenu</span><span class="num">{{ article.frais_garde|fcfa }}</span></div>{% endif %}
+		<div class="rl" style="border-top:1px solid var(--line);padding-top:8px"><b>Total des frais</b><b class="num t-bad">{{ article.frais_retour|add:article.frais_garde|fcfa }}</b></div>
+		{% else %}
 		<div class="rl"><span>Frais de livraison</span><span class="num">{{ article.montant_frais|fcfa }}</span></div>
 		{% if article.is_option_recuperation and article.cout_option_recuperation %}<div class="rl"><span>Récupération chez vous</span><span class="num">{{ article.cout_option_recuperation|fcfa }}</span></div>{% endif %}
-		{% if article.is_option_encaissement and article.cout_option_encaissement %}<div class="rl"><span>Commission d’encaissement{% if article.taux_option_encaissement %} {{ article.taux_option_encaissement|floatformat:"-2" }} %{% endif %}</span><span class="num">{{ article.cout_option_encaissement|fcfa }}</span></div>{% endif %}
+		{% if article.is_option_encaissement %}<div class="rl"><span>Frais de collecte de fonds ({{ article.taux_option_encaissement|default:taux_collecte|floatformat:"-2" }} % du montant encaissé)</span><span class="num">{{ article.cout_option_encaissement|default:0|fcfa }}</span></div>{% endif %}
 		<div class="rl" style="border-top:1px solid var(--line);padding-top:8px"><b>Total des frais</b><b class="num t-bad">{{ article.montant_total_frais|fcfa }}</b></div>
 		{% if article.is_option_encaissement %}<div class="net"><b>Vous recevez</b><b class="num">{{ article.montant_a_reverser|fcfa }}</b></div>{% endif %}
+		<div class="muted" style="font-size:11.5px">Frais de collecte prélevés seulement si le colis est livré. S’il n’est pas livré et revient : {{ taux_retour|floatformat:"-2" }} % des frais de livraison.</div>
+		{% endif %}
 	</div>
 
 	<div class="muted" style="font-size:11.5px;text-align:center;border-top:1px dashed var(--line);padding-top:10px">ML COD Intérieur est un service de ML SHIP AFRICA · montants en francs CFA</div>

@@ -130,7 +130,8 @@ def _menu_vendeur(vendeur):
                 ('Compte', [_r('Compléter mon profil', [_p('Compléter mon profil', M + 'vendeur_edit_profil')])])]
     groupes = [
         ('Accueil', [_r('Tableau de bord', TABLEAU)]),
-        ('Commandes', [_r('Nouvelle commande', [_p('Nouvelle commande', M + 'vendeur_edit_colis')]),
+        ('Commandes', [_r('Nouvelle commande', [_p('Nouvelle commande', M + 'vendeur_edit_colis'),
+                                                _p('Importer un fichier', M + 'vendeur_import_colis')]),
                        _r('Shipping', [_p('Shipping', M + 'vendeur_liste_colis')],
                           (M + 'vendeur_detail_colis', M + 'vendeur_facture_colis', M + 'vendeur_substituer_colis'))]),
     ]

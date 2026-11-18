@@ -13,7 +13,7 @@
 	<div class="kpi"><span class="l">Pièces disponibles</span><span class="v">{{ pieces }}</span><span class="n">{{ produits|length }} produit{{ produits|length|pluralize }}</span></div>
 	<div class="kpi"><span class="l">Produits épuisés</span><span class="v {% if epuises %}t-bad{% else %}t-ok{% endif %}">{{ epuises }}</span><span class="n">{% if epuises %}à réapprovisionner{% else %}tout est disponible{% endif %}</span></div>
 	<div class="kpi"><span class="l">Mis de côté (abîmés)</span><span class="v">{{ de_cote }}</span><span class="n">non comptés comme disponibles</span></div>
-	<div class="kpi"><span class="l">Stockage ce mois</span><span class="v">{{ stockage_mois|fcfa }}</span><span class="n">déduit de vos relevés</span></div>
+	<div class="kpi"><span class="l">Stockage ce mois</span><span class="v">{{ stockage_mois|fcfa }}</span><span class="n">déduit de vos factures de paiement</span></div>
 </div>
 
 <div class="split">
@@ -21,12 +21,12 @@
 		<div class="card">
 			<h2>Mes produits</h2>
 			<div class="tablewrap"><table>
-				<thead><tr><th>Référence</th><th>Produit</th><th class="r">Disponible</th><th class="r">Mis de côté</th><th>État</th></tr></thead>
+				<thead><tr><th></th><th>Référence</th><th>Produit</th><th class="r">Disponible</th><th class="r">Mis de côté</th><th>État</th></tr></thead>
 				<tbody>
 				{% for p in produits %}
-					<tr><td class="mono">{{ p.reference }}</td><td><b>{{ p.designation }}</b></td><td class="r num">{{ p.quantite_disponible }}</td><td class="r num">{{ p.quantite_de_cote }}</td>
+					<tr><td style="width:52px">{% if p.photo %}<img src="{{ p.photo.url }}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">{% endif %}</td><td class="mono">{{ p.reference }}</td><td><b>{{ p.designation }}</b></td><td class="r num">{{ p.quantite_disponible }}</td><td class="r num">{{ p.quantite_de_cote }}</td>
 					<td>{% if p.quantite_disponible <= 0 %}<span class="badge b-bad">Épuisé</span>{% elif p.quantite_disponible < 5 %}<span class="badge b-warn">Bientôt épuisé</span>{% else %}<span class="badge b-ok">Disponible</span>{% endif %}</td></tr>
-				{% empty %}<tr><td colspan="5" class="muted" style="padding:18px">Aucun produit en stock : annoncez votre premier envoi.</td></tr>{% endfor %}
+				{% empty %}<tr><td colspan="6" class="muted" style="padding:18px">Aucun produit en stock : annoncez votre premier envoi.</td></tr>{% endfor %}
 				</tbody>
 			</table></div>
 		</div>
@@ -43,17 +43,23 @@
 		<div class="card">
 			<h2>Annoncer un envoi de stock</h2>
 			<div class="muted" style="font-size:12.5px">Le manager compte les pièces à l’arrivée : les écarts éventuels s’affichent ci-dessous.</div>
-			<form method="post" style="display:flex;flex-direction:column;gap:8px">
+			<form method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:8px" id="envoi">
 				{% csrf_token %}
-				{% for i in "12345" %}
-				<div style="display:grid;grid-template-columns:1fr 1.4fr 70px;gap:6px">
-					<input name="reference" class="form-control form-control-sm" placeholder="Référence" aria-label="Référence {{ forloop.counter }}">
-					<input name="designation" class="form-control form-control-sm" placeholder="Produit" aria-label="Produit {{ forloop.counter }}">
-					<input name="quantite" type="number" min="0" class="form-control form-control-sm" placeholder="Qté" aria-label="Quantité {{ forloop.counter }}">
-				</div>
+				<div id="lignes" style="display:flex;flex-direction:column;gap:8px">
+				{% for i in "123" %}
+				<fieldset class="ligne" style="border:1px solid var(--line);border-radius:10px;padding:8px;display:grid;grid-template-columns:1fr 70px;gap:6px;margin:0">
+					<input name="reference" placeholder="Référence *" aria-label="Référence" list="refs">
+					<input name="quantite" type="number" min="0" placeholder="Qté *" aria-label="Quantité">
+					<input name="designation" placeholder="Nom du produit" aria-label="Produit" style="grid-column:1/-1">
+					<label class="muted" style="grid-column:1/-1;font-size:12px">Photo du produit <input type="file" name="photo_{{ forloop.counter0 }}" accept="image/*" capture="environment"></label>
+				</fieldset>
 				{% endfor %}
-				<input name="commentaire" class="form-control form-control-sm" placeholder="Commentaire (facultatif)">
-				<button class="btn primary">Annoncer l’envoi</button>
+				</div>
+				<datalist id="refs">{% for p in produits %}<option value="{{ p.reference }}">{{ p.designation }}</option>{% endfor %}</datalist>
+				<button type="button" class="btn sm" id="ajout-ligne">+ Ajouter un produit</button>
+				<input name="commentaire" placeholder="Commentaire (facultatif)">
+				<button class="btn primary">Envoyer pour validation</button>
+				<div class="muted" style="font-size:12px">Votre envoi reste « en attente » jusqu’à ce que le manager ait compté et confirmé les quantités à l’arrivée.</div>
 			</form>
 		</div>
 		<div class="card" style="margin-top:14px">
@@ -67,4 +73,15 @@
 		</div>
 	</aside>
 </div>
+{% endblock %}
+
+{% block scripts %}{{ block.super }}
+<script>
+document.getElementById('ajout-ligne').addEventListener('click', function () {
+	var box = document.getElementById('lignes'), n = box.querySelectorAll('.ligne').length;
+	var l = box.querySelector('.ligne').cloneNode(true);
+	l.querySelectorAll('input').forEach(function (i) { i.value = ''; if (i.type === 'file') i.name = 'photo_' + n; });
+	box.appendChild(l); l.querySelector('input').focus();
+});
+</script>
 {% endblock %}

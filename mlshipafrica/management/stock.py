@@ -36,14 +36,24 @@ def _mouvement(produit, type_, quantite, user=None, article=None, entree=None, c
 
 @transaction.atomic
 def annoncer_entree(vendeur, lignes, commentaire=''):
-    """lignes : [(reference, designation, quantite)]."""
-    lignes = [(r.strip()[:60], (d or r).strip()[:150], int(q)) for r, d, q in lignes if r and r.strip() and int(q or 0) > 0]
-    if not lignes:
+    """lignes : [(reference, designation, quantite)] ou [(reference, designation, quantite, photo)]. En attente du manager."""
+    propres = []
+    for ligne in lignes:
+        r, d, q = ligne[0], ligne[1], ligne[2]
+        photo = ligne[3] if len(ligne) > 3 else None
+        if r and r.strip() and int(q or 0) > 0:
+            propres.append((r.strip()[:60], (d or r).strip()[:150], int(q), photo))
+    if not propres:
         raise ValidationError("Ajoutez au moins une ligne avec une référence et une quantité.")
     numero = EntreeStock.objects.filter(vendeur=vendeur).count() + 1
     entree = EntreeStock.objects.create(code='BS-%s-%03d' % (vendeur.code, numero), vendeur=vendeur, commentaire=commentaire)
-    for reference, designation, quantite in lignes:
-        LigneEntreeStock.objects.create(entree=entree, reference=reference, designation=designation, quantite_annoncee=quantite)
+    for reference, designation, quantite, photo in propres:
+        if photo is None:
+            # Produit déjà connu : on reprend sa photo
+            connu = ProduitStock.objects.filter(vendeur=vendeur, reference=reference).exclude(photo='').exclude(photo=None).first()
+            photo = connu.photo if connu else None
+        LigneEntreeStock.objects.create(entree=entree, reference=reference, designation=designation, quantite_annoncee=quantite,
+                                        photo=photo)
     return entree
 
 
@@ -60,6 +70,9 @@ def valider_reception(entree, user, quantites_recues):
             raise ValidationError("Quantité reçue négative.")
         produit, _ = ProduitStock.objects.get_or_create(vendeur=entree.vendeur, reference=ligne.reference,
                                                         defaults={'designation': ligne.designation})
+        if ligne.photo and not produit.photo:
+            produit.photo = ligne.photo
+            produit.save(update_fields=['photo'])
         ligne.quantite_recue, ligne.produit = recu, produit
         ligne.save()
         if recu:

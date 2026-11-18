@@ -83,6 +83,9 @@ def tableau_de_bord(vendeur, debut, fin, filtre_villes='all'):
     )
     brouillons = colis_du_vendeur(vendeur).filter(statut_traitement=S.BROUILLON).count()
     argent = a_recevoir(vendeur)
+    # Montants de la période choisie (date de livraison ou de retour) : ils suivent le filtre de dates
+    argent_periode = totaux(Ecriture.objects.filter(vendeur=vendeur, date__gte=debut, date__lt=fin)
+                            .exclude(type=TypeEcriture.COUT_PRESTATAIRE))
 
     stock = None
     if vendeur.option_stockage:
@@ -116,7 +119,7 @@ def tableau_de_bord(vendeur, debut, fin, filtre_villes='all'):
         a_faire.append(('t-warn', '%d produit(s) épuisé(s)' % len(stock['epuises']),
                         ' · '.join(p.designation for p in stock['epuises'][:5]), 'stock', '', 'Réapprovisionner'))
     if argent > 0:
-        a_faire.append(('t-ok', None, 'Livrés, en attente du prochain relevé (lundi ou jeudi).', 'argent', '', 'Voir mon argent'))
+        a_faire.append(('t-ok', None, 'Livrés, en attente de votre prochaine facture de paiement (lundi ou jeudi).', 'argent', '', 'Voir mon argent'))
 
     # Taux par ville : le vendeur comparé à la moyenne du réseau dans la même ville, sur la même période
     par_ville = list(sur_periode.values('localite_arrivee__nom').annotate(
@@ -140,7 +143,7 @@ def tableau_de_bord(vendeur, debut, fin, filtre_villes='all'):
 
     return {'commandes': c['total'], 'en_cours': c['en_cours'], 'livres': c['livres'], 'echecs': c['echecs'],
             'taux': t, 'taux_classe': 't-ok' if t is not None and t >= OBJECTIF else 't-warn' if t is not None and t >= SEUIL_SURVEILLANCE else 't-bad' if t is not None else '',
-            'a_recevoir': argent, 'stock': stock, 'a_faire': a_faire, 'villes': villes, 'filtre_villes': filtre_villes}
+            'a_recevoir': argent, 'argent_periode': argent_periode, 'stock': stock, 'a_faire': a_faire, 'villes': villes, 'filtre_villes': filtre_villes}
 
 
 # ----------------------------------------------------------------------------------------- Shipping
@@ -187,6 +190,8 @@ def grille_vendeur(vendeur, localite_depart, localites, formats):
                   .filter(Q(vendeur=vendeur) | Q(vendeur__isnull=True)).select_related('config'))
     zone_depart = localite_depart.zone_id if localite_depart else None
     depart = localite_depart.pk if localite_depart else None
+    from management.finance import taux_collecte
+    taux_global = float(taux_collecte(vendeur.license))   # frais de collecte : un seul taux, réglé par le CEO
     grille = {}
     for loc in localites:
         par_format = {}
@@ -200,8 +205,8 @@ def grille_vendeur(vendeur, localite_depart, localites, formats):
             t = min(possibles, key=_priorite)
             par_format[fmt.pk] = {
                 'frais': int(t.montant_frais or 0),
-                'enc_cout': int(t.get_final_cout_option_encaissement() or 0) if t.config_id else int(t.cout_option_encaissement or 0),
-                'enc_taux': float(t.get_final_taux_option_encaissement() or 0) if t.config_id else float(t.taux_option_encaissement or 0),
+                'enc_cout': 0,
+                'enc_taux': taux_global,
                 'rec_cout': int(t.get_final_cout_option_recuperation() or 0) if t.config_id else int(t.cout_option_recuperation or 0),
                 'rec_taux': float(t.get_final_taux_option_recuperation() or 0) if t.config_id else float(t.taux_option_recuperation or 0),
             }

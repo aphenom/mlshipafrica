@@ -74,7 +74,7 @@
 		<div class="card"><h2>Suivi par l’équipe</h2><div class="kvs">
 			<div><b>Agent COD :</b> {% if vendeur.agent_cod %}{{ vendeur.agent_cod.user.get_full_name|default:vendeur.agent_cod.user.email }}{% else %}non affecté{% endif %}</div>
 			<div><b>Commercial :</b> {% if vendeur.commercial %}{{ vendeur.commercial.user.get_full_name|default:vendeur.commercial.user.email }}{% else %}non affecté{% endif %}</div>
-			<div><b>Stockage :</b> {% if vendeur.option_stockage %}oui{% else %}non{% endif %}</div>
+			<div><b>Stockage :</b> {% if vendeur.option_stockage %}oui{% else %}non{% if vendeur.demande_stockage_le %} · <span class="badge b-warn">demandé le {{ vendeur.demande_stockage_le|date:"d/m/Y" }}</span>{% endif %}{% endif %}</div>
 		</div></div>
 		{% endif %}
 

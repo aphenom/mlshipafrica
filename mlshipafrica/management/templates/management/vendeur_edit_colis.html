@@ -4,10 +4,11 @@
 {% block breadcrumb-li %}<li>Commandes</li><li class="active" aria-current="page">{% if current_article %}Brouillon {{ current_article }}{% else %}Nouvelle commande{% endif %}</li>{% endblock %}
 {% block content %}
 {% with rec=form.is_option_recuperation.value|stringformat:'s' enc=form.is_option_encaissement.value|stringformat:'s' fmt=form.format_article.value|stringformat:'s' %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}{% if message.tags == 'success' and request.GET.apres %} · <a href="{% url 'management:management_vendeur_detail_colis' request.GET.apres %}">voir la commande</a> · <a href="{% url 'management:management_vendeur_liste_colis' %}">terminer</a>{% endif %}</div>{% endfor %}
 <div class="card">
 	<div class="head">
 		<h1>{% if current_article %}Terminer la commande {{ current_article }}{% else %}Ajouter une commande{% endif %}</h1>
-		<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Voir mes commandes</a>
+		<span class="tools"><a class="btn" href="{% url 'management:management_vendeur_import_colis' %}">Importer un fichier</a><a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Quitter</a></span>
 	</div>
 	<details class="note">
 		<summary style="cursor:pointer;font-weight:700">Méthode ML COD : valider son client avant d’ajouter une commande</summary>
@@ -79,7 +80,7 @@
 
 		<div class="card"{% if not configuration.enable_option_encaissement %} hidden{% endif %}>
 			<h2>3 · L’encaissement</h2>
-			<label class="check"><input type="radio" name="is_option_encaissement" value="True" {% if enc != 'False' %}checked{% endif %}><span><b>ML COD Intérieur encaisse l’argent auprès du client et me le reverse</b><br><span class="muted" style="font-size:12.5px" id="txt-commission">Une commission s’applique sur le montant encaissé.</span></span></label>
+			<label class="check"><input type="radio" name="is_option_encaissement" value="True" {% if enc != 'False' %}checked{% endif %}><span><b>ML COD Intérieur encaisse l’argent auprès du client et me le reverse</b><br><span class="muted" style="font-size:12.5px" id="txt-commission">Frais de collecte de fonds sur le montant encaissé, seulement si le colis est livré.</span></span></label>
 			<label class="check"><input type="radio" name="is_option_encaissement" value="False" {% if enc == 'False' %}checked{% endif %}><span><b>Le client m’a déjà payé</b><br><span class="muted" style="font-size:12.5px">Rien à encaisser à la livraison : pas de commission, seuls les frais de livraison sont à votre charge.</span></span></label>
 			<span class="errs">{{ form.is_option_encaissement.errors|striptags }}</span>
 		</div>
@@ -91,13 +92,14 @@
 			<div class="rl"><span>Montant payé par le client</span><b class="num" id="r-total">0 F</b></div>
 			<div class="rl"><span id="r-frais-lib">Frais de livraison</span><span class="num t-bad" id="r-frais">—</span></div>
 			<div class="rl" id="r-rec-l" hidden><span>Récupération chez vous</span><span class="num t-bad" id="r-rec"></span></div>
-			<div class="rl" id="r-enc-l" hidden><span id="r-enc-lib">Commission d’encaissement</span><span class="num t-bad" id="r-enc"></span></div>
+			<div class="rl" id="r-enc-l" hidden><span id="r-enc-lib">Frais de collecte</span><span class="num t-bad" id="r-enc"></span></div>
 			<div class="net"><span><b id="r-net-lib">Vous recevez</b></span><b class="num" id="r-net">—</b></div>
 		</div>
-		<div class="muted" style="font-size:12.5px" id="r-explique">Versé sur votre relevé du lundi ou du jeudi une fois la commande livrée.</div>
+		<div class="muted" style="font-size:12.5px" id="r-explique">Payé sur votre facture de paiement du lundi ou du jeudi, une fois la commande livrée.</div>
 		<div class="errs" id="r-sans-tarif" hidden>Pas encore de tarif pour cette ville et ce format : choisissez un autre format ou contactez le support.</div>
 		<div class="note"><b>Deux filtres, un seul discours.</b> Vous validez d’abord votre client selon la méthode ML COD, puis l’équipe ML COD Intérieur filtre chaque commande avant l’envoi. Un client bien préparé, c’est un colis livré.</div>
-		<button type="submit" class="btn primary">Enregistrer la commande</button>
+		<button type="submit" class="btn primary">Continuer : vérifier la commande</button>
+		<a class="btn" href="{% url 'management:management_vendeur_liste_colis' %}">Quitter sans enregistrer</a>
 		{% if article.statut_traitement == statut_traitement.BROUILLON and article.pk %}
 		<button type="submit" name="submit_suppression" value="1" class="btn danger" onclick="return confirm('Supprimer ce brouillon ?')">Supprimer ce brouillon</button>
 		{% endif %}
@@ -139,18 +141,18 @@
 		}
 		if (!t) { ['r-frais', 'r-net'].forEach(function (id) { document.getElementById(id).textContent = '—'; }); return; }
 		var cRec = rec ? (t.rec_cout || Math.round(total * t.rec_taux / 100)) : 0;
-		var cEnc = enc ? (t.enc_cout || Math.round(total * t.enc_taux / 100)) : 0;
+		var cEnc = enc ? Math.round(total * t.enc_taux / 100) : 0;
 		var tous = t.frais + cRec + cEnc;
 		document.getElementById('r-frais-lib').textContent = 'Frais de livraison (' + loc.nom + (loc.zone ? ' · ' + loc.zone : '') + ')';
 		document.getElementById('r-frais').textContent = fcfa(-t.frais);
 		document.getElementById('r-rec-l').hidden = !cRec; document.getElementById('r-rec').textContent = fcfa(-cRec);
 		document.getElementById('r-enc-l').hidden = !enc;
-		document.getElementById('r-enc-lib').textContent = 'Commission d’encaissement' + (t.enc_cout ? '' : ' ' + String(t.enc_taux).replace('.', ',') + ' %');
+		document.getElementById('r-enc-lib').textContent = 'Frais de collecte ' + String(t.enc_taux).replace('.', ',') + ' %';
 		document.getElementById('r-enc').textContent = fcfa(-cEnc);
-		document.getElementById('txt-commission').textContent = t.enc_cout ? 'Commission de ' + fcfa(t.enc_cout) + ' par colis encaissé.' : 'Commission de ' + String(t.enc_taux).replace('.', ',') + ' % sur le montant encaissé.';
+		document.getElementById('txt-commission').textContent = 'Frais de collecte de ' + String(t.enc_taux).replace('.', ',') + ' % sur le montant encaissé, seulement si le colis est livré.';
 		document.getElementById('r-net-lib').textContent = enc ? 'Vous recevez' : 'Frais à votre charge';
 		document.getElementById('r-net').textContent = fcfa(enc ? total - tous : tous);
-		document.getElementById('r-explique').textContent = enc ? 'Versé sur votre relevé du lundi ou du jeudi une fois la commande livrée.' : 'Le client vous paie directement : les frais sont retenus sur votre relevé.';
+		document.getElementById('r-explique').textContent = enc ? 'Payé sur votre facture de paiement du lundi ou du jeudi, une fois la commande livrée.' : 'Le client vous paie directement : les frais sont retenus sur votre facture de paiement.';
 	}
 	f.addEventListener('input', calc);
 	f.addEventListener('change', calc);

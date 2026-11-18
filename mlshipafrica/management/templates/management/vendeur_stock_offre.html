@@ -1,0 +1,20 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Stockage · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li><a href="{% url 'management:management_vendeur_profil' %}">Paramètres</a></li><li class="active" aria-current="page">Stockage</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card" style="max-width:680px">
+	<div class="head"><div><h1>Confiez votre stock à ML COD Intérieur</h1><div class="muted">Vos produits sont gardés à Abidjan : vous créez vos commandes depuis votre stock, nous préparons et expédions.</div></div><a class="btn sm" href="{% url 'management:management_vendeur_profil' %}">← Retour</a></div>
+	<ul style="margin:0 0 0 18px;line-height:1.7">
+		<li>Vous annoncez chaque envoi (référence, produit, photo, quantité) ; le manager compte à la réception et valide.</li>
+		<li>Chaque commande « depuis mon stock » sort la quantité ; un retour en bon état revient en stock.</li>
+		<li>Stockage{% if tarif_stockage %} : {{ tarif_stockage|fcfa }} par pièce et par jour{% endif %}, déduit de vos factures de paiement ; pas de frais de garde sur vos retours.</li>
+	</ul>
+	{% if vendeur.demande_stockage_le %}
+	<div class="note">Demande envoyée le {{ vendeur.demande_stockage_le|date:"d/m/Y" }} : votre commercial vous rappelle pour l’activer.</div>
+	{% else %}
+	<form method="post" style="margin-top:12px">{% csrf_token %}<button class="btn primary" name="demander_stockage" value="1">Demander le stockage</button></form>
+	{% endif %}
+</div>
+{% endblock %}

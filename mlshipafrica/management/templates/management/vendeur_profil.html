@@ -16,7 +16,10 @@
 		<div class="tools">
 			<a class="btn primary" href="{% url 'management:management_vendeur_edit_profil' %}">Modifier mon profil</a>
 			<a class="btn" href="{% url 'account_change_password' %}">Mot de passe</a>
+			<a class="btn" href="{% url 'management:management_vendeur_paiement' %}">Numéro de paiement</a>
+			<a class="btn" href="{% url 'management:management_vendeur_stock' %}">{% if vendeur.option_stockage %}Mon stock{% else %}Stockage{% endif %}</a>
 		</div>
+		<div class="muted" style="font-size:12px">Modifier le profil le renvoie en validation chez ML COD ; le numéro de paiement se change à part, sans bloquer votre compte.</div>
 		<div class="muted" style="font-size:12px">Vendeur depuis le {{ vendeur.date_creation|date:"d/m/Y" }}{% if vendeur.option_stockage %} · stock chez ML COD Intérieur{% endif %}</div>
 	</div>
 

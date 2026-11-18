@@ -19,7 +19,8 @@
 <div class="kpis">
 	<div class="kpi"><span class="l">Taux de livraison</span><span class="v">{% if tb.taux is None %}—{% else %}{{ tb.taux }} %{% endif %}</span><span class="n {{ tb.taux_classe }}">Objectif ML COD Intérieur : 80 %</span></div>
 	<div class="kpi"><span class="l">Commandes</span><span class="v">{{ tb.commandes }}</span><span class="n">{{ tb.en_cours }} en cours · {{ tb.livres }} livrée{{ tb.livres|pluralize }}</span></div>
-	<a class="kpi" href="{% url 'management:management_vendeur_releves' %}"><span class="l">À recevoir</span><span class="v">{{ tb.a_recevoir|fcfa }}</span><span class="n t-ok">versement lundi ou jeudi</span></a>
+	<a class="kpi" href="{% url 'management:management_vendeur_releves' %}"><span class="l">Encaissé sur la période</span><span class="v">{{ tb.argent_periode.collecte|fcfa }}</span><span class="n">frais {{ tb.argent_periode.frais|add:tb.argent_periode.retours|add:tb.argent_periode.garde|add:tb.argent_periode.stockage|fcfa }} · net <b>{{ tb.argent_periode.net|fcfa }}</b></span></a>
+	<a class="kpi" href="{% url 'management:management_vendeur_releves' %}"><span class="l">À recevoir aujourd’hui</span><span class="v">{{ tb.a_recevoir|fcfa }}</span><span class="n t-ok">payé le lundi ou le jeudi</span></a>
 	{% if tb.stock %}
 	<a class="kpi" href="{% url 'management:management_vendeur_stock' %}"><span class="l">Stock</span><span class="v">{{ tb.stock.pieces }} pièce{{ tb.stock.pieces|pluralize }}</span><span class="n {% if tb.stock.epuises %}t-bad{% else %}t-ok{% endif %}">{{ tb.stock.epuises|length }} produit{{ tb.stock.epuises|length|pluralize }} épuisé{{ tb.stock.epuises|length|pluralize }}</span></a>
 	{% endif %}

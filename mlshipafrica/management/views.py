@@ -172,13 +172,21 @@ def vendeur_facture_colis(request, code):
                 except ValidationError as erreur:
                     django_messages.error(request, ' '.join(erreur.messages))
                     return redirect('management:management_vendeur_facture_colis', article.code)
-                return redirect('management:management_vendeur_detail_colis', article.code)
+                django_messages.success(request, "Commande %s créée : elle part en préparation." % article.code)
+                if request.POST.get("submit_validation") == "continuer":
+                    return HttpResponseRedirect(reverse('management:management_vendeur_edit_colis') + '?apres=' + article.code)
+                return redirect('management:management_vendeur_liste_colis')
             if "submit_modification" in request.POST and request.POST["submit_modification"]:
                 return HttpResponseRedirect(reverse('management:management_vendeur_edit_colis') + '?current_article=' + code) 
             if "submit_impression" in request.POST and request.POST["submit_impression"]:
                 pass
 
             return redirect('management:management_vendeur_facture_colis', article.code)
+        from management.finance import configuration, taux_collecte
+        from mlshipafrica.enums import array_statut_traitement_livre
+        statuts_livres = [str(x) for x in array_statut_traitement_livre]
+        taux_collecte = taux_collecte(vendeur.license)
+        taux_retour = getattr(configuration(vendeur.license), 'taux_frais_retour', 50)
     except Exception as e:
         raise Http404
     return render(request, 'management/vendeur_facture_colis.html', locals())
@@ -1038,11 +1046,21 @@ def vendeur_stock(request):
     except Vendeur.DoesNotExist:
         raise Http404
     if not vendeur.option_stockage:
-        raise Http404
+        # Pas encore en stockage : on explique l'offre et le vendeur peut la demander
+        if request.method == 'POST' and request.POST.get('demander_stockage'):
+            if not vendeur.demande_stockage_le:
+                vendeur.demande_stockage_le = timezone.now()
+                vendeur.save(update_fields=['demande_stockage_le'])
+            django_messages.success(request, "Demande envoyée : votre commercial vous rappelle pour activer le stockage.")
+            return redirect('management:management_vendeur_stock')
+        from management.finance import configuration
+        tarif_stockage = getattr(configuration(vendeur.license), 'tarif_stockage_jour', None)
+        return render(request, 'management/vendeur_stock_offre.html', locals())
     if request.method == 'POST':
-        lignes = list(zip(request.POST.getlist('reference'), request.POST.getlist('designation'), request.POST.getlist('quantite')))
+        refs, noms, qtes = request.POST.getlist('reference'), request.POST.getlist('designation'), request.POST.getlist('quantite')
+        photos = [request.FILES.get('photo_%d' % i) for i in range(len(refs))]
         try:
-            lignes = [(r, d, int(q or 0)) for r, d, q in lignes]
+            lignes = [(r, d, int(q or 0), p) for r, d, q, p in zip(refs, noms, qtes, photos)]
             entree = annoncer_entree(vendeur, lignes, request.POST.get('commentaire', ''))
             django_messages.success(request, "Envoi %s annoncé : il sera contrôlé à la réception." % entree.code)
         except (ValidationError, ValueError) as erreur:

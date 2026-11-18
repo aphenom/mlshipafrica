@@ -28,7 +28,7 @@
 	</div>
 	<div class="tablewrap"><table>
 		<thead><tr><th>Référence</th><th>Produit</th><th class="r">Annoncé</th><th>Compté à l’arrivée</th></tr></thead>
-		<tbody>{% for l in e.lignes.all %}<tr><td class="mono">{{ l.reference }}</td><td>{{ l.designation }}</td><td class="r num">{{ l.quantite_annoncee }}</td><td><input name="recu_{{ l.pk }}" type="number" min="0" value="{{ l.quantite_annoncee }}" class="form-control form-control-sm" style="max-width:110px" aria-label="Quantité reçue pour {{ l.reference }}"></td></tr>{% endfor %}</tbody>
+		<tbody>{% for l in e.lignes.all %}<tr><td class="mono">{% if l.photo %}<a href="{{ l.photo.url }}" target="_blank" rel="noopener"><img src="{{ l.photo.url }}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--line);vertical-align:middle;margin-right:6px"></a>{% endif %}{{ l.reference }}</td><td>{{ l.designation }}</td><td class="r num">{{ l.quantite_annoncee }}</td><td><input name="recu_{{ l.pk }}" type="number" min="0" value="{{ l.quantite_annoncee }}" class="form-control form-control-sm" style="max-width:110px" aria-label="Quantité reçue pour {{ l.reference }}"></td></tr>{% endfor %}</tbody>
 	</table></div>
 </form>
 {% endfor %}
