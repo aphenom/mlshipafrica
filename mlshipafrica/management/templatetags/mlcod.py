@@ -50,3 +50,26 @@ def qr(valeur):
         return mark_safe(svg(str(valeur)))
     except ValueError:
         return ''
+
+
+def texte_qr_commande(a):
+    """Les informations de la commande lues par n'importe quel lecteur de QR code (la 1re ligne reste le code)."""
+    montant = '{:,.0f} F'.format(a.valeur_totale or 0).replace(',', ' ') if a.is_option_encaissement else 'rien (payé)'
+    lignes = [a.code, 'ML COD Intérieur',
+              'Client : %s' % ('%s %s' % (a.nom_destinataire or '', a.prenom_destinataire or '')).strip()[:40],
+              'Tél : %s' % (a.numero_principal_destinataire or ''),
+              'Ville : %s' % (a.localite_arrivee.nom if a.localite_arrivee_id else ''),
+              'Produit : %s x%s' % (((a.produit_stock.designation if a.produit_stock_id else a.designation) or '')[:30], a.quantite or 1),
+              'À encaisser : %s' % montant]
+    return '\n'.join(lignes)
+
+
+@register.filter
+def qr_commande(article):
+    """{{ article|qr_commande }} : QR code avec les informations de la commande."""
+    from django.utils.safestring import mark_safe
+    from management.qrcode_svg import svg
+    try:
+        return mark_safe(svg(texte_qr_commande(article)))
+    except ValueError:
+        return qr(article.code)

@@ -298,6 +298,7 @@ def admin_colis_imprimer(request):
     maintenant = timezone.localtime()
     return render(request, 'management/imprimer_colis.html', {
         'numero': 'FR-%s-%s' % (maintenant.strftime('%Y%m%d-%H%M'), len(articles)),
+        'total_acomptes': sum((a.acompte_paye.montant for a in articles if a.acompte_paye), 0),
         'doc': doc, 'titre': DOCUMENTS[doc], 'articles': articles, 'a_encaisser': a_encaisser,
         'villes': sorted(villes.items()), 'produits': sorted(produits.values(), key=lambda p: -p['quantite']),
         'quantite_totale': sum(p['quantite'] for p in produits.values()), 'maintenant': timezone.now(),

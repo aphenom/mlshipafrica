@@ -206,8 +206,11 @@ class Shipping(tests_pages.RecettePages):
         self.assertIn('FAC-%s' % paye.code, facture)
         route = self.client.post('/management/admin_colis_imprimer/', {'doc': 'feuille_route', 'codes': [paye.code, rien.code]}).content.decode()
         self.assertIn('FEUILLE DE ROUTE', route)
-        for retire in ('Signature client', 'LIVRÉ', 'Acompte'):
+        for retire in ('Signature client', 'LIVRÉ'):
             self.assertNotIn(retire, route)
+        self.assertIn('<th>Ville</th>', route)
+        self.assertIn('PAYÉ</span>', route)                                       # colonne acompte : payé…
+        self.assertIn('tagp zero">0 F', route)                                     # … ou 0 F
 
     def test_qr_codes_generes_par_le_serveur(self):
         colis = self.nouveau_depose()
