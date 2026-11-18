@@ -231,7 +231,7 @@ def premier_mois_mensuel():
     """Premier mois facturé avec cette règle (réglage STOCKAGE_MENSUEL_DEPUIS = 'AAAA-MM', le mois de mise en ligne)."""
     from datetime import date
     from django.conf import settings
-    a, m = (getattr(settings, 'STOCKAGE_MENSUEL_DEPUIS', '2026-11') or '2026-11').split('-')
+    a, m = (getattr(settings, 'STOCKAGE_MENSUEL_DEPUIS', '2026-12') or '2026-12').split('-')
     return date(int(a), int(m), 1)
 
 

@@ -10,8 +10,15 @@ from sms.models import EmailAuto, SmsMessage, SmsModele
 class MessagesAuto(tests_pages.RecettePages):
     test_toutes_les_pages = None
 
+    def test_nouveaux_messages_desactives_au_deploiement(self):
+        nouveaux = ('v_bienvenue', 'v_approuve', 'cl_transit', 'cl_en_livraison', 'cl_livre', 'v_recu', 'v_livre', 'v_facture', 'v_verse', 'v_stockage')
+        self.assertFalse(SmsModele.objects.filter(cle__in=nouveaux, actif=True).exists())
+        self.assertFalse(SmsModele.objects.filter(cle__in=nouveaux, email_actif=True).exists())
+        self.assertTrue(SmsModele.objects.get(cle='cl_recu').actif)                   # l'existant ne change pas
+
     def test_bienvenue_puis_approbation_par_sms_et_email(self):
         from django.contrib.auth.models import User
+        SmsModele.objects.filter(cle__in=('v_bienvenue', 'v_approuve')).update(actif=True, email_actif=True)
         u = User.objects.create(username='nouveau', email='nouveau@test.ci')
         with self.captureOnCommitCallbacks(execute=True):
             v = Vendeur.objects.create(user=u, nom_store='Boutique Neuve', license=self.vendeur.license,

@@ -685,6 +685,7 @@ class StockTests(TestCase):
         produit.refresh_from_db()
         self.assertEqual((produit.quantite_disponible, produit.quantite_de_cote), (3, 1))
 
+    @override_settings(STOCKAGE_MENSUEL_DEPUIS='2026-11')
     def test_stockage_300_par_piece_et_par_mois_des_l_entree(self):
         from datetime import date, timedelta
         from django.utils import timezone

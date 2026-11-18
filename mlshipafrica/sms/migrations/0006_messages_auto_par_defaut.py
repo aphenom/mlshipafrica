@@ -1,8 +1,9 @@
 """
 Messages automatiques réglés par le CEO : un modèle par évènement, SMS et/ou e-mail (e-mail : vendeur seulement).
 
-Par défaut, seuls les SMS du plan validé le 29/10/2026 restent actifs côté client (reçu, arrivé, 1er échec, annulé) ;
-les nouveaux SMS de statut sont créés désactivés : le CEO les active s'il le veut (coût par SMS).
+Mise à jour en production sans surprise : les messages qui existaient gardent leur réglage ; TOUS les nouveaux
+messages (SMS et e-mails) sont créés désactivés. Le CEO relit les textes et active ce qu'il veut dans
+Paramètres › Messages automatiques.
 """
 from django.db import migrations
 
@@ -71,8 +72,8 @@ def creer(apps, schema_editor):
         SmsModele.objects.filter(cle=cle).update(categorie=cat, ordre=ordre)
     for cle, lib, dest, cat, ordre, sms, texte, mail, objet, corps in NOUVEAUX:
         SmsModele.objects.get_or_create(cle=cle, defaults={
-            'libelle': lib, 'destinataire': dest, 'categorie': cat, 'ordre': ordre, 'actif': sms, 'texte': texte,
-            'email_actif': mail, 'email_objet': objet, 'email_texte': corps, 'priorite': 5})
+            'libelle': lib, 'destinataire': dest, 'categorie': cat, 'ordre': ordre, 'actif': False, 'texte': texte,
+            'email_actif': False, 'email_objet': objet, 'email_texte': corps, 'priorite': 5})
 
 
 class Migration(migrations.Migration):

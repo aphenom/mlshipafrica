@@ -360,7 +360,7 @@ LOGGING['loggers']['integrations'] = {'handlers': LOG_HANDLERS, 'level': 'INFO',
 #   python manage.py crontab add
 # Heures du serveur = UTC = heure d'Abidjan.
 # Premier mois de stockage facturé au mois (300 F la pièce le 1er) : le mois de mise en ligne, 'AAAA-MM'
-STOCKAGE_MENSUEL_DEPUIS = os.environ.get('STOCKAGE_MENSUEL_DEPUIS', '2026-11')
+STOCKAGE_MENSUEL_DEPUIS = os.environ.get('STOCKAGE_MENSUEL_DEPUIS', '2026-12')  # novembre 2026 : déjà facturé par l'ancien calcul
 
 CRONTAB_LOCK_JOBS = True  # une tâche ne démarre pas si la précédente tourne encore
 CRONTAB_COMMAND_SUFFIX = '2>&1'

@@ -1,12 +1,15 @@
 """Circuit de paiement : Livré → Unpaid (comptable) → facture de paiement Paid → Versé ; réglages des frais par le CEO."""
 from decimal import Decimal
 
+from django.test import override_settings
+
 from management import tests_pages
 from management.finance import a_payer_par_vendeur, ecritures_a_payer, generer_releves
 from management.models import Article, Ecriture, Releve
 from mlshipafrica.enums import StatutReleve, StatutTraitement as S, TypeEcriture as T, TypeProfilStaffChoice as R
 
 
+@override_settings(STOCKAGE_MENSUEL_DEPUIS='2026-11')
 class Paiements(tests_pages.RecettePages):
     test_toutes_les_pages = None
 
@@ -203,3 +206,12 @@ class Paiements(tests_pages.RecettePages):
         self.assertTrue(Ecriture.objects.filter(cle__endswith=':' + timezone.localdate().strftime('%Y-%m'), type=T.STOCKAGE,
                                                 vendeur=self.vendeur, montant=3000).exists())
         self.assertEqual([d for d, _, r in mois_a_charger(license, mois_suivant + timedelta(days=4)) if r], [])
+
+
+    def test_ancienne_tache_des_releves_ne_genere_rien(self):
+        from io import StringIO
+        from django.core.management import call_command
+        sortie = StringIO()
+        call_command('releves_vendeurs', stdout=sortie)
+        self.assertIn('Rien généré', sortie.getvalue())
+        self.assertFalse(Releve.objects.exists())
