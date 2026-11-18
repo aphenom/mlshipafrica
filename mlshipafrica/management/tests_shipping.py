@@ -208,3 +208,13 @@ class Shipping(tests_pages.RecettePages):
         self.assertIn('FEUILLE DE ROUTE', route)
         for retire in ('Signature client', 'LIVRÉ', 'Acompte'):
             self.assertNotIn(retire, route)
+
+    def test_qr_codes_generes_par_le_serveur(self):
+        colis = self.nouveau_depose()
+        self.client.force_login(self.comptes[R.MANAGER])
+        for doc in ('etiquettes', 'factures', 'feuille_route'):
+            page = self.client.post('/management/admin_colis_imprimer/', {'doc': doc, 'codes': [colis.code]}).content.decode()
+            self.assertIn('<svg', page, doc)
+            self.assertNotIn('cdnjs', page, doc)                                      # plus de dépendance externe
+        from management.qrcode_svg import matrice
+        self.assertEqual(len(matrice(colis.code)), 21)                                # version 1 pour un code colis

@@ -37,3 +37,16 @@ def couleur_taux(taux):
 def get_item(dico, cle):
     """{{ comptes|get_item:statut }} : valeur d'un dictionnaire par sa clé."""
     return dico.get(cle) if hasattr(dico, 'get') else None
+
+
+@register.filter
+def qr(valeur):
+    """QR code SVG généré par le serveur (aucun CDN) : {{ article.code|qr }}."""
+    from django.utils.safestring import mark_safe
+    from management.qrcode_svg import svg
+    if not valeur:
+        return ''
+    try:
+        return mark_safe(svg(str(valeur)))
+    except ValueError:
+        return ''

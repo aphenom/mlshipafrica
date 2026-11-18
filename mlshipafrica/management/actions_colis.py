@@ -386,6 +386,7 @@ def vendeur_imprimer(request):
         'doc': {'bordereau': 'bordereau_depot', 'factures': 'factures_vendeur'}.get(doc, doc), 'titre': DOCUMENTS_VENDEUR[doc],
         'articles': articles, 'a_encaisser': a_encaisser, 'vendeur': vendeur, 'maintenant': timezone.now(),
         'par': vendeur.nom_store or vendeur.code, 'retour': '/management/vendeur_liste_colis/', 'ecartes': ecartes,
+        'numero_depot': timezone.localtime().strftime('%Y%m%d-%H%M'),
     })
 
 

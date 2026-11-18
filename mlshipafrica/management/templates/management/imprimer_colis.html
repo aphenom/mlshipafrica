@@ -48,7 +48,8 @@
 	.lbl .cash.on { background:#111; color:#fff; }
 	.lbl .acompte { font-size:9pt; display:flex; justify-content:space-between; align-items:center; border:1px dashed #222; border-radius:1.5mm; padding:1.4mm 2mm; }
 	.lbl .qr { width:34mm; height:34mm; }
-	.qr img, .qr canvas { width:100% !important; height:100% !important; display:block; }
+	.qr svg { width:100%; height:100%; display:block; }
+	.page .qr { flex:0 0 auto; }
 	.chip { font-size:8pt; font-weight:700; border:1.5px solid #222; padding:.6mm 1.6mm; border-radius:1mm; white-space:nowrap; }
 	.tagp { font-weight:800; padding:.3mm 1.6mm; border-radius:1mm; font-size:7.2pt; color:#fff; background:#16a34a; }
 	.tagp.zero { background:#6b7280; }
@@ -88,7 +89,7 @@
 		</div>
 		<div style="display:flex;gap:5mm;align-items:center">
 			<div style="text-align:right;font-size:9pt;line-height:1.45"><b>ML COD Intérieur</b><div style="color:#444">Cocody Faya, Abidjan</div><div>Édité le <b>{{ maintenant|date:"d/m/Y H:i" }}</b></div><div>par <b>{{ par }}</b></div><div>Livreur : <b>ML COD Intérieur</b></div></div>
-			<div style="display:flex;flex-direction:column;align-items:center;gap:1mm"><div class="qr" style="width:20mm;height:20mm" data-qr="{{ numero }}"></div><b class="m" style="font-size:6.8pt;white-space:nowrap">{{ numero }}</b></div>
+			<div style="display:flex;flex-direction:column;align-items:center;gap:1mm"><div class="qr" style="width:20mm;height:20mm">{{ numero|qr }}</div><b class="m" style="font-size:6.8pt;white-space:nowrap">{{ numero }}</b></div>
 		</div>
 	</div>
 	<table>
@@ -111,14 +112,12 @@
 	</table>
 	<div class="pied"><div>Remis par (ML COD Intérieur) · nom et signature</div><div>Agent livreur · nom et signature</div><div>Contrôle ML COD Intérieur (caisse) · nom, signature, date</div></div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>document.querySelectorAll('[data-qr]').forEach(function (el) { try { new QRCode(el, { text: el.dataset.qr, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { el.style.cssText += ';border:1px dashed #222;display:grid;place-items:center;font-size:7pt'; el.textContent = 'QR'; } });</script>
 
 {% elif doc == 'bordereau_depot' %}
 <div class="page">
 	<header class="doc">
 		<div><div class="marque">ML COD Intérieur</div><h1>Bordereau de dépôt</h1><div class="muted">{{ vendeur.nom_store|default:vendeur.code }} · {{ vendeur.code }}{% if vendeur.numero_contact %} · {{ vendeur.numero_contact }}{% endif %}</div></div>
-		<div class="r muted">Édité le {{ maintenant|date:"d/m/Y H:i" }}<br>{{ articles|length }} colis</div>
+		{% with num="BD-"|add:vendeur.code|add:"-"|add:numero_depot %}<div style="display:flex;gap:10px;align-items:center"><div class="r muted">N° <b class="mono">{{ num }}</b><br>Édité le {{ maintenant|date:"d/m/Y H:i" }}<br>{{ articles|length }} colis</div><div class="qr" style="width:22mm;height:22mm">{{ num|qr }}</div></div>{% endwith %}
 	</header>
 	<table>
 		<thead><tr><th>#</th><th>Commande</th><th>Client</th><th>Téléphone</th><th>Ville</th><th>Produit</th><th class="r">À encaisser</th><th>Reçu ✓</th></tr></thead>
@@ -133,7 +132,7 @@
 <div class="page">
 	<header class="doc">
 		<div><div class="marque">ML COD Intérieur</div><h1>Bordereau d'envoi de stock</h1><div class="muted">{{ vendeur.nom_store|default:vendeur.code }} · {{ vendeur.code }}</div></div>
-		<div class="r"><div class="mono">{{ entree.code }}</div><div class="muted">Annoncé le {{ entree.date_annonce|date:"d/m/Y H:i" }}<br>{{ entree.get_statut_display }}{% if entree.date_reception %} le {{ entree.date_reception|date:"d/m/Y" }}{% endif %}</div></div>
+		<div style="display:flex;gap:10px;align-items:center"><div class="r"><div class="mono">{{ entree.code }}</div><div class="muted">Annoncé le {{ entree.date_annonce|date:"d/m/Y H:i" }}<br>{{ entree.get_statut_display }}{% if entree.date_reception %} le {{ entree.date_reception|date:"d/m/Y" }}{% endif %}</div></div><div class="qr" style="width:22mm;height:22mm">{{ entree.code|qr }}</div></div>
 	</header>
 	<table>
 		<thead><tr><th>Référence</th><th>Produit</th><th class="r">Annoncé</th><th class="r">Compté à l'arrivée</th></tr></thead>
@@ -193,7 +192,7 @@
 			<b class="m" style="font-size:11pt">{{ a.numero_principal_destinataire|default:"" }}</b>
 			{% if a.numero_secondaire_destinataire %}<span class="m" style="font-size:9pt">{{ a.numero_secondaire_destinataire }}</span>{% endif %}
 			<span style="font-size:9pt">{{ a.adresse_destinataire|default:""|truncatechars:70 }}</span></div>
-		<div style="width:36mm;display:flex;flex-direction:column;align-items:center;gap:1mm"><div class="qr" data-qr="{{ a.code }}"></div><b class="m" style="font-size:11pt">{{ a.code }}</b></div>
+		<div style="width:36mm;display:flex;flex-direction:column;align-items:center;gap:1mm"><div class="qr">{{ a.code|qr }}</div><b class="m" style="font-size:11pt">{{ a.code }}</b></div>
 	</div>
 	{% if a.is_option_encaissement %}<div class="cash on"><b style="font-size:9pt">À ENCAISSER</b><b style="font-size:17pt">{{ a.valeur_totale|fcfa }}</b></div>
 	{% else %}<div class="cash"><b style="font-size:9pt">RIEN À ENCAISSER</b><span style="font-size:10pt">client payé par le vendeur</span></div>{% endif %}
@@ -205,8 +204,6 @@
 	<div style="margin-top:auto;border-top:1px solid #222;padding-top:1.6mm;font-size:8pt;display:flex;justify-content:space-between"><span>Créé le {{ a.date_creation|date:"d/m/Y H:i" }}</span><span>Scannez à chaque étape</span></div>
 </div>
 {% endfor %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>document.querySelectorAll('[data-qr]').forEach(function (el) { try { new QRCode(el, { text: el.dataset.qr, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { el.style.cssText += ';border:1px dashed #222;display:grid;place-items:center;font-size:7pt'; el.textContent = 'QR'; } });</script>
 
 {% elif doc == 'factures' %}
 {% load static %}
@@ -227,12 +224,10 @@
 	{% if a.acompte_paye %}<div style="font-size:8.5pt;color:#444">Frais d’acheminement de {{ a.acompte_paye.montant|fcfa }} réglés séparément à ML SHIP AFRICA lors de l’appel ({{ a.acompte_paye.get_reseau_display }}). Remboursés uniquement si la commande est annulée avant expédition.</div>{% endif %}
 	<div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #e6e6e6;padding-top:3mm;font-size:8.5pt">
 		<div><b>Livré par ML SHIP AFRICA</b><div style="color:#444">Cocody Faya, Abidjan · Merci pour votre commande.</div></div>
-		<div style="display:flex;flex-direction:column;align-items:center;gap:1mm"><div class="qr" style="width:18mm;height:18mm" data-qr="{{ a.code }}"></div><b class="m" style="font-size:7.5pt">{{ a.code }}</b></div>
+		<div style="display:flex;flex-direction:column;align-items:center;gap:1mm"><div class="qr" style="width:18mm;height:18mm">{{ a.code|qr }}</div><b class="m" style="font-size:7.5pt">{{ a.code }}</b></div>
 	</div>
 </div>
 {% endfor %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>document.querySelectorAll('[data-qr]').forEach(function (el) { try { new QRCode(el, { text: el.dataset.qr, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { el.style.cssText += ';border:1px dashed #222;display:grid;place-items:center;font-size:7pt'; el.textContent = 'QR'; } });</script>
 {% endif %}
 </body>
 </html>
