@@ -68,7 +68,7 @@ class TableauxDeBord(tests_pages.RecettePages):
         from management.models import Releve
         Releve.objects.create(code='RL-TEST-1', vendeur=self.vendeur, date_arrete=timezone.now(), net=12500)
         page = self.page(R.COMPTABLE)
-        self.assertIn('voici votre journée', page)
+        self.assertIn('voici votre dashboard', page)
         self.assertIn('relevé(s) à verser', page)
         self.assertIn('Calendrier financier', page)
 

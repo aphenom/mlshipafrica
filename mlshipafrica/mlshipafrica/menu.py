@@ -95,7 +95,7 @@ MENUS_EQUIPE = {
         _r('Mouvements des colis', MOUVEMENTS),
     ],
     R.COMPTABLE: [
-        _r('Aujourd’hui', TABLEAU),
+        _r('Dashboard', TABLEAU),
         _r('Shipping', EN_ROUTE + RECEPTION + RETOURS, DETAIL_COLIS),
         _r('Paiements vendeurs', RELEVES + MOYENS + ACOMPTES + ANCIENS_PAIEMENTS, FACTURE_PAIEMENT),
         _r('Contrôle prestataire', PRESTATAIRE),

@@ -157,3 +157,20 @@ class Paiements(tests_pages.RecettePages):
         self.assertNotIn(self.vendeur.code, self.client.get('/management/admin_releves/?etape=stockage').content.decode())
         self.client.force_login(self.comptes[R.MANAGER])
         self.assertNotEqual(self.client.get('/management/admin_releves/?etape=stockage').status_code, 200)   # comptable et CEO seulement
+
+    def test_dashboard_comptable_et_paiements_par_periode(self):
+        self.client.force_login(self.comptes[R.COMPTABLE])
+        page = self.client.get('/').content.decode()
+        self.assertIn('Dashboard', page)
+        self.assertIn('Résultat · Aujourd’hui', page)                                 # s'ouvre sur aujourd'hui
+        for p in ('hier', '7j', 'mois', 'moisprec'):
+            self.assertEqual(self.client.get('/?p=%s' % p).status_code, 200)
+        page = self.client.get('/?du=2026-11-01&au=2026-11-10').content.decode()
+        self.assertIn('du 01/11 au 10/11', page)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post('/management/admin_colis_actions/', {'action': 'unpaid', 'codes': [self.livre.code]})
+        code = generer_releves(vendeurs=[self.vendeur], license=self.vendeur.license, par=self.comptes[R.COMPTABLE])[0].code
+        self.assertIn(code, self.client.get('/management/admin_releves/?etape=factures&p=jour').content.decode())
+        self.assertNotIn(code, self.client.get('/management/admin_releves/?etape=factures&du=2001-01-01&au=2001-01-31').content.decode())
+        self.assertEqual(self.client.get('/management/admin_releves/?etape=verses&p=hier').status_code, 200)
+        self.assertEqual(self.client.get('/management/admin_benefice/?periode=hier').status_code, 200)

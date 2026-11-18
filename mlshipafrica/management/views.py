@@ -1208,7 +1208,9 @@ def _periode(request):
     from datetime import datetime, time as dtime
     aujourd_hui = timezone.localdate()
     periode = request.GET.get('periode', 'jour')
-    if periode == 'semaine':
+    if periode == 'hier':
+        debut, fin = aujourd_hui - timedelta(days=1), aujourd_hui
+    elif periode == 'semaine':
         debut = aujourd_hui - timedelta(days=aujourd_hui.weekday())
         fin = aujourd_hui + timedelta(days=1)
     elif periode == 'mois':

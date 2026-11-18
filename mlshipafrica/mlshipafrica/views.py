@@ -72,10 +72,14 @@ def index(request):
                     return render(request, 'management/commercial_tableau.html', locals())
                 if role in (R.MANAGER, R.SUPER, R.COMPTABLE):
                     from management import tableaux_equipe as te
+                    if role == R.COMPTABLE and not request.GET.get('p') and not request.GET.get('du'):
+                        request.GET = request.GET.copy()
+                        request.GET['p'] = 'jour'          # le dashboard de la comptable s'ouvre sur aujourd'hui
                     p, du, au, debut, fin = te.periode_equipe(request)
                     periodes = te.PERIODES
                     if role == R.COMPTABLE:
-                        journee = te.journee_comptable(profil_staff.license)
+                        libelle_periode = dict(te.PERIODES).get(p) or ('du %s au %s' % (du.strftime('%d/%m'), au.strftime('%d/%m')))
+                        journee = te.journee_comptable(profil_staff.license, debut, fin)
                         return render(request, 'management/comptable_jour.html', locals())
                     pil = te.pilotage(profil_staff.license, debut, fin)
                     if a_le_droit(user, 'argent'):

@@ -10,6 +10,7 @@
 		<form method="get" class="tools" style="align-items:flex-end">
 			<div class="chips">
 				<a class="chip" href="?periode=jour"{% if periode == 'jour' %} aria-current="page"{% endif %}>Aujourd’hui</a>
+				<a class="chip" href="?periode=hier"{% if periode == 'hier' %} aria-current="page"{% endif %}>Hier</a>
 				<a class="chip" href="?periode=semaine"{% if periode == 'semaine' %} aria-current="page"{% endif %}>Semaine</a>
 				<a class="chip" href="?periode=mois"{% if periode == 'mois' %} aria-current="page"{% endif %}>Mois</a>
 			</div>

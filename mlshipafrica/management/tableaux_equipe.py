@@ -20,7 +20,7 @@ HEURES_SANS_APPEL = 2  # « non traitées » : commande jamais appelée 2 h apr�
 # Statuts qui ont leur propre liste dans Shipping (?type_colis=…)
 STATUTS_AVEC_LISTE = (S.EN_ATTENTE_RAMASSAGE, S.EN_ATTENTE_DEPOT, S.REVENU_ABIDJAN, S.ECHEC_LIVRAISON, S.ANNULE, S.RETOURNE, S.LIVRE)
 
-PERIODES = [('jour', 'Aujourd’hui'), ('7j', '7 jours'), ('mois', 'Ce mois'), ('moisprec', 'Mois dernier')]
+PERIODES = [('jour', 'Aujourd’hui'), ('hier', 'Hier'), ('7j', '7 jours'), ('mois', 'Ce mois'), ('moisprec', 'Mois dernier')]
 
 # Colis en circulation, regroupés comme dans la maquette
 EN_CIRCULATION = [
@@ -39,6 +39,8 @@ def periode_equipe(request):
     p = request.GET.get('p', '' if request.GET.get('du') else 'mois')
     if p == 'jour':
         du = au = aujourdhui
+    elif p == 'hier':
+        du = au = aujourdhui - timedelta(days=1)
     elif p == '7j':
         du, au = aujourdhui - timedelta(days=6), aujourdhui
     elif p == 'mois':
@@ -139,12 +141,13 @@ def argent_ceo(license, debut, fin):
             'a_rembourser': a_rembourser['t'] or 0, 'acomptes_a_rembourser': a_rembourser['n'] or 0}
 
 
-def journee_comptable(license):
-    """La journée de la comptable : ce qu'il faut faire, le résultat du jour, les 7 prochains jours."""
+def journee_comptable(license, debut=None, fin=None):
+    """Dashboard de la comptable : résultat de la période choisie (aujourd'hui par défaut), ce qu'il faut faire
+    maintenant, les 7 prochains jours."""
     from management.finance import journal
     aujourdhui = timezone.localdate()
-    debut = timezone.make_aware(datetime.combine(aujourdhui, time.min))
-    jour = journal(license, debut, debut + timedelta(days=1))
+    debut = debut or timezone.make_aware(datetime.combine(aujourdhui, time.min))
+    jour = journal(license, debut, fin or debut + timedelta(days=1))
     releves = Releve.objects.filter(vendeur__license=license, statut=StatutReleve.A_VERSER)
     sans_coordonnees = releves.filter(Q(vendeur__compte_versement__isnull=True) | Q(vendeur__compte_versement='')).count()
     acomptes = Acompte.objects.filter(article__license=license, statut=StatutAcompte.A_REMBOURSER)

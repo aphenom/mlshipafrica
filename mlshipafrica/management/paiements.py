@@ -115,6 +115,18 @@ def admin_paiements(request):
         ctx['stockage_total'] = sum((l['montant'] for l in ctx['stockage_lignes']), 0)
     elif etape in ('factures', 'verses'):
         liste = (a_verser if etape == 'factures' else releves.filter(statut__in=(StatutReleve.VERSE, StatutReleve.ANNULE)))
+        # Période : date d'émission pour les factures à verser, date de versement pour l'historique
+        from management.tableaux_equipe import PERIODES, periode_equipe
+        if request.GET.get('p') or request.GET.get('du'):
+            p, du, au, debut, fin = periode_equipe(request)
+            if etape == 'factures':
+                liste = liste.filter(date_arrete__gte=debut, date_arrete__lt=fin)
+            else:
+                liste = liste.filter(Q(date_versement__gte=debut, date_versement__lt=fin) |
+                                     Q(statut=StatutReleve.ANNULE, date_annulation__gte=debut, date_annulation__lt=fin))
+            ctx.update({'p': p, 'du': du, 'au': au})
+        ctx['periodes'] = PERIODES
+        ctx['total_liste'] = liste.aggregate(n=Count('id'), net=Sum('net'), envoye=Sum('montant_verse'))
         liste = list(liste[:500])
         for r in liste:
             if r.statut == StatutReleve.A_VERSER:

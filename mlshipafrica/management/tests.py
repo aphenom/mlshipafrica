@@ -336,7 +336,7 @@ class RolesEtDroitsTests(TestCase):
         for role in self.comptes:
             self.client.force_login(self.comptes[role])
             page = self.client.get('/', follow=True).content.decode()
-            argent_societe = 'Bénéfice ML COD Intérieur' in page or 'Résultat du jour' in page
+            argent_societe = 'Bénéfice ML COD Intérieur' in page or 'Résultat · ' in page
             if role in ('super', 'comptable'):
                 self.assertTrue(argent_societe, role)            # bénéfice (CEO) ou résultat du jour (comptable)
             else:

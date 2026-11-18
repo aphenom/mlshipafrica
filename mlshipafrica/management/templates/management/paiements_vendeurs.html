@@ -113,6 +113,14 @@
 </form>
 
 {% else %}
+<form method="get" class="card"><div class="tools" style="align-items:flex-end;flex-wrap:wrap;justify-content:flex-start">
+	<input type="hidden" name="etape" value="{{ etape }}">
+	<div class="chips"><a class="chip" href="?etape={{ etape }}"{% if not p and not du %} aria-current="page"{% endif %}>Tout</a>{% for v, l in periodes %}<a class="chip" href="?etape={{ etape }}&p={{ v }}"{% if p == v %} aria-current="page"{% endif %}>{{ l }}</a>{% endfor %}</div>
+	<label class="field">{% if etape == 'factures' %}Émises du{% else %}Versées du{% endif %}<input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+	<label class="field">au<input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
+	<button class="btn">Filtrer</button>
+	<span class="muted" style="margin-left:auto">{{ total_liste.n|default:0 }} facture{{ total_liste.n|pluralize }} · net {{ total_liste.net|default:0|fcfa }}{% if etape == 'verses' %} · envoyé {{ total_liste.envoye|default:0|fcfa }}{% endif %}</span>
+</div></form>
 <div class="tablewrap">
 	<table>
 		<thead><tr><th>Facture</th><th>Vendeur</th><th>Versement vers</th><th class="r">Encaissé</th><th class="r">Retenues</th><th class="r">Net</th><th class="r">Frais de versement</th><th class="r">{% if etape == 'factures' %}À envoyer{% else %}Envoyé{% endif %}</th><th>{% if etape == 'factures' %}Action{% else %}Statut{% endif %}</th></tr></thead>
