@@ -1,6 +1,7 @@
 """
 Tests du lot « zones, tarifs, statuts ».    python manage.py test management sms
 """
+from decimal import ROUND_HALF_UP, Decimal
 from io import StringIO
 
 from django.contrib.auth.models import User
@@ -117,7 +118,8 @@ class GrilleMlCodTests(TestCase):
                           valeur=15000, quantite=1, is_option_encaissement=True)
         article.save()
         self.assertEqual(article.montant_frais, 3481)
-        self.assertEqual(article.montant_a_reverser, 15000 - 3481)
+        self.assertEqual(article.cout_option_encaissement, 750)                 # 5 % de collecte, réglé par le CEO
+        self.assertEqual(article.montant_a_reverser, 15000 - 3481 - 750)
 
     def test_sans_tarif_message_clair(self):
         self.appliquer()
@@ -750,7 +752,7 @@ class ArgentTests(TestCase):
             cas = i % 5
             if cas in (0, 1, 2):                                   # livré avec encaissement
                 a = self.parcours(self.colis(valeur, fmt), aller + (S.LIVRE_PAYE,))
-                attendu['collecte'] += valeur; attendu['frais'] += prix; attendu['livres'] += 1
+                attendu['collecte'] += valeur; attendu['frais'] += prix + int((Decimal(valeur) * 5 / 100).quantize(Decimal('1'), rounding=ROUND_HALF_UP)); attendu['livres'] += 1
                 livres_codes.append(a.code)
             elif cas == 3:                                         # livré sans encaissement (déjà payé)
                 a = self.parcours(self.colis(valeur, fmt, encaissement=False), aller + (S.LIVRE,))

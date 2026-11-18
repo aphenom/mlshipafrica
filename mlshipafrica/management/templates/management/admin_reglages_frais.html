@@ -1,0 +1,23 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Frais et réglages · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Paramètres</li><li class="active" aria-current="page">Frais et réglages</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<form method="post" class="card ml" style="max-width:860px">{% csrf_token %}
+	<div class="head"><div><h1>Frais et réglages</h1><div class="muted">Un seul réglage pour tous les vendeurs, appliqué automatiquement aux nouvelles commandes. Chaque changement est gardé dans le journal d’audit.</div></div></div>
+	<div class="form">
+		{% for champ, libelle, aide, valeur in champs %}
+		<label class="field">{{ libelle }}<input name="{{ champ }}" value="{{ valeur|floatformat:'-2' }}" inputmode="decimal" required>{% if aide %}<span class="hint">{{ aide }}</span>{% endif %}</label>
+		{% endfor %}
+	</div>
+	<div class="note" style="margin-top:12px">
+		<b>Appliquer le taux de collecte ({{ taux|floatformat:"-2" }} %) aux colis existants</b><br>
+		{{ simulation.0 }} colis pas encore facturés ont des frais de collecte différents{% if simulation.1 %} (écart sur les livrés : {{ simulation.1|fcfa }}){% endif %}.
+		{% if simulation_tout.0 != simulation.0 %}Avec les colis déjà facturés ou versés : {{ simulation_tout.0 }} colis (écart {{ simulation_tout.1|fcfa }}).{% endif %}
+		<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" name="appliquer" value="1"> Appliquer maintenant aux colis pas encore facturés</label>
+		<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="inclure_factures" value="1"> Inclure aussi les colis déjà facturés ou versés (l’écart est régularisé sur la prochaine facture de chaque vendeur)</label>
+	</div>
+	<div class="tools" style="margin-top:12px"><button class="btn primary" onclick="return confirm('Enregistrer les réglages ?')">Enregistrer</button></div>
+</form>
+{% endblock %}

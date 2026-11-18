@@ -5,70 +5,53 @@
 {% block content %}
 {% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
 <div class="card">
-	<div class="head"><div><h1>Mon argent</h1><div class="muted">Deux relevés par semaine, le lundi et le jeudi : ce qui a été encaissé pour vous, moins les frais, les retours, la garde et le stockage.</div></div></div>
+	<div class="head"><div><h1>Mon argent</h1><div class="muted">Votre colis est livré → nous confirmons l’argent reçu → votre facture de paiement est émise (lundi et jeudi) → l’argent vous est envoyé. Chaque facture détaille, colis par colis, l’encaissé et les frais déduits.</div></div></div>
+	<div class="note ml" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
+		<span>{% if vendeur.versement_valide and vendeur.compte_valide %}Versements sur <b>{{ vendeur.get_moyen_valide_display }}</b> · <span class="mono">{{ vendeur.compte_valide }}</span>{% elif vendeur.compte_versement %}<b>Numéro de paiement en attente de validation</b> : vos versements reprennent dès que la comptabilité l’a vérifié.{% else %}<b>Aucun numéro de paiement</b> : renseignez-le pour recevoir votre argent.{% endif %}</span>
+		<a class="btn sm" href="{% url 'management:management_vendeur_paiement' %}">{% if vendeur.compte_versement %}Modifier mon numéro{% else %}Ajouter mon numéro{% endif %}</a>
+	</div>
 </div>
 
 <div class="kpis">
-	<div class="kpi"><span class="l">À recevoir</span><span class="v">{{ total_a_recevoir|fcfa }}</span><span class="n t-ok">relevés à verser et livraisons en attente</span></div>
-	<div class="kpi"><span class="l">Dernier versement</span><span class="v">{% if dernier_verse %}{{ dernier_verse.net|fcfa }}{% else %}—{% endif %}</span><span class="n">{% if dernier_verse %}le {{ dernier_verse.date_versement|date:"d/m/Y" }}{% if dernier_verse.reference_versement %} · réf. {{ dernier_verse.reference_versement }}{% endif %}{% else %}aucun pour l’instant{% endif %}</span></div>
-	<div class="kpi"><span class="l">Prochain relevé</span><span class="v">{{ en_cours.net|fcfa }}</span><span class="n">{% if date_prochain_releve %}{{ date_prochain_releve|date:"l d/m" }} à 6 h{% endif %}</span></div>
+	<div class="kpi"><span class="l">Livrés, en vérification</span><span class="v">{{ kpi_a_valider.t|default:0|fcfa }}</span><span class="n">{{ kpi_a_valider.n|default:0 }} colis · argent en cours de confirmation</span></div>
+	<div class="kpi"><span class="l">Prochain paiement</span><span class="v">{{ prochain.net|fcfa }}</span><span class="n">net après frais{% if frais_estimes %} · frais de versement estimés {{ frais_estimes|fcfa }}{% endif %}</span></div>
+	<div class="kpi"><span class="l">Paid · versement en cours</span><span class="v">{{ kpi_en_cours.t|default:0|fcfa }}</span><span class="n {% if kpi_en_cours.n %}t-warn{% endif %}">{{ kpi_en_cours.n|default:0 }} facture{{ kpi_en_cours.n|pluralize }}</span></div>
+	<div class="kpi"><span class="l">Dernier versement</span><span class="v">{% if dernier_verse %}{{ dernier_verse.montant_verse|default:dernier_verse.net|fcfa }}{% else %}—{% endif %}</span><span class="n">{% if dernier_verse %}le {{ dernier_verse.date_versement|date:"d/m/Y" }}{% if dernier_verse.reference_versement %} · réf. {{ dernier_verse.reference_versement }}{% endif %}{% else %}aucun pour l’instant{% endif %}</span></div>
 </div>
 
-<div class="split">
-	<div class="grow">
-		{% if releve_detail %}{% include "management/_releve_detail.html" %}{% endif %}
+<div class="card">
+	<h2>Mes factures de paiement</h2>
+	<div class="tablewrap"><table>
+		<thead><tr><th>Facture</th><th class="r">Encaissé</th><th class="r">Frais de livraison + collecte</th><th class="r">Retours</th><th class="r">Garde + stockage</th><th class="r">Net</th><th>Statut</th><th></th></tr></thead>
+		<tbody>
+		{% for r in releves %}
+			<tr>
+				<td class="nw mono">{{ r.code }}<div class="muted" style="font-size:11.5px;font-family:inherit">émise le {{ r.date_arrete|date:"d/m/Y" }}</div></td>
+				<td class="r num nw">{{ r.total_collecte|fcfa }}</td>
+				<td class="r num nw t-bad">{% if r.total_frais %}− {{ r.total_frais|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw t-bad">{% if r.total_retours %}− {{ r.total_retours|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw t-bad">{% if r.total_garde or r.total_stockage %}− {{ r.total_garde|add:r.total_stockage|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw"><b>{{ r.net|fcfa }}</b>{% if r.statut == 'verse' and r.frais_versement %}<div class="muted" style="font-size:11px">envoyé {{ r.montant_verse|fcfa }}</div>{% endif %}</td>
+				<td>{% if r.statut == 'verse' %}<span class="badge st-verse">Versé le {{ r.date_versement|date:"d/m/Y" }}</span>{% if r.reference_versement %}<div class="mono muted" style="font-size:11px">{{ r.reference_versement }}</div>{% endif %}{% else %}<span class="badge st-unpaid">Paid · versement en cours</span>{% endif %}</td>
+				<td class="nw"><a class="btn sm" href="{% url 'management:management_facture_paiement' r.code %}">Voir · imprimer</a></td>
+			</tr>
+		{% empty %}<tr><td colspan="8" class="muted" style="padding:18px">Pas encore de facture de paiement.</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+</div>
 
-		<details class="card dplier"{% if not releve_detail %} open{% endif %}>
-			<summary class="dsum"><h2>Prochain relevé (pas encore arrêté)</h2><span class="dinfo">net {{ en_cours.net|fcfa }} <span class="dchev">▾</span></span></summary>
-			<div class="recap" style="max-width:560px">
-				<div class="rl"><span>Encaissé auprès de vos clients</span><b class="num">{{ en_cours.collecte|fcfa }}</b></div>
-				<div class="rl"><span>Frais de livraison et de collecte</span><span class="num t-bad">{% if en_cours.frais %}− {% endif %}{{ en_cours.frais|fcfa }}</span></div>
-				{% if en_cours.retours %}<div class="rl"><span>Frais de retour</span><span class="num t-bad">− {{ en_cours.retours|fcfa }}</span></div>{% endif %}
-				{% if en_cours.garde %}<div class="rl"><span>Garde des colis revenus</span><span class="num t-bad">− {{ en_cours.garde|fcfa }}</span></div>{% endif %}
-				{% if en_cours.stockage %}<div class="rl"><span>Stockage</span><span class="num t-bad">− {{ en_cours.stockage|fcfa }}</span></div>{% endif %}
-				<div class="net"><b>Net de ce relevé</b><b class="num">{{ en_cours.net|fcfa }}</b></div>
-			</div>
-			{% if lignes_en_cours %}
-			<div class="tablewrap"><table>
-				<thead><tr><th>Date</th><th>Colis</th><th>Ligne</th><th class="r">Montant</th></tr></thead>
-				<tbody>{% for e in lignes_en_cours %}<tr><td class="nw">{{ e.date|date:"d/m/Y" }}</td><td class="mono">{% if e.article %}<a class="linkcode" href="{% url 'management:management_vendeur_detail_colis' e.article.code %}">{{ e.article.code }}</a>{% else %}—{% endif %}</td><td>{{ e.get_type_display }}</td><td class="r num nw {% if e.type != 'collecte' %}t-bad{% endif %}">{% if e.type != 'collecte' %}− {% endif %}{{ e.montant|fcfa }}</td></tr>{% endfor %}</tbody>
-			</table></div>
-			{% else %}<div class="muted">Aucune livraison en attente de relevé.</div>{% endif %}
-		</details>
-
-		<details class="card dplier" open>
-			<summary class="dsum"><h2>Mes relevés</h2><span class="dinfo">{{ releves|length }} relevé{{ releves|length|pluralize }} <span class="dchev">▾</span></span></summary>
-			<div class="tablewrap"><table>
-				<thead><tr><th>Relevé</th><th class="r">Encaissé</th><th class="r">Retenues</th><th class="r">Net</th><th>Statut</th><th>Référence</th></tr></thead>
-				<tbody>
-				{% for r in releves %}
-					<tr>
-						<td class="nw"><a class="linkcode" href="?releve={{ r.code }}">{{ r.code }}</a><div class="muted" style="font-size:11.5px">arrêté le {{ r.date_arrete|date:"d/m/Y" }}</div></td>
-						<td class="r num nw">{{ r.total_collecte|fcfa }}</td>
-						<td class="r num nw t-bad">− {{ r.total_frais|add:r.total_retours|add:r.total_garde|add:r.total_stockage|fcfa }}</td>
-						<td class="r num nw"><b>{{ r.net|fcfa }}</b></td>
-						<td>{% if r.statut == 'verse' %}<span class="badge st-verse">Versé le {{ r.date_versement|date:"d/m/Y" }}</span>{% else %}<span class="badge st-unpaid">À verser</span>{% endif %}</td>
-						<td class="mono" style="font-size:12px">{{ r.reference_versement|default:"" }}</td>
-					</tr>
-				{% empty %}<tr><td colspan="6" class="muted" style="padding:18px">Pas encore de relevé.</td></tr>{% endfor %}
-				</tbody>
-			</table></div>
-		</details>
+<details class="card dplier"{% if not releves %} open{% endif %}>
+	<summary class="dsum"><h2>Dans mon prochain paiement</h2><span class="dinfo">net {{ prochain.net|fcfa }} <span class="dchev">▾</span></span></summary>
+	<p class="muted" style="margin:0">Colis dont l’argent est confirmé, retours et stockage, pas encore facturés. Les colis livrés « en vérification » s’y ajoutent dès que l’argent est confirmé.</p>
+	{% include "management/_lignes_paiement.html" with lignes=prochain_lignes autres=prochain_autres r=None %}
+	<div class="recap" style="max-width:440px;margin-left:auto;width:100%">
+		<div class="rl"><span>Encaissé</span><b class="num">{{ prochain.collecte|fcfa }}</b></div>
+		<div class="rl"><span>Frais de livraison</span><span class="num t-bad">− {{ prochain.frais_livraison|fcfa }}</span></div>
+		<div class="rl"><span>Frais de collecte</span><span class="num t-bad">− {{ prochain.frais_collecte|fcfa }}</span></div>
+		{% if prochain.retours %}<div class="rl"><span>Frais de retour</span><span class="num t-bad">− {{ prochain.retours|fcfa }}</span></div>{% endif %}
+		{% if prochain.garde %}<div class="rl"><span>Garde</span><span class="num t-bad">− {{ prochain.garde|fcfa }}</span></div>{% endif %}
+		{% if prochain.stockage %}<div class="rl"><span>Stockage</span><span class="num t-bad">− {{ prochain.stockage|fcfa }}</span></div>{% endif %}
+		<div class="net"><b>Net</b><b class="num">{{ prochain.net|fcfa }}</b></div>
 	</div>
-
-	<aside class="aside card">
-		<h2>Où recevoir mon argent</h2>
-		{% if vendeur.versement_refus_motif %}<div class="note bad">Votre dernier changement a été refusé : {{ vendeur.versement_refus_motif }}</div>{% endif %}
-		{% if vendeur.compte_versement and not vendeur.versement_valide %}<div class="note" style="background:var(--warn-soft);color:var(--warn)"><b>En attente de validation.</b> Nos versements sont suspendus jusqu'à ce que la comptabilité ait vérifié votre procuration{% if vendeur.compte_valide %} ; en attendant, rien n'est envoyé sur l'ancien numéro{% endif %}.</div>
-		{% elif vendeur.versement_valide %}<div class="note">Versements sur : <b>{{ vendeur.get_moyen_valide_display }}</b> · <span class="mono">{{ vendeur.compte_valide }}</span>{% if vendeur.titulaire_valide %} · {{ vendeur.titulaire_valide }}{% endif %} <span class="badge b-ok">validé</span></div>{% endif %}
-		<form method="post" enctype="multipart/form-data" class="form" style="grid-template-columns:1fr">{% csrf_token %}
-			<label class="field">Moyen *<select name="moyen_versement" required><option value="">Choisir</option>{% for v, l in moyens %}<option value="{{ v }}" {% if vendeur.moyen_versement == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
-			<label class="field">Numéro ou RIB *<input name="compte_versement" value="{{ vendeur.compte_versement|default:'' }}" required maxlength="60"></label>
-			<label class="field">Titulaire<input name="titulaire_versement" value="{{ vendeur.titulaire_versement|default:'' }}" maxlength="100"></label>
-			<label class="field">Procuration signée {% if not vendeur.procuration_versement %}*{% endif %}<input type="file" name="procuration_versement" accept="image/*,application/pdf"><span class="hint">{% if vendeur.procuration_versement %}Déjà jointe. Obligatoire à nouveau si vous changez de numéro.{% else %}Photo ou PDF, obligatoire.{% endif %}</span></label>
-			<button class="btn primary">Enregistrer</button>
-		</form>
-		<div class="note ml">Par sécurité, tout changement de numéro est vérifié par la comptabilité avant le prochain versement, et vous est confirmé par SMS.{% if frais_versement_regles %} Frais de versement à votre charge, déduits du montant envoyé : {% for f in frais_versement_regles %}{{ f.get_moyen_display }} {{ f.taux|floatformat:"-2" }} %{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %}</div>
-	</aside>
-</div>
+</details>
 {% endblock %}

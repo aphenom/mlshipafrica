@@ -1,0 +1,36 @@
+{% load mlcod %}<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facture de paiement {{ releve.code }} · ML COD Intérieur</title>
+<style>
+	:root { --ink:#14181f; --muted:#5d6675; --line:#d6dbe3; --brand:#15803d; --bad:#b91c1c; }
+	* { box-sizing:border-box; }
+	body { margin:0; background:#eef1f5; color:var(--ink); font:13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+	.bar { position:sticky; top:0; display:flex; gap:10px; align-items:center; padding:10px 16px; background:#fff; border-bottom:1px solid var(--line); }
+	.bar b { flex:1; } .bar a, .bar button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--brand); background:#fff; color:var(--brand); cursor:pointer; text-decoration:none; }
+	.bar button { background:var(--brand); color:#fff; }
+	.page { background:#fff; max-width:1000px; margin:16px auto; padding:24px 28px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+	header { display:flex; justify-content:space-between; gap:16px; border-bottom:2px solid var(--brand); padding-bottom:12px; margin-bottom:14px; }
+	h1 { margin:0; font-size:20px; } .marque { font-weight:800; color:var(--brand); font-size:16px; } .muted { color:var(--muted); }
+	.mono { font-family:ui-monospace, Menlo, Consolas, monospace; } .r { text-align:right; white-space:nowrap; } .nw { white-space:nowrap; } .num { font-variant-numeric:tabular-nums; } .t-bad { color:var(--bad); }
+	table { width:100%; border-collapse:collapse; } th, td { border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top; }
+	th { background:#f3f5f8; font-size:11px; text-transform:uppercase; } .tablewrap { overflow-x:auto; }
+	.recap { margin-top:14px; } .recap .rl, .recap .net { display:flex; justify-content:space-between; gap:12px; padding:4px 0; border-bottom:1px dashed var(--line); } .recap .net { font-size:15px; border-bottom:2px solid var(--ink); }
+	.statut { display:inline-block; padding:3px 10px; border-radius:99px; background:#fef3c7; color:#8a5a00; font-weight:700; } .statut.verse { background:#dcfce7; color:#166534; }
+	@media print { body { background:#fff; } .bar { display:none; } .page { box-shadow:none; margin:0; max-width:none; padding:0; } @page { size:A4; margin:12mm; } }
+</style>
+</head>
+<body>
+<div class="bar"><b>Facture de paiement {{ releve.code }}</b><a href="{{ retour }}">← Retour</a><button onclick="window.print()">Imprimer</button></div>
+<div class="page">
+	<header>
+		<div><div class="marque">ML COD Intérieur</div><h1>Facture de paiement</h1><div class="mono">{{ releve.code }}</div><div class="muted">émise le {{ releve.date_arrete|date:"d/m/Y" }}</div></div>
+		<div class="r"><b>{{ vendeur.nom_store|default:vendeur.code }}</b><div class="muted">{{ vendeur.code }}{% if vendeur.numero_contact %} · {{ vendeur.numero_contact }}{% endif %}</div>
+			<div style="margin-top:8px"><span class="statut{% if releve.statut == 'verse' %} verse{% endif %}">{% if releve.statut == 'verse' %}Versé{% else %}Paid · versement en cours{% endif %}</span></div></div>
+	</header>
+	{% include "management/_lignes_paiement.html" with lignes=lignes autres=autres r=releve %}
+	<p class="muted" style="font-size:11.5px;text-align:center;margin-top:18px">ML COD Intérieur est un service de ML SHIP AFRICA · montants en francs CFA · une question sur une ligne : écrivez-nous depuis votre espace, rubrique Mon argent.</p>
+</div>
+</body>
+</html>

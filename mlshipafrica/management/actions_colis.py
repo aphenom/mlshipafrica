@@ -124,6 +124,9 @@ def _selection(request, license):
 
 
 def _retour(request):
+    retour = request.POST.get('retour', '')
+    if retour.startswith('/management/') and '//' not in retour:
+        return redirect(retour)
     filtres = request.POST.get('filtres', '')
     return redirect('/management/admin_liste_colis/' + ('?' + filtres if filtres else ''))
 

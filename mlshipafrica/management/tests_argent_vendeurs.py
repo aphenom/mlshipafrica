@@ -87,17 +87,18 @@ class ArgentVendeurs(tests_pages.RecettePages):
 
     def test_vendeur_saisit_son_numero_avec_procuration(self):
         self.client.force_login(self.vendeur.user)
-        self.client.post('/management/vendeur_releves/', {'moyen_versement': 'wave', 'compte_versement': '0707070707'})
+        self.client.post('/management/vendeur_paiement/', {'moyen_versement': 'wave', 'compte_versement': '0707070707'})
         self.vendeur.refresh_from_db()
         self.assertIsNone(self.vendeur.compte_versement)                 # refusé sans procuration
-        self.client.post('/management/vendeur_releves/', {'moyen_versement': 'wave', 'compte_versement': '0707070707',
+        self.client.post('/management/vendeur_paiement/', {'moyen_versement': 'wave', 'compte_versement': '0707070707',
                                                           'titulaire_versement': 'Mi Shop', 'procuration_versement': procuration()})
         self.vendeur.refresh_from_db()
         self.assertEqual(self.vendeur.compte_versement, '0707070707')
         self.assertFalse(self.vendeur.versement_valide)
-        page = self.client.get('/management/vendeur_releves/').content.decode()
+        page = self.client.get('/management/vendeur_paiement/').content.decode()
         self.assertIn('En attente de validation', page)
         self.assertIn('Wave 1 %', page)
+        self.assertIn('en attente de validation', self.client.get('/management/vendeur_releves/').content.decode())
 
     def test_comptable_valide_et_verse_le_montant_apres_frais(self):
         enregistrer_coordonnees(self.vendeur, 'wave', '0707070707', 'Mi Shop', procuration())

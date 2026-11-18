@@ -1,0 +1,35 @@
+{% load mlcod %}
+<div class="tablewrap"><table>
+	<thead><tr><th>Colis</th><th>Client · ville</th><th class="r">Encaissé</th><th class="r">Frais de livraison</th><th class="r">Frais de collecte</th><th class="r">Retour</th><th class="r">Garde</th><th class="r">Net</th></tr></thead>
+	<tbody>
+	{% for l in lignes %}
+		<tr><td class="mono nw">{{ l.article.code }}{% if l.article.reference_externe %}<div class="muted" style="font-size:11px">{{ l.article.reference_externe }}</div>{% endif %}</td>
+			<td>{{ l.article.nom_destinataire|default:"" }} {{ l.article.prenom_destinataire|default:"" }}<div class="muted" style="font-size:11.5px">{{ l.article.localite_arrivee.nom|default:"" }} · {{ l.article.get_statut_traitement_display }}</div></td>
+			<td class="r num nw">{% if l.collecte %}{{ l.collecte|fcfa }}{% else %}—{% endif %}</td>
+			<td class="r num nw t-bad">{% if l.frais %}− {{ l.frais|fcfa }}{% else %}—{% endif %}</td>
+			<td class="r num nw t-bad">{% if l.frais_collecte %}− {{ l.frais_collecte|fcfa }}{% else %}—{% endif %}</td>
+			<td class="r num nw t-bad">{% if l.retour %}− {{ l.retour|fcfa }}{% else %}—{% endif %}</td>
+			<td class="r num nw t-bad">{% if l.garde %}− {{ l.garde|fcfa }}{% else %}—{% endif %}</td>
+			<td class="r num nw"><b class="{% if l.net < 0 %}t-bad{% endif %}">{{ l.net|fcfa }}</b></td></tr>
+	{% endfor %}
+	{% for e in autres %}
+		<tr><td class="muted">—</td><td>{{ e.get_type_display }} du {{ e.date|date:"d/m/Y" }}</td><td colspan="5"></td><td class="r num nw t-bad">− {{ e.montant|fcfa }}</td></tr>
+	{% endfor %}
+	{% if not lignes and not autres %}<tr><td colspan="8" class="muted" style="padding:14px">Aucune ligne.</td></tr>{% endif %}
+	</tbody>
+</table></div>
+{% if r %}
+<div class="recap" style="max-width:440px;margin-left:auto;width:100%">
+	<div class="rl"><span>Encaissé auprès de vos clients</span><b class="num">{{ r.total_collecte|fcfa }}</b></div>
+	<div class="rl"><span>Frais de livraison et de collecte</span><span class="num t-bad">− {{ r.total_frais|fcfa }}</span></div>
+	<div class="rl"><span>Frais de retour</span><span class="num t-bad">− {{ r.total_retours|fcfa }}</span></div>
+	<div class="rl"><span>Garde</span><span class="num t-bad">− {{ r.total_garde|fcfa }}</span></div>
+	<div class="rl"><span>Stockage</span><span class="num t-bad">− {{ r.total_stockage|fcfa }}</span></div>
+	<div class="net"><b>Net</b><b class="num">{{ r.net|fcfa }}</b></div>
+	{% if r.statut == 'verse' %}
+	{% if r.frais_versement %}<div class="rl"><span>Frais de versement {{ r.get_moyen_versement_display }} (à votre charge)</span><span class="num t-bad">− {{ r.frais_versement|fcfa }}</span></div>{% endif %}
+	<div class="net"><b>Montant envoyé</b><b class="num">{{ r.montant_verse|default:r.net|fcfa }}</b></div>
+	<div class="muted" style="font-size:12px;text-align:right">Versé le {{ r.date_versement|date:"d/m/Y" }}{% if r.compte_verse %} sur {{ r.get_moyen_versement_display }} · {{ r.compte_verse }}{% endif %}{% if r.reference_versement %} · réf. {{ r.reference_versement }}{% endif %}</div>
+	{% endif %}
+</div>
+{% endif %}

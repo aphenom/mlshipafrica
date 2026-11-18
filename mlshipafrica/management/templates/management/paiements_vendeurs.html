@@ -1,0 +1,185 @@
+{% extends "base_main.html" %}
+{% load mlcod %}
+{% block title %}Paiements vendeurs · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li>Paiements</li><li class="active" aria-current="page">Paiements vendeurs</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% elif message.tags == 'warning' %} warn{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card ml">
+	<div class="head">
+		<div><h1>Paiements vendeurs</h1><div class="muted">Livré → <b>Unpaid</b> (vous confirmez que l’argent est chez nous) → <b>Paid</b> (facture de paiement envoyée au vendeur) → <b>Versé</b> (argent envoyé). Vous pilotez ; le lundi et le jeudi, la plateforme pré-coche les vendeurs à payer.</div></div>
+	</div>
+	<div class="kpis">
+		<a class="kpi" href="?etape=unpaid"><span class="l">1 · Livrés à valider</span><span class="v">{{ kpi_a_valider.n|default:0 }}</span><span class="n {% if kpi_a_valider.n %}t-warn{% else %}t-ok{% endif %}">{{ kpi_a_valider.t|default:0|fcfa }} encaissés à confirmer</span></a>
+		<a class="kpi" href="?etape=a_payer"><span class="l">2 · À payer</span><span class="v">{{ kpi_a_payer.net|fcfa }}</span><span class="n">{{ kpi_a_payer_vendeurs }} vendeur{{ kpi_a_payer_vendeurs|pluralize }} · factures pas encore générées</span></a>
+		<a class="kpi" href="?etape=factures"><span class="l">3 · Factures à verser</span><span class="v">{{ kpi_a_verser.t|default:0|fcfa }}</span><span class="n {% if kpi_a_verser.n %}t-warn{% else %}t-ok{% endif %}">{{ kpi_a_verser.n|default:0 }} facture{{ kpi_a_verser.n|pluralize }} Paid</span></a>
+		<a class="kpi" href="?etape=verses"><span class="l">4 · Versés ce mois</span><span class="v">{{ kpi_verses_mois.t|default:0|fcfa }}</span><span class="n t-ok">{{ kpi_verses_mois.n|default:0 }} versement{{ kpi_verses_mois.n|pluralize }}</span></a>
+	</div>
+	{% if kpi_sans_coordonnees %}<div class="note warn">{{ kpi_sans_coordonnees }} numéro{{ kpi_sans_coordonnees|pluralize }} de paiement à valider : ces vendeurs sont bloqués. {% if 'moyens_versement' in droits %}<a href="{% url 'management:management_admin_moyens_versement' %}">Valider dans Moyens de paiement</a>{% endif %}</div>{% endif %}
+	<nav class="ctabs" aria-label="Étapes">{% for v, l in etapes %}<a href="?etape={{ v }}"{% if etape == v %} aria-current="page" class="on"{% endif %}>{{ l }}</a>{% endfor %}</nav>
+</div>
+
+{% if releve_detail %}
+<div class="card">
+	<div class="head">
+		<div><div class="crumb">Facture de paiement · {{ releve_detail.get_statut_display }}</div><h2 class="mono">{{ releve_detail.code }} · {{ releve_detail.vendeur.nom_store }}</h2></div>
+		<span class="tools"><a class="btn sm" href="{% url 'management:management_facture_paiement' releve_detail.code %}" target="_blank" rel="noopener">Imprimer</a><a class="btn sm" href="?etape={{ etape }}">Fermer</a></span>
+	</div>
+	{% include "management/_lignes_paiement.html" with lignes=lignes autres=autres r=releve_detail %}
+</div>
+{% endif %}
+
+{% if etape == 'unpaid' %}
+<div class="card">
+	<form method="get" class="tools">
+		<input type="hidden" name="etape" value="unpaid">
+		<label class="field"><select name="vendeur" aria-label="Vendeur"><option value="">Tous les vendeurs</option>{% for code, nom in vendeurs_liste %}<option value="{{ code }}" {% if code == vendeur_filtre %}selected{% endif %}>{{ nom }}</option>{% endfor %}</select></label>
+		<label class="field">Livrés du <input type="date" name="du" value="{{ du|date:'Y-m-d' }}"></label>
+		<label class="field">au <input type="date" name="au" value="{{ au|date:'Y-m-d' }}"></label>
+		<label class="field"><input type="search" name="q" value="{{ q }}" placeholder="N°, client, téléphone"></label>
+		<button class="btn">Filtrer</button>
+	</form>
+	<p class="muted" style="margin:0">Colis livrés avec encaissement dont l’argent n’est pas encore confirmé. Comparez le total avec ce que le livreur a remis, puis passez-les en Unpaid : ils entrent dans le prochain paiement.</p>
+</div>
+<form method="post" action="{% url 'management:management_admin_colis_actions' %}" id="selection">{% csrf_token %}
+	<input type="hidden" name="action" value="unpaid">
+	<input type="hidden" name="filtres" value="{{ filtres }}">
+	<input type="hidden" name="retour" value="{% url 'management:management_admin_releves' %}?etape=unpaid">
+	<input type="hidden" name="tous" value="0" id="sel-tous">
+	<div class="bulk">
+		<span><b id="sel-n">0</b> cochés · <b id="sel-t">0 F</b></span>
+		{% if total_selection.n %}<button type="button" class="btn sm" id="sel-tout">Tout le filtre : {{ total_selection.n }} colis · {{ total_selection.t|default:0|fcfa }}</button>{% endif %}
+		<button class="btn sm primary" id="go-unpaid">Passer en Unpaid</button>
+	</div>
+	<div class="tablewrap"><table>
+		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-page" aria-label="Cocher la page"></th><th>Commande</th><th>Vendeur</th><th>Client</th><th>Ville</th><th class="r">Encaissé</th><th>Livré le</th></tr></thead>
+		<tbody>
+		{% for a in page %}
+			<tr><td><input type="checkbox" class="sel" name="codes" value="{{ a.code }}" data-m="{{ a.valeur_totale|default:0|floatformat:0 }}"></td>
+				<td class="nw"><a class="linkcode" href="{% url 'management:management_admin_detail_colis' a.code %}">{{ a.code }}</a></td>
+				<td>{{ a.vendeur.nom_store|default:"—" }}</td><td>{{ a.nom_destinataire|default:"" }} {{ a.prenom_destinataire|default:"" }}</td>
+				<td>{{ a.localite_arrivee.nom|default:"—" }}</td><td class="r num nw">{{ a.valeur_totale|fcfa }}</td><td class="nw muted">{{ a.date_modification|date:"d/m/Y H:i" }}</td></tr>
+		{% empty %}<tr><td colspan="7" class="muted" style="padding:18px">Aucun colis livré en attente de validation.</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+</form>
+{% if page.paginator.num_pages > 1 %}<div class="pager"><span class="muted">{{ page.start_index }} à {{ page.end_index }} sur {{ page.paginator.count }}</span><span class="tools">{% if page.has_previous %}<a class="btn sm" href="?etape=unpaid&{{ filtres }}&page={{ page.previous_page_number }}">‹</a>{% endif %}<span class="muted">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?etape=unpaid&{{ filtres }}&page={{ page.next_page_number }}">›</a>{% endif %}</span></div>{% endif %}
+
+{% elif etape == 'a_payer' %}
+<form method="post" onsubmit="return confirm('Générer les factures de paiement des vendeurs cochés ? Chaque vendeur reçoit sa facture dans « Mon argent ».')">{% csrf_token %}
+	<input type="hidden" name="action" value="generer">
+	<div class="card">
+		<div class="head"><div><h2>Vendeurs à payer</h2><div class="muted">{% if jour_paiement %}Jour de paiement : les vendeurs payables sont pré-cochés. Décochez ceux que vous ne payez pas aujourd’hui.{% else %}Ce n’est pas un jour de paiement (lundi ou jeudi) : rien n’est pré-coché, vous pouvez quand même payer.{% endif %} Seuls les colis passés en Unpaid, les retours et le stockage entrent dans la facture.</div></div>
+			<div class="tools"><b>Total cochés : <span id="tot-cg">0 F</span></b><button class="btn primary">Générer les factures de paiement</button></div></div>
+	</div>
+	<div class="tablewrap"><table>
+		<thead><tr><th style="width:30px"><input type="checkbox" id="sel-v" aria-label="Tout cocher"></th><th>Vendeur</th><th class="r">Colis</th><th class="r">Encaissé</th><th class="r">Frais de livraison</th><th class="r">Frais de collecte</th><th class="r">Retours</th><th class="r">Garde + stockage</th><th class="r">Net</th><th>Versement</th></tr></thead>
+		<tbody>
+		{% for v in vendeurs_a_payer %}
+			<tr{% if v.bloque %} class="muted"{% endif %}>
+				<td><input type="checkbox" class="selv" name="vendeurs" value="{{ v.vendeur.code }}" data-m="{{ v.net|floatformat:0 }}" {% if jour_paiement and not v.bloque and v.net > 0 %}checked{% endif %}{% if v.bloque %} disabled title="{{ v.bloque }}"{% endif %}></td>
+				<td><b>{{ v.vendeur.nom_store|default:v.vendeur.code }}</b><div class="muted mono" style="font-size:11px">{{ v.vendeur.code }}</div></td>
+				<td class="r num">{{ v.colis }}</td>
+				<td class="r num nw">{{ v.collecte|fcfa }}</td>
+				<td class="r num nw t-bad">{% if v.frais_livraison %}− {{ v.frais_livraison|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw t-bad">{% if v.frais_collecte %}− {{ v.frais_collecte|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw t-bad">{% if v.retours %}− {{ v.retours|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw t-bad">{% if v.garde or v.stockage %}− {{ v.garde|add:v.stockage|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw"><b class="{% if v.net < 0 %}t-bad{% endif %}">{{ v.net|fcfa }}</b></td>
+				<td style="font-size:12.5px">{% if v.bloque %}<span class="badge b-bad">{{ v.bloque }}</span>{% elif v.net <= 0 %}<span class="muted">rien à envoyer (solde)</span>{% else %}{{ v.vendeur.get_moyen_valide_display }} · <span class="mono">{{ v.vendeur.compte_valide }}</span>{% if v.frais_versement %}<div class="muted">frais {{ v.frais_versement|fcfa }} à sa charge</div>{% endif %}{% endif %}</td>
+			</tr>
+		{% empty %}<tr><td colspan="10" class="muted" style="padding:18px">Rien à payer : passez d’abord les colis livrés en Unpaid (étape 1).</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+</form>
+
+{% else %}
+<div class="tablewrap">
+	<table>
+		<thead><tr><th>Facture</th><th>Vendeur</th><th>Versement vers</th><th class="r">Encaissé</th><th class="r">Retenues</th><th class="r">Net</th><th class="r">Frais de versement</th><th class="r">{% if etape == 'factures' %}À envoyer{% else %}Envoyé{% endif %}</th><th>{% if etape == 'factures' %}Action{% else %}Statut{% endif %}</th></tr></thead>
+		<tbody>
+		{% for r in releves %}
+			<tr>
+				<td class="nw"><a class="linkcode" href="?etape={{ etape }}&releve={{ r.code }}">{{ r.code }}</a><div class="muted" style="font-size:11px">émise le {{ r.date_arrete|date:"d/m/Y" }}{% if r.genere_par %} · {{ r.genere_par.get_full_name|default:r.genere_par.email }}{% endif %}</div></td>
+				<td>{% if 'vendeurs_voir' in droits %}<a href="{% url 'management:management_admin_vendeur_profil' r.vendeur.code %}">{{ r.vendeur.nom_store|default:r.vendeur.code }}</a>{% else %}{{ r.vendeur.nom_store|default:r.vendeur.code }}{% endif %}</td>
+				<td style="font-size:12.5px">{% if r.statut == 'verse' %}{% if r.compte_verse %}{{ r.get_moyen_versement_display }} · <span class="mono">{{ r.compte_verse }}</span>{% else %}{{ r.get_moyen_versement_display|default:"—" }}{% endif %}{% elif r.statut == 'annule' %}—{% elif r.vendeur.versement_valide and r.vendeur.compte_valide %}{{ r.vendeur.get_moyen_valide_display }} · <span class="mono">{{ r.vendeur.compte_valide }}</span>{% elif r.vendeur.compte_versement %}<span class="badge b-warn">à valider</span>{% else %}<span class="badge b-bad">non renseigné</span>{% endif %}</td>
+				<td class="r num nw">{{ r.total_collecte|fcfa }}</td>
+				<td class="r num nw t-bad">− {{ r.total_frais|add:r.total_retours|add:r.total_garde|add:r.total_stockage|fcfa }}</td>
+				<td class="r num nw"><b class="{% if r.net < 0 %}t-bad{% endif %}">{{ r.net|fcfa }}</b></td>
+				<td class="r num nw t-bad">{% if r.statut == 'verse' %}{% if r.frais_versement %}− {{ r.frais_versement|fcfa }}{% else %}—{% endif %}{% elif r.frais_estimes %}− {{ r.frais_estimes|fcfa }}{% else %}—{% endif %}</td>
+				<td class="r num nw"><b>{% if r.statut == 'verse' %}{{ r.montant_verse|default:r.net|fcfa }}{% elif r.statut == 'a_verser' %}{{ r.a_envoyer|fcfa }}{% else %}—{% endif %}</b></td>
+				<td class="nw">{% if r.statut == 'a_verser' %}{% if r.net > 0 and not r.vendeur.versement_valide %}<span class="badge b-bad" title="Validez d'abord ses coordonnées dans Moyens de paiement">bloqué</span>{% else %}<button type="button" class="btn sm primary" data-ouvrir="verser-{{ r.pk }}">Verser</button>{% endif %} <button type="button" class="btn sm" data-ouvrir="annuler-{{ r.pk }}">Annuler</button>
+					{% elif r.statut == 'verse' %}<span class="badge st-verse">{{ r.date_versement|date:"d/m/Y" }}</span> <span class="mono" style="font-size:11.5px">{{ r.reference_versement }}</span>
+					{% else %}<span class="badge b-mute">Annulée</span><div class="muted" style="font-size:11px">{{ r.motif_annulation }}</div>{% endif %}</td>
+			</tr>
+			{% if r.statut == 'a_verser' %}
+			<tr class="sel" id="verser-{{ r.pk }}" hidden><td colspan="9">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Envoyer {{ r.a_envoyer|fcfa }} sur {{ r.vendeur.get_moyen_valide_display }} {{ r.vendeur.compte_valide }} et marquer la facture {{ r.code }} versée ?')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk }}"><input type="hidden" name="action" value="verser">
+					<div class="field">Envoyer<b style="font-size:18px">{{ r.a_envoyer|fcfa }}</b><span class="hint">sur {{ r.vendeur.get_moyen_valide_display }} · {{ r.vendeur.compte_valide }}{% if r.frais_estimes %} (net {{ r.net|fcfa }} − frais {{ r.frais_estimes|fcfa }}){% endif %}</span></div>
+					<label class="field">Référence du transfert *<input name="reference" required placeholder="ex. WV-8F3K21"></label>
+					<div class="tools"><button class="btn primary">Marquer versé</button><button type="button" class="btn" data-fermer="verser-{{ r.pk }}">Fermer</button></div>
+				</form>
+			</td></tr>
+			<tr class="sel" id="annuler-{{ r.pk }}" hidden><td colspan="9">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Annuler la facture {{ r.code }} ? Ses colis repassent dans « À payer ».')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk }}"><input type="hidden" name="action" value="annuler">
+					<label class="field">Motif de l’annulation *<input name="motif" required maxlength="300" placeholder="ex. généré par erreur, contestation du vendeur"></label>
+					<div class="tools"><button class="btn danger">Annuler la facture</button><button type="button" class="btn" data-fermer="annuler-{{ r.pk }}">Fermer</button></div>
+				</form>
+			</td></tr>
+			{% endif %}
+		{% empty %}<tr><td colspan="9" class="muted" style="padding:18px">{% if etape == 'factures' %}Aucune facture à verser.{% else %}Aucun versement.{% endif %}</td></tr>{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block styles %}{{ block.super }}
+<style>
+.bulk { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; margin:10px 0; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.08); }
+.ctabs a.on { font-weight:700; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function fcfa(n) { return Math.round(n).toLocaleString('fr-FR').replace(/\s/g, ' ') + ' F'; }
+document.addEventListener('click', function (e) {
+	var o = e.target.closest('[data-ouvrir]'), f = e.target.closest('[data-fermer]');
+	if (o) { var tr = document.getElementById(o.dataset.ouvrir); tr.hidden = !tr.hidden; var i = tr.querySelector('input:not([type=hidden])'); if (!tr.hidden && i) i.focus(); }
+	if (f) document.getElementById(f.dataset.fermer).hidden = true;
+});
+(function () {
+	var form = document.getElementById('selection');
+	if (form) {
+		var tous = document.getElementById('sel-tous');
+		var maj = function () {
+			var c = form.querySelectorAll('input.sel:checked'), t = 0;
+			c.forEach(function (x) { t += +x.dataset.m; });
+			document.getElementById('sel-n').textContent = tous.value === '1' ? '{{ total_selection.n|default:0 }}' : c.length;
+			document.getElementById('sel-t').textContent = tous.value === '1' ? '{{ total_selection.t|default:0|fcfa }}' : fcfa(t);
+		};
+		form.addEventListener('change', function (e) {
+			if (e.target.id === 'sel-page') form.querySelectorAll('input.sel').forEach(function (x) { x.checked = e.target.checked; });
+			if (e.target.classList.contains('sel') && !e.target.checked) tous.value = '0';
+			maj();
+		});
+		var tout = document.getElementById('sel-tout');
+		if (tout) tout.addEventListener('click', function () { tous.value = '1'; form.querySelectorAll('input.sel').forEach(function (x) { x.checked = true; }); maj(); });
+		form.addEventListener('submit', function (e) {
+			var n = document.getElementById('sel-n').textContent;
+			if (n === '0') { e.preventDefault(); alert('Cochez au moins un colis.'); return; }
+			if (!confirm('Passer ' + n + ' colis en Unpaid (' + document.getElementById('sel-t').textContent + ') ? Cela confirme que l’argent est chez nous.')) e.preventDefault();
+		});
+		maj();
+	}
+	var tv = document.getElementById('sel-v');
+	if (tv) {
+		var majv = function () { var t = 0; document.querySelectorAll('input.selv:checked').forEach(function (x) { t += +x.dataset.m; }); document.getElementById('tot-cg').textContent = fcfa(t); };
+		tv.addEventListener('change', function () { document.querySelectorAll('input.selv:not(:disabled)').forEach(function (x) { x.checked = tv.checked; }); majv(); });
+		document.querySelectorAll('input.selv').forEach(function (x) { x.addEventListener('change', majv); });
+		majv();
+	}
+})();
+</script>
+{% endblock %}

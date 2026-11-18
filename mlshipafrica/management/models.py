@@ -429,6 +429,10 @@ class Article(MyModelAbstract):
             tarification_taux_option_encaissement = tarification.get_final_taux_option_encaissement() or 0
             tarification_cout_option_recuperation = tarification.get_final_cout_option_recuperation()
             tarification_cout_option_encaissement = tarification.get_final_cout_option_encaissement()
+            # Frais de collecte : un seul taux pour tous les vendeurs, réglé par le CEO (Paramètres › Frais et réglages)
+            from management.finance import taux_collecte
+            tarification_taux_option_encaissement = taux_collecte(self.license)
+            tarification_cout_option_encaissement = None
             
             self.valeur_totale = self.valeur_totale if self.valeur_totale and self.valeur_totale > 0 else self.valeur*self.quantite
            
@@ -445,7 +449,8 @@ class Article(MyModelAbstract):
                 self.cout_option_recuperation = None
 
             if self.is_option_encaissement is True:
-                self.cout_option_encaissement = tarification_cout_option_encaissement if tarification_cout_option_encaissement else round((self.valeur_totale*tarification_taux_option_encaissement)/100,0)
+                from management.finance import frais_collecte
+                self.cout_option_encaissement = frais_collecte(self, tarification_taux_option_encaissement)
             else:
                 self.cout_option_encaissement = None
 
@@ -785,6 +790,10 @@ class Releve(models.Model):
     montant_verse = models.DecimalField("Montant envoyé", max_digits=12, decimal_places=2, null=True, blank=True)
     compte_verse = models.CharField("Numéro ou RIB utilisé", max_length=60, blank=True, default='')
     titulaire_verse = models.CharField("Titulaire", max_length=100, blank=True, default='')
+    genere_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='releves_generes')
+    annule_par = models.ForeignKey(User, models.SET_NULL, null=True, blank=True, related_name='releves_annules')
+    date_annulation = models.DateTimeField(null=True, blank=True)
+    motif_annulation = models.CharField("Motif d'annulation", max_length=300, blank=True, default='')
 
     class Meta:
         ordering = ['-date_creation']

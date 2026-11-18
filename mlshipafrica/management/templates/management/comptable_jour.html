@@ -32,14 +32,14 @@
 		<div class="card">
 			<div class="head" style="align-items:baseline"><h2>Calendrier financier</h2><span class="muted" style="font-size:13px">7 prochains jours</span></div>
 			<div class="cal7">{% for j in journee.calendrier %}<div class="calj2 {% if j.evenements %}{{ j.evenements.0.1 }}{% endif %}"><span class="d">{{ j.date|date:"D j"|upper }}</span>{% for lib, cls in j.evenements %}<span class="e t-{{ cls }}">{{ lib }}</span>{% endfor %}</div>{% endfor %}</div>
-			<div class="muted" style="font-size:12px;display:flex;gap:12px;flex-wrap:wrap"><span><b class="t-warn">●</b> Relevés des vendeurs (lundi et jeudi, 6 h)</span><span><b class="t-info">●</b> Fichier du prestataire</span><span><b class="t-ok">●</b> Stockage du mois</span></div>
+			<div class="muted" style="font-size:12px;display:flex;gap:12px;flex-wrap:wrap"><span><b class="t-warn">●</b> Jours de paiement des vendeurs (lundi et jeudi)</span><span><b class="t-info">●</b> Fichier du prestataire</span><span><b class="t-ok">●</b> Stockage du mois</span></div>
 		</div>
 	</div>
 
 	<div class="tools">
 		<a class="btn" href="{% url 'management:management_admin_benefice' %}">Journal et bénéfice</a>
 		<a class="btn" href="{% url 'management:management_admin_fichier_prestataire' %}">Fichier du prestataire</a>
-		<a class="btn" href="{% url 'management:management_admin_releves' %}">Relevés vendeurs</a>
+		<a class="btn" href="{% url 'management:management_admin_releves' %}">Paiements vendeurs</a>
 	</div>
 </div>
 {% endblock %}

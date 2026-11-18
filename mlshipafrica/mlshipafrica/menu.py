@@ -53,9 +53,11 @@ FRAIS = [_p('Frais à régler', M + 'admin_liste_paiements', 'paiements', type_p
 REVERSEMENTS = [_p('Reversements à faire', M + 'admin_liste_reversements', 'paiements', type_reversements='en_attente'),
                 _p('Par vendeur', M + 'admin_liste_reversements_vendeurs', 'paiements'),
                 _p('Historique', M + 'admin_liste_reversements', 'paiements', type_reversements='historique')]
-RELEVES = [_p('Relevés vendeurs', M + 'admin_releves', 'releves')]
+RELEVES = [_p('Paiements vendeurs', M + 'admin_releves', 'releves')]
+FACTURE_PAIEMENT = (M + 'facture_paiement',)
+REGLAGES = [_p('Frais et réglages', M + 'admin_reglages_frais', 'parametres_configuration')]
 MOYENS = [_p('Moyens de paiement', M + 'admin_moyens_versement', 'moyens_versement')]
-# Ancien circuit (colis par colis) : seulement l'historique, pour consultation. Les vendeurs sont payés par les relevés.
+# Ancien circuit (colis par colis) : seulement l'historique, pour consultation. Les vendeurs sont payés par les factures de paiement.
 ANCIENS_PAIEMENTS = [_p('Anciens frais réglés', M + 'admin_liste_paiements', 'paiements', type_paiements='historique'),
                      _p('Anciens reversements', M + 'admin_liste_reversements', 'paiements', type_reversements='historique')]
 ACOMPTES = [_p('Acomptes clients', M + 'admin_acomptes', 'acomptes')]
@@ -95,8 +97,8 @@ MENUS_EQUIPE = {
     R.COMPTABLE: [
         _r('Aujourd’hui', TABLEAU),
         _r('Shipping', EN_ROUTE + RECEPTION + RETOURS, DETAIL_COLIS),
-        _r('Encaissements', PRESTATAIRE),
-        _r('Versements', RELEVES + MOYENS + ACOMPTES + ANCIENS_PAIEMENTS),
+        _r('Paiements vendeurs', RELEVES + MOYENS + ACOMPTES + ANCIENS_PAIEMENTS, FACTURE_PAIEMENT),
+        _r('Contrôle prestataire', PRESTATAIRE),
         _r('Rapports', BENEFICE + COMMISSIONS + JOURNAUX_ARGENT + MOUVEMENTS),
         _r('Vendeurs', VENDEURS, FICHE_VENDEUR),
     ],
@@ -108,11 +110,11 @@ MENUS_EQUIPE = {
     R.SUPER: [
         _r('Tableau de bord', TABLEAU),
         _r('Finance', BENEFICE + ACOMPTES + COMMISSIONS),
-        _r('Paiements', RELEVES + MOYENS + ANCIENS_PAIEMENTS + JOURNAUX_ARGENT),
+        _r('Paiements', RELEVES + MOYENS + ANCIENS_PAIEMENTS + JOURNAUX_ARGENT, FACTURE_PAIEMENT),
         _r('Prestataire', PRESTATAIRE),
         _r('Commercial', VENDEURS, FICHE_VENDEUR),
         _r('Shipping', APPELS + EN_ROUTE + RECEPTION + RETOURS + STOCK + MOUVEMENTS, DETAIL_COLIS),
-        _r('Paramètres', PARAMETRES, FICHE_PARAMETRE),
+        _r('Paramètres', REGLAGES + PARAMETRES, FICHE_PARAMETRE),
     ],
     R.ADMINISTRATEUR: [
         _r('Tableau de bord', TABLEAU),
@@ -135,10 +137,12 @@ def _menu_vendeur(vendeur):
     if vendeur.option_stockage:
         groupes.append(('Stock', [_r('Mon stock', [_p('Mon stock', M + 'vendeur_stock')])]))
     groupes += [
-        ('Argent', [_r('Mon argent', [_p('Mes relevés', M + 'vendeur_releves'),
-                                      _p('Anciens reversements', M + 'vendeur_liste_colis_reversement')])]),
+        ('Argent', [_r('Mon argent', [_p('Mes factures de paiement', M + 'vendeur_releves'),
+                                      _p('Anciens reversements', M + 'vendeur_liste_colis_reversement')],
+                       (M + 'facture_paiement',))]),
         ('Compte', [_r('Intégrations', [_p('Intégrations', 'integrations:vendeur_integrations')]),
-                    _r('Mon profil', [_p('Mon profil', M + 'vendeur_profil')], (M + 'vendeur_edit_profil',))]),
+                    _r('Paramètres', [_p('Mon profil', M + 'vendeur_profil'), _p('Numéro de paiement', M + 'vendeur_paiement')],
+                       (M + 'vendeur_edit_profil',))]),
     ]
     return groupes
 

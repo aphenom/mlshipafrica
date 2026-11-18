@@ -101,7 +101,7 @@
 		{% if peut_payer %}
 		<div class="card">
 			<h2>Comptabilité (ancien circuit)</h2>
-			<div class="muted" style="font-size:12.5px">Règlement des frais et reversement colis par colis. Les colis suivis par les relevés du lundi et du jeudi se versent depuis « Relevés vendeurs ».</div>
+			<div class="muted" style="font-size:12.5px">Règlement des frais et reversement colis par colis. Les colis suivis par les factures de paiement se versent depuis « Paiements vendeurs ».</div>
 			<form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')">
 				{% csrf_token %}
 				<h3 style="font-size:14px;font-weight:700;margin:6px 0">Paiement des frais</h3>

@@ -1,0 +1,20 @@
+{% extends "base_main.html" %}
+{% block title %}Numéro de paiement · ML COD Intérieur{% endblock %}
+{% block breadcrumb-li %}<li><a href="{% url 'management:management_vendeur_profil' %}">Paramètres</a></li><li class="active" aria-current="page">Numéro de paiement</li>{% endblock %}
+{% block content %}
+{% for message in messages %}<div class="note{% if message.tags == 'error' %} bad{% endif %}">{{ message }}</div>{% endfor %}
+<div class="card" style="max-width:640px">
+	<div class="head"><div><h1>Où recevoir mon argent</h1><div class="muted">Le numéro sur lequel nous vous envoyons vos paiements.</div></div><a class="btn sm" href="{% url 'management:management_vendeur_releves' %}">← Mon argent</a></div>
+	{% if vendeur.versement_refus_motif %}<div class="note bad">Votre dernier changement a été refusé : {{ vendeur.versement_refus_motif }}</div>{% endif %}
+	{% if vendeur.compte_versement and not vendeur.versement_valide %}<div class="note warn"><b>En attente de validation.</b> Les versements sont suspendus jusqu’à ce que la comptabilité ait vérifié votre procuration{% if vendeur.compte_valide %} ; rien n’est envoyé sur l’ancien numéro en attendant{% endif %}.</div>
+	{% elif vendeur.versement_valide %}<div class="note">Versements sur : <b>{{ vendeur.get_moyen_valide_display }}</b> · <span class="mono">{{ vendeur.compte_valide }}</span>{% if vendeur.titulaire_valide %} · {{ vendeur.titulaire_valide }}{% endif %} <span class="badge b-ok">validé</span></div>{% endif %}
+	<form method="post" enctype="multipart/form-data" class="form">{% csrf_token %}
+		<label class="field">Moyen *<select name="moyen_versement" required><option value="">Choisir</option>{% for v, l in moyens %}<option value="{{ v }}" {% if vendeur.moyen_versement == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+		<label class="field">Numéro ou RIB *<input name="compte_versement" value="{{ vendeur.compte_versement|default:'' }}" required maxlength="60"></label>
+		<label class="field">Titulaire<input name="titulaire_versement" value="{{ vendeur.titulaire_versement|default:'' }}" maxlength="100"></label>
+		<label class="field">Procuration signée {% if not vendeur.procuration_versement %}*{% endif %}<input type="file" name="procuration_versement" accept="image/*,application/pdf"><span class="hint">{% if vendeur.procuration_versement %}Déjà jointe. Obligatoire à nouveau si vous changez de numéro.{% else %}Photo ou PDF, obligatoire.{% endif %}</span></label>
+		<div class="tools" style="grid-column:1/-1"><button class="btn primary">Enregistrer</button><a class="btn" href="{% url 'management:management_vendeur_releves' %}">Annuler</a></div>
+	</form>
+	<div class="note ml">Par sécurité, tout changement de numéro est vérifié par la comptabilité avant le prochain versement, et vous est confirmé par SMS.{% if frais_versement_regles %} Frais de versement à votre charge, déduits du montant envoyé : {% for f in frais_versement_regles %}{{ f.get_moyen_display }} {{ f.taux|floatformat:"-2" }} %{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %}</div>
+</div>
+{% endblock %}

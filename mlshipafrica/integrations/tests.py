@@ -109,7 +109,7 @@ class ApiVendeurTests(TestCase):
                                                                      'ville': 'Korhogo', 'montant': 12000})
         self.assertEqual(r.status_code, 201)
         code = r.json()['code']
-        self.assertEqual(r.json()['frais_livraison'], 3481)
+        self.assertEqual(r.json()['frais_livraison'], 3481 + 600)   # livraison + 5 % de collecte sur 12 000
         self.assertEqual(self.appel('post', '/integrations/api/v1/colis/', cle, {'reference': 'WC-1001', 'telephone': '0505050505',
                                                                                   'ville': 'Korhogo', 'montant': 12000}).status_code, 200)
         self.assertEqual(Article.objects.filter(reference_externe='WC-1001').count(), 1)

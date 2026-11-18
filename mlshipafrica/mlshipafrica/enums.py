@@ -297,8 +297,10 @@ class TypeEcriture(models.TextChoices):
 
 
 class StatutReleve(models.TextChoices):
-    A_VERSER = 'a_verser', 'À verser'
+    # « Paid » du circuit de la comptable : la facture de paiement est émise, l'argent n'est pas encore envoyé
+    A_VERSER = 'a_verser', 'Paid · à verser'
     VERSE = 'verse', 'Versé'
+    ANNULE = 'annule', 'Annulée'
 
 
 class MoyenVersement(models.TextChoices):

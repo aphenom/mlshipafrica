@@ -67,6 +67,42 @@ def recalculer_frais_colis(article, taux=None):
     return article
 
 
+def colis_a_recalculer(license, inclure_factures=False):
+    """Colis avec encaissement concernés par un changement du taux de collecte."""
+    qs = Article.objects.filter(license=license, is_option_encaissement=True, etat_suppression=False).exclude(
+        statut_traitement=S.BROUILLON)
+    if not inclure_factures:
+        # Déjà dans une facture de paiement (Paid ou Versé) : on n'y touche pas, sauf demande expresse du CEO
+        qs = qs.exclude(ecritures__releve__isnull=False, ecritures__releve__statut__in=(StatutReleve.A_VERSER, StatutReleve.VERSE))
+        qs = qs.exclude(etat_reversement=True)
+    return qs.distinct()
+
+
+def appliquer_taux_collecte(license, taux, inclure_factures=False, simuler=False):
+    """
+    Applique le taux de collecte aux colis existants : frais recalculés, et pour les colis livrés l'écart est écrit
+    dans la comptabilité (il entre dans la prochaine facture de paiement). Renvoie (colis modifiés, écart total des
+    frais sur les colis livrés).
+    """
+    taux = _d(taux)
+    modifies, ecart = 0, ZERO
+    for article in colis_a_recalculer(license, inclure_factures).iterator():
+        nouveau = frais_collecte(article, taux)
+        if nouveau == _d(article.cout_option_encaissement) and _d(article.taux_option_encaissement) == taux:
+            continue
+        modifies += 1
+        if article.statut_traitement in LIVRES:
+            ecart += nouveau - _d(article.cout_option_encaissement)
+        if simuler:
+            continue
+        recalculer_frais_colis(article, taux)
+        Article.objects.filter(pk=article.pk).update(
+            taux_option_encaissement=article.taux_option_encaissement, cout_option_encaissement=article.cout_option_encaissement,
+            montant_total_frais=article.montant_total_frais, montant_a_reverser=article.montant_a_reverser)
+        comptabiliser(article)
+    return modifies, ecart
+
+
 def attendu(article):
     """Ce qui doit être compté pour ce colis, par type d'écriture."""
     livre = article.statut_traitement in LIVRES
@@ -148,6 +184,8 @@ def totaux(ecritures):
     t = {
         'collecte': par_type.get(T.COLLECTE, ZERO),
         'frais': par_type.get(T.FRAIS, ZERO) + par_type.get(T.FRAIS_COLLECTE, ZERO),
+        'frais_livraison': par_type.get(T.FRAIS, ZERO),
+        'frais_collecte': par_type.get(T.FRAIS_COLLECTE, ZERO),
         'retours': par_type.get(T.FRAIS_RETOUR, ZERO),
         'garde': par_type.get(T.GARDE, ZERO),
         'stockage': par_type.get(T.STOCKAGE, ZERO),
@@ -156,12 +194,64 @@ def totaux(ecritures):
     return t
 
 
+def ecritures_a_payer(license=None, vendeurs=None, arrete=None):
+    """
+    Lignes qui peuvent entrer dans une facture de paiement : pas encore facturées, et pour un colis livré avec
+    encaissement, seulement une fois passé en « Unpaid » par la comptable (l'argent du client est bien chez nous).
+    """
+    qs = Ecriture.objects.filter(releve__isnull=True, vendeur__isnull=False).exclude(type=T.COUT_PRESTATAIRE)
+    qs = qs.exclude(article__statut_traitement=S.LIVRE, article__is_option_encaissement=True)
+    if license is not None:
+        qs = qs.filter(vendeur__license=license)
+    if vendeurs is not None:
+        qs = qs.filter(vendeur__in=vendeurs)
+    if arrete is not None:
+        qs = qs.filter(date__lte=arrete)
+    return qs
+
+
+def livres_a_valider(license=None, vendeur=None):
+    """Colis livrés avec encaissement pas encore passés en « Unpaid » (argent pas encore confirmé)."""
+    qs = Article.objects.filter(etat_suppression=False, statut_traitement=S.LIVRE, is_option_encaissement=True)
+    if license is not None:
+        qs = qs.filter(license=license)
+    if vendeur is not None:
+        qs = qs.filter(vendeur=vendeur)
+    return qs
+
+
+def a_payer_par_vendeur(license):
+    """Vendeurs à payer : totaux de leurs lignes payables, et ce qui bloque le paiement."""
+    from management.models import Vendeur
+    lignes = ecritures_a_payer(license)
+    resultat = []
+    ids = list(lignes.values_list('vendeur', flat=True).distinct())
+    for vendeur in Vendeur.objects.filter(pk__in=ids).order_by('nom_store'):
+        sienne = lignes.filter(vendeur=vendeur)
+        t = totaux(sienne)
+        if not any(t.values()):
+            continue
+        t['vendeur'] = vendeur
+        t['colis'] = sienne.exclude(article__isnull=True).values('article').distinct().count()
+        t['bloque'] = ''
+        if t['net'] > 0 and not (vendeur.versement_valide and vendeur.compte_valide):
+            t['bloque'] = "Numéro de paiement à valider" if vendeur.compte_versement else "Pas de numéro de paiement"
+        t['frais_versement'] = frais_versement(vendeur.moyen_valide, t['net']) if not t['bloque'] else ZERO
+        resultat.append(t)
+    return resultat
+
+
+def jour_de_paiement(jour=None):
+    """Lundi et jeudi : la plateforme pré-coche les vendeurs à payer."""
+    jour = jour or timezone.localdate()
+    return jour.weekday() in (0, 3)
+
+
 @transaction.atomic
-def generer_releves(arrete=None):
-    """Un relevé par vendeur ayant des écritures non relevées jusqu'à l'arrêté. Renvoie la liste des relevés."""
+def generer_releves(arrete=None, vendeurs=None, license=None, par=None):
+    """Une facture de paiement par vendeur avec ses lignes payables jusqu'à l'arrêté. Renvoie la liste créée."""
     arrete = arrete or timezone.now()
-    a_relever = Ecriture.objects.filter(releve__isnull=True, vendeur__isnull=False, date__lte=arrete).exclude(
-        type=T.COUT_PRESTATAIRE)
+    a_relever = ecritures_a_payer(license, vendeurs, arrete)
     crees = []
     for vendeur_id in a_relever.values_list('vendeur', flat=True).distinct():
         lignes = a_relever.filter(vendeur_id=vendeur_id)
@@ -173,10 +263,50 @@ def generer_releves(arrete=None):
         releve = Releve.objects.create(
             code='RL-%s-%s-%03d' % (timezone.localtime(arrete).strftime('%y%m%d'), vendeur.code, numero),
             vendeur=vendeur, date_arrete=arrete, total_collecte=t['collecte'], total_frais=t['frais'],
-            total_retours=t['retours'], total_garde=t['garde'], total_stockage=t['stockage'], net=t['net'])
+            total_retours=t['retours'], total_garde=t['garde'], total_stockage=t['stockage'], net=t['net'], genere_par=par)
         lignes.update(releve=releve)
         crees.append(releve)
     return crees
+
+
+@transaction.atomic
+def annuler_releve(releve, par, motif):
+    """Facture générée par erreur : annulée avant versement, ses lignes redeviennent payables."""
+    releve = Releve.objects.select_for_update().get(pk=releve.pk)
+    if releve.statut != StatutReleve.A_VERSER:
+        raise ValidationError("Seule une facture pas encore versée peut être annulée.")
+    if not (motif or '').strip():
+        raise ValidationError("Indiquez le motif de l'annulation.")
+    releve.ecritures.update(releve=None)
+    releve.statut, releve.annule_par, releve.date_annulation = StatutReleve.ANNULE, par, timezone.now()
+    releve.motif_annulation = motif.strip()[:300]
+    releve.save()
+    return releve
+
+
+def lignes_releve(releve_ou_ecritures):
+    """
+    Facture de paiement ligne par ligne : une ligne par colis (encaissé, frais de livraison, frais de collecte,
+    retour, garde, net), puis les lignes sans colis (stockage). Renvoie (lignes, autres).
+    """
+    ecritures = releve_ou_ecritures.ecritures.all() if isinstance(releve_ou_ecritures, Releve) else releve_ou_ecritures
+    ecritures = ecritures.exclude(type=T.COUT_PRESTATAIRE).select_related('article', 'article__localite_arrivee')
+    par_colis, autres = {}, []
+    for e in ecritures.order_by('date'):
+        if e.article_id is None:
+            autres.append(e)
+            continue
+        l = par_colis.setdefault(e.article_id, {'article': e.article, 'date': e.date, 'collecte': ZERO, 'frais': ZERO,
+                                                'frais_collecte': ZERO, 'retour': ZERO, 'garde': ZERO, 'stockage': ZERO})
+        cle = {T.COLLECTE: 'collecte', T.FRAIS: 'frais', T.FRAIS_COLLECTE: 'frais_collecte', T.FRAIS_RETOUR: 'retour',
+               T.GARDE: 'garde', T.STOCKAGE: 'stockage'}.get(e.type)
+        if cle:
+            l[cle] += _d(e.montant)
+        l['date'] = max(l['date'], e.date)
+    lignes = sorted(par_colis.values(), key=lambda l: l['date'])
+    for l in lignes:
+        l['net'] = l['collecte'] - l['frais'] - l['frais_collecte'] - l['retour'] - l['garde'] - l['stockage']
+    return lignes, autres
 
 
 def frais_versement(moyen, net):

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from . import views # import views so we can use them in urls.
-from . import actions_colis
+from . import actions_colis, paiements
 
 app_name = 'management'
 urlpatterns = [
@@ -32,11 +32,14 @@ urlpatterns = [
     path('admin_confirmations/', views.admin_confirmations, name='management_admin_confirmations'),
     path('admin_acomptes/', views.admin_acomptes, name='management_admin_acomptes'),
     path('admin_stock/', views.admin_stock, name='management_admin_stock'),
-    path('admin_releves/', views.admin_releves, name='management_admin_releves'),
+    path('admin_releves/', paiements.admin_paiements, name='management_admin_releves'),
     path('admin_moyens_versement/', views.admin_moyens_versement, name='management_admin_moyens_versement'),
     path('admin_benefice/', views.admin_benefice, name='management_admin_benefice'),
     path('admin_fichier_prestataire/', views.admin_fichier_prestataire, name='management_admin_fichier_prestataire'),
     path('admin_commissions/', views.admin_commissions, name='management_admin_commissions'),
-    path('vendeur_releves/', views.vendeur_releves, name='management_vendeur_releves'),
+    path('vendeur_releves/', paiements.vendeur_releves, name='management_vendeur_releves'),
+    path('admin_reglages_frais/', paiements.admin_reglages_frais, name='management_admin_reglages_frais'),
+    path('vendeur_paiement/', paiements.vendeur_paiement, name='management_vendeur_paiement'),
+    path('facture_paiement/<str:code>/', paiements.facture_paiement, name='management_facture_paiement'),
     path('vendeur_stock/', views.vendeur_stock, name='management_vendeur_stock'),
 ]

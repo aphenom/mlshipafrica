@@ -620,7 +620,7 @@ def admin_detail_colis(request, code):
                         
                 if request.POST.get("submit_new_reversement") and article.ecritures.exclude(type='cout_prestataire').exists():
                     # Colis suivi par les relevés du lundi et du jeudi : pas de reversement à l'unité (double paiement)
-                    django_messages.error(request, "Ce colis est versé par les relevés vendeurs (menu Relevés vendeurs), pas à l'unité.")
+                    django_messages.error(request, "Ce colis est versé par les factures de paiement (menu Paiements vendeurs), pas à l'unité.")
                 elif "submit_new_reversement" in request.POST and request.POST["submit_new_reversement"]:             
                     if str(article.get_last_encaissement().pk) == request.POST["last_encaissement"] and article.is_option_encaissement is True and  article.statut_traitement == article.get_last_historique().statut_traitement and article.statut_traitement == StatutTraitement.LIVRE_PAYE:
                         new_reversement = Reversement()
@@ -1130,54 +1130,6 @@ def _periode(request):
 
 
 @login_required
-@droit_requis('releves')
-def admin_releves(request):
-    from management.finance import generer_releves, marquer_verse
-    from management.models import Releve
-    from mlshipafrica.enums import MoyenVersement, StatutReleve
-    user = request.user
-    profil_staff = user.account_profil_staff
-    releves = Releve.objects.filter(vendeur__license=profil_staff.license).select_related('vendeur', 'verse_par')
-    if request.method == 'POST':
-        try:
-            if request.POST.get('generer'):
-                n = len(generer_releves())
-                django_messages.success(request, "%d relevé(s) généré(s)." % n)
-            else:
-                releve = releves.get(pk=request.POST.get('releve'))
-                marquer_verse(releve, user, request.POST.get('reference', ''), request.POST.get('moyen', ''))
-                django_messages.success(request, "Relevé %s marqué versé." % releve.code)
-        except (ValidationError, Releve.DoesNotExist) as erreur:
-            django_messages.error(request, ' '.join(getattr(erreur, 'messages', ["Relevé introuvable."])))
-        return redirect(reverse('management:management_admin_releves') + '?' + request.GET.urlencode())
-    statut_selected = request.GET.get('statut', StatutReleve.A_VERSER)
-    if statut_selected in StatutReleve.values:
-        releves = releves.filter(statut=statut_selected)
-    releve_detail = None
-    if request.GET.get('releve'):
-        releve_detail = Releve.objects.filter(vendeur__license=profil_staff.license, code=request.GET['releve']).first()
-        lignes_detail = releve_detail.ecritures.select_related('article').order_by('date') if releve_detail else []
-    total_a_verser = releves.filter(statut=StatutReleve.A_VERSER, net__gt=0).aggregate(t=Sum('net'))['t'] or 0
-    from management.finance import frais_versement
-    releves = list(releves[:500])
-    for r in releves:
-        if r.statut == StatutReleve.A_VERSER:
-            r.frais_estimes = frais_versement(r.vendeur.moyen_valide, r.net) if r.vendeur.versement_valide else 0
-            r.a_envoyer = max(r.net - r.frais_estimes, 0) if r.net > 0 else 0
-    # Indicateurs de la maquette, sur tous les relevés de la licence (pas seulement le filtre affiché)
-    tous_releves = Releve.objects.filter(vendeur__license=profil_staff.license)
-    a_verser = tous_releves.filter(statut=StatutReleve.A_VERSER)
-    kpi_a_verser = a_verser.filter(net__gt=0).aggregate(t=Sum('net'), n=Count('id'))
-    kpi_sans_coordonnees = a_verser.filter(net__gt=0).filter(Q(vendeur__versement_valide=False) | Q(vendeur__compte_valide='')).count()
-    kpi_verses_mois = tous_releves.filter(statut=StatutReleve.VERSE, date_versement__gte=timezone.make_aware(
-        datetime.datetime.combine(timezone.localdate().replace(day=1), datetime.time.min))).aggregate(t=Sum('net'), n=Count('id'))
-    comptes_statut = dict(tous_releves.values_list('statut').annotate(n=Count('id')))
-    statuts_releve = StatutReleve
-    moyens = MoyenVersement.choices
-    return render(request, 'management/admin_releves.html', locals())
-
-
-@login_required
 @droit_requis('moyens_versement')
 def admin_moyens_versement(request):
     """
@@ -1223,54 +1175,6 @@ def admin_moyens_versement(request):
     regles = {f.moyen: f for f in FraisVersement.objects.all()}
     frais = [(v, l, regles.get(v)) for v, l in MoyenVersement.choices]
     return render(request, 'management/admin_moyens_versement.html', locals())
-
-
-@login_required
-def vendeur_releves(request):
-    """Le vendeur voit ses relevés (ses montants) et renseigne ses coordonnées de versement."""
-    from management.finance import totaux
-    from management.models import Ecriture
-    from mlshipafrica.enums import MoyenVersement
-    try:
-        vendeur = Vendeur.objects.get(user=request.user)
-    except Vendeur.DoesNotExist:
-        raise Http404
-    if request.method == 'POST':
-        from management.finance import enregistrer_coordonnees
-        moyen = request.POST.get('moyen_versement')
-        try:
-            changement = enregistrer_coordonnees(vendeur, moyen, request.POST.get('compte_versement'),
-                                                 request.POST.get('titulaire_versement'), request.FILES.get('procuration_versement'))
-        except ValidationError as erreur:
-            django_messages.error(request, ' '.join(erreur.messages))
-        else:
-            if changement:
-                # Sécurité : le vendeur est prévenu de tout changement de ses coordonnées de versement
-                from sms.service import mettre_en_file
-                transaction.on_commit(lambda: mettre_en_file(
-                    'moyen', vendeur.numero_sms or vendeur.numero_contact, {'moyen': MoyenVersement(moyen).label},
-                    cle_dedoublonnage='moyen:%s:%s' % (vendeur.code, timezone.now().strftime('%Y%m%d%H%M%S')), vendeur=vendeur))
-                django_messages.success(request, "Coordonnées enregistrées. La comptabilité vérifie votre procuration : les versements reprennent dès la validation."
-                                        if not vendeur.versement_valide else "Coordonnées enregistrées.")
-            else:
-                django_messages.success(request, "Coordonnées enregistrées.")
-        return redirect('management:management_vendeur_releves')
-    releves = vendeur.releves.all()
-    releve_detail = releves.filter(code=request.GET.get('releve')).first() if request.GET.get('releve') else None
-    if releve_detail:
-        lignes_detail = releve_detail.ecritures.select_related('article').order_by('date')
-    non_releve = Ecriture.objects.filter(vendeur=vendeur, releve__isnull=True).exclude(type='cout_prestataire')
-    en_cours = totaux(non_releve)
-    lignes_en_cours = non_releve.select_related('article').order_by('-date')[:200]
-    moyens = MoyenVersement.choices
-    from management.models import FraisVersement
-    frais_versement_regles = FraisVersement.objects.filter(taux__gt=0)
-    # Mon argent de la maquette : à recevoir, dernier versement, prochain relevé (lundi ou jeudi, 6 h)
-    from management.espace_vendeur import a_recevoir, prochain_releve
-    total_a_recevoir = a_recevoir(vendeur)
-    dernier_verse = releves.filter(statut='verse').order_by('-date_versement').first()
-    date_prochain_releve = prochain_releve()
-    return render(request, 'management/vendeur_releves.html', locals())
 
 
 @login_required
