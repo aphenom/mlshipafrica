@@ -131,11 +131,11 @@ class ZonesEtTarifs(tests_pages.RecettePages):
 
     def test_le_ceo_modifie_prix_et_cout_avec_trace(self):
         from core.models import JournalAudit
-        from management.models import Tarification
-        tarif = Tarification.objects.filter(vendeur__isnull=True, localite_arrivee__isnull=True, zone_arrivee__isnull=False,
-                                            etat_validation=True, etat_suppression=False).first()
         self.client.force_login(self.comptes[R.SUPER])
-        page = self.client.get('/core/zones_tarifs/').content.decode()
+        r = self.client.get('/core/zones_tarifs/')
+        page = r.content.decode()
+        # Un tarif réellement affiché (zone numérotée, avec des villes), quel que soit l'ordre des autres tests
+        tarif = next(l['tarif'] for z in r.context['zones'] for l in z['lignes'] if l['tarif'])
         self.assertIn('name="prix_%d"' % tarif.pk, page)
         self.client.post('/core/zones_tarifs/', {'prix_%d' % tarif.pk: '3600', 'cout_%d' % tarif.pk: '2700'})
         tarif.refresh_from_db()

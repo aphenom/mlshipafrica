@@ -8,3 +8,6 @@ mlshipafrica/mlshipafrica/__pycache__/__init__.cpython-313.pyc
 
 logs/
 */logs/
+
+# Fichiers déposés (pièces, procurations, photos) : jamais dans le dépôt
+mlshipafrica/media/

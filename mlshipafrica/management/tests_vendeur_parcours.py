@@ -14,13 +14,12 @@ PNG = (b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08
        b'\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x35\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82')
 
 
-@override_settings(MEDIA_ROOT=MEDIA)
-
 def texte_xlsx(contenu):
     """Contenu d'un export .xlsx → texte, une ligne par rangée (cellules séparées par ;)."""
     from management.fichier_prestataire import lire_xlsx
     return '\n'.join(';'.join('' if c is None else str(c) for c in l) for l in lire_xlsx(contenu)[0]['lignes'])
 
+@override_settings(MEDIA_ROOT=MEDIA)
 class ParcoursVendeur(tests_pages.RecettePages):
     test_toutes_les_pages = None
 
