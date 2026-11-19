@@ -60,7 +60,7 @@
 				<label class="field full" id="bloc-stock"{% if type_colis != 'stock' %} hidden{% endif %}>Produit de mon stock *
 					<select name="produit_stock" id="c-stock">
 						<option value="">Choisir le produit</option>
-						{% for p in form.fields.produit_stock.queryset %}<option value="{{ p.pk }}" data-nom="{{ p.designation }}" data-dispo="{{ p.quantite_disponible }}" {% if form.produit_stock.value|stringformat:'s' == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.reference }} · {{ p.designation }} ({{ p.quantite_disponible }} disponible{{ p.quantite_disponible|pluralize }})</option>{% endfor %}
+						{% for p in form.fields.produit_stock.queryset %}<option value="{{ p.pk|stringformat:"d" }}" data-nom="{{ p.designation }}" data-dispo="{{ p.quantite_disponible }}" {% if form.produit_stock.value|stringformat:'s' == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.reference }} · {{ p.designation }} ({{ p.quantite_disponible }} disponible{{ p.quantite_disponible|pluralize }})</option>{% endfor %}
 					</select>
 					<span class="hint">La quantité sort de votre stock à la validation. Il ne reste que les produits disponibles.</span>
 					<span class="errs">{{ form.produit_stock.errors|striptags }}</span>
@@ -76,7 +76,7 @@
 			</div>
 			<div class="field">Format du colis *
 				<div class="seg" role="radiogroup" aria-label="Format" id="c-formats" style="align-self:flex-start">
-					{% for f in form.fields.format_article.queryset %}<label><input type="radio" name="format_article" value="{{ f.pk }}" {% if fmt == f.pk|stringformat:'s' %}checked{% elif forloop.first and fmt == 'None' %}checked{% elif forloop.first and fmt == '' %}checked{% endif %}> {{ f.nom }}</label>{% endfor %}
+					{% for f in form.fields.format_article.queryset %}<label><input type="radio" name="format_article" value="{{ f.pk|stringformat:"d" }}" {% if fmt == f.pk|stringformat:'s' %}checked{% elif forloop.first and fmt == 'None' %}checked{% elif forloop.first and fmt == '' %}checked{% endif %}> {{ f.nom }}</label>{% endfor %}
 				</div>
 				<span class="hint">Petit : moins de 3 kg · 40 × 20 × 13 cm. Moyen : 3 à 7 kg · 70 × 30 × 20 cm. Le tarif dépend de la zone de la ville.</span>
 				<span class="errs">{{ form.format_article.errors|striptags }}</span>

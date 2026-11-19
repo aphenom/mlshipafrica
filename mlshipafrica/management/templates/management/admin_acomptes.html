@@ -25,16 +25,16 @@
 				<td class="nw">{{ acompte.date_reception|date:"d/m/Y H:i" }}{% if acompte.recu_par %}<div class="muted" style="font-size:11px">{{ acompte.recu_par.get_full_name|default:acompte.recu_par.email }}</div>{% endif %}</td>
 				<td class="r num nw"><b>{{ acompte.montant|fcfa }}</b></td>
 				<td class="nw">
-					{% if acompte.statut == statuts_acompte.A_REMBOURSER %}<button type="button" class="btn sm primary" data-ouvrir="remb-{{ acompte.pk }}">Rembourser</button>{% if acompte.date_demande_remboursement %}<div class="muted" style="font-size:11px">depuis {{ acompte.date_demande_remboursement|timesince }}</div>{% endif %}
+					{% if acompte.statut == statuts_acompte.A_REMBOURSER %}<button type="button" class="btn sm primary" data-ouvrir="remb-{{ acompte.pk|stringformat:"d" }}">Rembourser</button>{% if acompte.date_demande_remboursement %}<div class="muted" style="font-size:11px">depuis {{ acompte.date_demande_remboursement|timesince }}</div>{% endif %}
 					{% elif acompte.statut == statuts_acompte.REMBOURSE %}<span class="badge b-mute">Remboursé le {{ acompte.date_remboursement|date:"d/m/Y" }}</span> <span class="mono" style="font-size:11.5px">{{ acompte.reference_remboursement }}</span>
 					{% else %}<span class="badge b-acok">Reçu</span>{% endif %}
 				</td>
 			</tr>
 			{% if acompte.statut == statuts_acompte.A_REMBOURSER %}
-			<tr class="sel" id="remb-{{ acompte.pk }}" hidden><td colspan="7">
-				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Confirmer le remboursement de {{ acompte.montant|fcfa }} au client ?')">{% csrf_token %}<input type="hidden" name="acompte" value="{{ acompte.pk }}">
+			<tr class="sel" id="remb-{{ acompte.pk|stringformat:"d" }}" hidden><td colspan="7">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Confirmer le remboursement de {{ acompte.montant|fcfa }} au client ?')">{% csrf_token %}<input type="hidden" name="acompte" value="{{ acompte.pk|stringformat:"d" }}">
 					<label class="field">Référence du remboursement *<input name="reference" required maxlength="100" placeholder="ex. OM-55K2J"></label>
-					<div class="tools"><button class="btn primary">Marquer remboursé</button><button type="button" class="btn" data-fermer="remb-{{ acompte.pk }}">Annuler</button><span class="muted" style="font-size:12px">À renvoyer au numéro {{ acompte.numero_depot|default:"qui a payé" }} par {{ acompte.get_reseau_display }}.</span></div>
+					<div class="tools"><button class="btn primary">Marquer remboursé</button><button type="button" class="btn" data-fermer="remb-{{ acompte.pk|stringformat:"d" }}">Annuler</button><span class="muted" style="font-size:12px">À renvoyer au numéro {{ acompte.numero_depot|default:"qui a payé" }} par {{ acompte.get_reseau_display }}.</span></div>
 				</form>
 			</td></tr>
 			{% endif %}

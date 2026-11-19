@@ -7,7 +7,7 @@
 		{% if notifications_non_lues %}<form method="post">{% csrf_token %}<button class="btn sm">Tout marquer comme lu</button></form>{% endif %}</div>
 	<div>
 	{% for n in notifs %}
-		<a class="notif{% if not n.lue %} nonlue{% endif %}" href="?ouvrir={{ n.pk }}"><span aria-hidden="true">{% if n.type == 'message' %}💬{% elif n.type == 'paiement' %}💰{% elif n.type == 'stock' %}📦{% elif n.type == 'echec' %}⚠️{% elif n.type == 'contestation' %}❗{% else %}🔔{% endif %}</span>
+		<a class="notif{% if not n.lue %} nonlue{% endif %}" href="?ouvrir={{ n.pk|stringformat:"d" }}"><span aria-hidden="true">{% if n.type == 'message' %}💬{% elif n.type == 'paiement' %}💰{% elif n.type == 'stock' %}📦{% elif n.type == 'echec' %}⚠️{% elif n.type == 'contestation' %}❗{% else %}🔔{% endif %}</span>
 			<span><b>{{ n.titre }}</b><span class="muted" style="font-size:12.5px">{{ n.texte }}</span><small class="muted" style="display:block;font-size:11px">{{ n.date|date:"d/m/Y H:i" }}</small></span></a>
 	{% empty %}<div class="muted" style="padding:18px">Aucune notification pour l’instant.</div>{% endfor %}
 	</div>

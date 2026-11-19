@@ -48,7 +48,7 @@
 			</table></div>
 			{% if peut_format %}
 			<form method="POST" class="tools" style="margin-top:10px;align-items:flex-end" onsubmit="return confirm('Changer le format de ce colis ? Les frais de livraison sont recalculés et le vendeur est prévenu.')">{% csrf_token %}
-				<label class="field">Format vérifié au bureau<select name="format" required>{% for f in formats %}<option value="{{ f.pk }}"{% if f.pk == article.format_article_id %} selected{% endif %}>{{ f.nom }}</option>{% endfor %}</select></label>
+				<label class="field">Format vérifié au bureau<select name="format" required>{% for f in formats %}<option value="{{ f.pk|stringformat:"d" }}"{% if f.pk == article.format_article_id %} selected{% endif %}>{{ f.nom }}</option>{% endfor %}</select></label>
 				<label class="field">Motif<input name="motif_format" maxlength="200" placeholder="ex. carton 60 cm, 4 kg"></label>
 				<button class="btn sm" name="submit_format" value="1">Corriger le format</button>
 			</form>{% endif %}
@@ -127,7 +127,7 @@
 						<button name="submit_new_reglement" value="submit_new_reglement" class="btn primary">Enregistrer</button>
 						<button data-cacher="div-paiement" type="button" class="btn">Annuler</button>
 					{% elif article.etat_reglement is True %}
-						<input type="hidden" value="{{ article.get_last_reglement.pk }}" name="last_reglement">
+						<input type="hidden" value="{{ article.get_last_reglement.pk|stringformat:"d" }}" name="last_reglement">
 						<button value="submit_annuler_reglement" name="submit_annuler_reglement" type="submit" class="btn danger">Annuler le paiement</button>
 					{% endif %}
 					</div>
@@ -137,7 +137,7 @@
 			{% if encaissement_article and article.etat_encaissement is True %}
 			<form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Voulez-vous vraiment faire cette action ?')" style="border-top:1px solid var(--line);padding-top:10px">
 				{% csrf_token %}
-				<input type="hidden" value="{{ encaissement_article.pk }}" name="last_encaissement">
+				<input type="hidden" value="{{ encaissement_article.pk|stringformat:"d" }}" name="last_encaissement">
 				<h3 style="font-size:14px;font-weight:700;margin:6px 0">Reversement au vendeur</h3>
 				{% if reversement_article is None or article.etat_reversement is False %}<button id="btn-init-reversement" data-montrer="div-reversement" type="button" class="btn primary sm">Enregistrer un reversement</button>{% endif %}
 				<div id="div-reversement" {% if reversement_article is None or article.etat_reversement is False %}hidden{% endif %}>
@@ -151,7 +151,7 @@
 						<button name="submit_new_reversement" value="submit_new_reversement" class="btn primary">Enregistrer</button>
 						<button data-cacher="div-reversement" type="button" class="btn">Annuler</button>
 					{% elif article.etat_reversement is True %}
-						<input type="hidden" value="{{ article.get_last_reversement.pk }}" name="last_reversement">
+						<input type="hidden" value="{{ article.get_last_reversement.pk|stringformat:"d" }}" name="last_reversement">
 						<button value="submit_annuler_reversement" name="submit_annuler_reversement" type="submit" class="btn danger">Annuler le reversement</button>
 					{% endif %}
 					</div>
@@ -184,7 +184,7 @@
 			{% if statut_traitement_applicables %}
 			<form method="POST" enctype="multipart/form-data" class="form" style="grid-template-columns:1fr" onsubmit="return confirm('Enregistrer ce mouvement ?')">
 				{% csrf_token %}
-				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
+				<input type="hidden" value="{{ article.get_last_historique.pk|stringformat:"d" }}" name="last_mouvement">
 				<label class="field">Nouveau statut *<select name="mouvement_statut" required>{% for value, label in statut_traitement_applicables %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
 				<label class="field">Date du mouvement *<input name="mouvement_date" min="{{ article.get_last_historique.date|date:'Y-m-d\TH:i' }}" max="{% now 'Y-m-d\TH:i' %}" value="{% now 'Y-m-d\TH:i' %}" type="datetime-local" required></label>
 				{% if not article.code_tracking %}<label class="field">Code tracking<input name="mouvement_code_tracking" type="text"></label>{% endif %}
@@ -195,7 +195,7 @@
 			{% if peut_annuler_mouvement and article.statut_traitement == article.get_last_historique.statut_traitement and article.etat_reversement is False %}
 			<form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Annuler le dernier mouvement ?')">
 				{% csrf_token %}
-				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
+				<input type="hidden" value="{{ article.get_last_historique.pk|stringformat:"d" }}" name="last_mouvement">
 				<button value="submit_annuler_last_mouvement" name="submit_annuler_last_mouvement" type="submit" class="btn danger sm">Annuler le dernier mouvement</button>
 			</form>
 			{% endif %}
@@ -203,7 +203,7 @@
 			<details class="dplier" style="margin-top:12px"><summary class="dsum"><b>Corriger le statut (erreur de saisie)</b></summary>
 			<form method="POST" class="form" style="grid-template-columns:1fr;margin-top:8px" onsubmit="return confirm('Corriger le statut de ce colis ? La correction et sa raison restent dans l\'historique.')">
 				{% csrf_token %}
-				<input type="hidden" value="{{ article.get_last_historique.pk }}" name="last_mouvement">
+				<input type="hidden" value="{{ article.get_last_historique.pk|stringformat:"d" }}" name="last_mouvement">
 				<label class="field">Statut corrigé *<select name="correction_statut" required>{% for value, label in statuts_corrigibles %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
 				<label class="field">Raison *<input name="correction_motif" type="text" maxlength="300" required placeholder="ex. livré par erreur, le client a refusé"></label>
 				<button value="1" name="submit_correction" type="submit" class="btn sm">Corriger</button>

@@ -21,21 +21,21 @@
 					<div class="card-header d-flex flex-wrap align-items-center gap-2">
 						<div class="card-title mb-0">{{ imp.nom_fichier|default:"Fichier" }} · onglet « {{ imp.onglet }} » · importé le {{ imp.date|date:"d/m/Y H:i" }}{% if imp.par %} par {{ imp.par.get_full_name|default:imp.par.email }}{% endif %}</div>
 						{% if peut_supprimer %}
-						<form method="post" class="ms-auto" onsubmit="return confirm('Supprimer ce fichier et ses {{ imp.nb_lignes }} ligne(s) ? Les coûts qu\'il avait rapprochés seront remis à zéro. Vous pourrez réimporter le bon fichier.');">{% csrf_token %}<input type="hidden" name="supprimer" value="{{ imp.pk }}"><button class="btn btn-sm btn-outline-danger">Supprimer ce fichier</button></form>
+						<form method="post" class="ms-auto" onsubmit="return confirm('Supprimer ce fichier et ses {{ imp.nb_lignes }} ligne(s) ? Les coûts qu\'il avait rapprochés seront remis à zéro. Vous pourrez réimporter le bon fichier.');">{% csrf_token %}<input type="hidden" name="supprimer" value="{{ imp.pk|stringformat:"d" }}"><button class="btn btn-sm btn-outline-danger">Supprimer ce fichier</button></form>
 						{% endif %}
 						{% if imports|length > 1 %}
-						<form method="get" class="{% if not peut_supprimer %}ms-auto{% endif %}"><select name="import" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()">{% for i in imports %}<option value="{{ i.pk }}" {% if i.pk == imp.pk %}selected{% endif %}>{{ i.date|date:"d/m/Y H:i" }} · {{ i.onglet }} · {{ i.nb_lignes }}</option>{% endfor %}</select></form>
+						<form method="get" class="{% if not peut_supprimer %}ms-auto{% endif %}"><select name="import" class="form-select form-select-sm" onchange="if (event.isTrusted) this.form.submit()">{% for i in imports %}<option value="{{ i.pk|stringformat:"d" }}" {% if i.pk == imp.pk %}selected{% endif %}>{{ i.date|date:"d/m/Y H:i" }} · {{ i.onglet }} · {{ i.nb_lignes }}</option>{% endfor %}</select></form>
 						{% endif %}
 					</div>
 					<div class="card-body">
 						<div class="d-flex flex-wrap gap-2 mb-3">
-							<a class="btn btn-sm {% if filtre == 'tous' %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?import={{ imp.pk }}&filtre=tous">Toutes · {{ compteurs.tous }}</a>
-							<a class="btn btn-sm {% if filtre == 'statut' %}btn-danger{% else %}btn-outline-danger{% endif %}" href="?import={{ imp.pk }}&filtre=statut">Statut différent · {{ compteurs.statut }}</a>
-							<a class="btn btn-sm {% if filtre == 'montant' %}btn-warning{% else %}btn-outline-warning{% endif %}" href="?import={{ imp.pk }}&filtre=montant">Montant différent · {{ compteurs.montant }}</a>
-							<a class="btn btn-sm {% if filtre == 'inconnues' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" href="?import={{ imp.pk }}&filtre=inconnues">Inconnues chez nous · {{ compteurs.inconnues }}</a>
-							<a class="btn btn-sm {% if filtre == 'commentaires' %}btn-info{% else %}btn-outline-info{% endif %}" href="?import={{ imp.pk }}&filtre=commentaires">Avec commentaires · {{ compteurs.commentaires }}</a>
-							<form method="get" class="d-flex gap-1 ms-auto"><input type="hidden" name="import" value="{{ imp.pk }}"><input type="hidden" name="filtre" value="{{ filtre }}"><input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="N°, ID colis, vendeur, commentaire"><button class="btn btn-sm btn-outline-primary">Chercher</button></form>
-							<a class="btn btn-sm btn-outline-success" href="?import={{ imp.pk }}&filtre={{ filtre }}&q={{ q|urlencode }}&export=csv">Télécharger (Excel)</a>
+							<a class="btn btn-sm {% if filtre == 'tous' %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?import={{ imp.pk|stringformat:"d" }}&filtre=tous">Toutes · {{ compteurs.tous }}</a>
+							<a class="btn btn-sm {% if filtre == 'statut' %}btn-danger{% else %}btn-outline-danger{% endif %}" href="?import={{ imp.pk|stringformat:"d" }}&filtre=statut">Statut différent · {{ compteurs.statut }}</a>
+							<a class="btn btn-sm {% if filtre == 'montant' %}btn-warning{% else %}btn-outline-warning{% endif %}" href="?import={{ imp.pk|stringformat:"d" }}&filtre=montant">Montant différent · {{ compteurs.montant }}</a>
+							<a class="btn btn-sm {% if filtre == 'inconnues' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" href="?import={{ imp.pk|stringformat:"d" }}&filtre=inconnues">Inconnues chez nous · {{ compteurs.inconnues }}</a>
+							<a class="btn btn-sm {% if filtre == 'commentaires' %}btn-info{% else %}btn-outline-info{% endif %}" href="?import={{ imp.pk|stringformat:"d" }}&filtre=commentaires">Avec commentaires · {{ compteurs.commentaires }}</a>
+							<form method="get" class="d-flex gap-1 ms-auto"><input type="hidden" name="import" value="{{ imp.pk|stringformat:"d" }}"><input type="hidden" name="filtre" value="{{ filtre }}"><input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="N°, ID colis, vendeur, commentaire"><button class="btn btn-sm btn-outline-primary">Chercher</button></form>
+							<a class="btn btn-sm btn-outline-success" href="?import={{ imp.pk|stringformat:"d" }}&filtre={{ filtre }}&q={{ q|urlencode }}&export=csv">Télécharger (Excel)</a>
 						</div>
 						<div class="table-responsive">
 							<table class="table table-sm table-bordered align-middle" style="font-size:13px">

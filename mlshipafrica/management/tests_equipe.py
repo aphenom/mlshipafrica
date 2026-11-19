@@ -142,6 +142,15 @@ class ZonesEtTarifs(tests_pages.RecettePages):
         self.assertEqual((int(tarif.montant_frais), int(tarif.cout_partenaire)), (3600, 2700))
         self.assertTrue(JournalAudit.objects.filter(modele='Tarification', objet_id=str(tarif.pk)).exists())
 
+    def test_identifiants_sans_separateur_de_milliers(self):
+        # USE_THOUSAND_SEPARATOR : {{ x.pk }} donnerait « 1 196 » et casserait les champs au-delà de 999
+        import re
+        from pathlib import Path
+        from django.conf import settings
+        brut = re.compile(r'\{\{ ?[A-Za-z_.]+\.(pk|id) ?\}\}')
+        fautifs = [str(f) for f in Path(settings.BASE_DIR).rglob('templates/**/*.html') if brut.search(f.read_text(encoding='utf-8'))]
+        self.assertEqual(fautifs, [])
+
     def test_reserve_au_ceo(self):
         for role in (R.COMPTABLE, R.MANAGER, R.ADMINISTRATEUR):
             self.client.force_login(self.comptes[role])

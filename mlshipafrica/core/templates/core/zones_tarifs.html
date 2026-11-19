@@ -31,8 +31,8 @@
 					{% if l.tarif %}
 					<tr data-ligne>
 						<td><b>{{ l.format.nom }}</b></td>
-						<td class="r"><input type="number" min="0" step="1" class="num zin" name="cout_{{ l.tarif.pk }}" value="{{ l.tarif.cout_partenaire|default_if_none:''|floatformat:'0u' }}" placeholder="à saisir" aria-label="Coût partenaire {{ z.zone.nom }} {{ l.format.nom }}" data-cout></td>
-						<td class="r"><input type="number" min="0" step="1" class="num zin" name="prix_{{ l.tarif.pk }}" value="{{ l.tarif.montant_frais|default_if_none:''|floatformat:'0u' }}" aria-label="Prix vendeur {{ z.zone.nom }} {{ l.format.nom }}" data-prix></td>
+						<td class="r"><input type="number" min="0" step="1" class="num zin" name="cout_{{ l.tarif.pk|stringformat:"d" }}" value="{{ l.tarif.cout_partenaire|default_if_none:''|floatformat:'0u' }}" placeholder="à saisir" aria-label="Coût partenaire {{ z.zone.nom }} {{ l.format.nom }}" data-cout></td>
+						<td class="r"><input type="number" min="0" step="1" class="num zin" name="prix_{{ l.tarif.pk|stringformat:"d" }}" value="{{ l.tarif.montant_frais|default_if_none:''|floatformat:'0u' }}" aria-label="Prix vendeur {{ z.zone.nom }} {{ l.format.nom }}" data-prix></td>
 						<td class="r" data-marge></td>
 					</tr>
 					{% else %}

@@ -24,11 +24,11 @@
 	{% csrf_token %}
 	<div class="head" style="align-items:center">
 		<div><h2><span class="mono">{{ e.code }}</span> · {{ e.vendeur.nom_store }}</h2><div class="muted" style="font-size:12.5px">Annoncé le {{ e.date_annonce|date:"d/m/Y H:i" }}{% if e.commentaire %} · {{ e.commentaire }}{% endif %}</div></div>
-		<button name="valider_entree" value="{{ e.pk }}" class="btn primary">Valider la réception</button>
+		<button name="valider_entree" value="{{ e.pk|stringformat:"d" }}" class="btn primary">Valider la réception</button>
 	</div>
 	<div class="tablewrap"><table>
 		<thead><tr><th>Référence</th><th>Produit</th><th class="r">Annoncé</th><th>Compté à l’arrivée</th></tr></thead>
-		<tbody>{% for l in e.lignes.all %}<tr><td class="mono">{% if l.photo %}<a href="{{ l.photo.url }}" target="_blank" rel="noopener"><img src="{{ l.photo.url }}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--line);vertical-align:middle;margin-right:6px"></a>{% endif %}{{ l.reference }}</td><td>{{ l.designation }}</td><td class="r num">{{ l.quantite_annoncee }}</td><td><input name="recu_{{ l.pk }}" type="number" min="0" value="{{ l.quantite_annoncee }}" class="form-control form-control-sm" style="max-width:110px" aria-label="Quantité reçue pour {{ l.reference }}"></td></tr>{% endfor %}</tbody>
+		<tbody>{% for l in e.lignes.all %}<tr><td class="mono">{% if l.photo %}<a href="{{ l.photo.url }}" target="_blank" rel="noopener"><img src="{{ l.photo.url }}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--line);vertical-align:middle;margin-right:6px"></a>{% endif %}{{ l.reference }}</td><td>{{ l.designation }}</td><td class="r num">{{ l.quantite_annoncee }}</td><td><input name="recu_{{ l.pk|stringformat:"d" }}" type="number" min="0" value="{{ l.quantite_annoncee }}" class="form-control form-control-sm" style="max-width:110px" aria-label="Quantité reçue pour {{ l.reference }}"></td></tr>{% endfor %}</tbody>
 	</table></div>
 </form>
 {% endfor %}
@@ -43,7 +43,7 @@
 				<td>{{ p.vendeur.nom_store }}</td><td class="mono">{{ p.reference }}</td><td><b>{{ p.designation }}</b></td>
 				<td class="r num">{% if p.quantite_disponible <= 0 %}<span class="badge b-bad">{{ p.quantite_disponible }}</span>{% else %}{{ p.quantite_disponible }}{% endif %}</td>
 				<td class="r num">{{ p.quantite_de_cote }}</td>
-				<td><form method="post" class="tools" style="flex-wrap:nowrap" onsubmit="return confirm('Ajuster le stock de {{ p.designation|escapejs }} ?')">{% csrf_token %}<input name="delta" type="number" class="form-control form-control-sm" style="max-width:80px" placeholder="+/−" required aria-label="Ajustement"><input name="motif" class="form-control form-control-sm" placeholder="Motif (inventaire, casse…)" required style="min-width:160px"><button name="ajuster_produit" value="{{ p.pk }}" class="btn sm">Ajuster</button></form></td>
+				<td><form method="post" class="tools" style="flex-wrap:nowrap" onsubmit="return confirm('Ajuster le stock de {{ p.designation|escapejs }} ?')">{% csrf_token %}<input name="delta" type="number" class="form-control form-control-sm" style="max-width:80px" placeholder="+/−" required aria-label="Ajustement"><input name="motif" class="form-control form-control-sm" placeholder="Motif (inventaire, casse…)" required style="min-width:160px"><button name="ajuster_produit" value="{{ p.pk|stringformat:"d" }}" class="btn sm">Ajuster</button></form></td>
 			</tr>
 		{% empty %}<tr><td colspan="6" class="muted" style="padding:18px">Aucun produit en stock.</td></tr>{% endfor %}
 		</tbody>

@@ -70,7 +70,7 @@
 												</div><!-- main-form-group -->
 											</div>
 											{% if achat_license == license.get_achat_license_last %}
-												<input type="hidden" value="{{achat_license.pk}}" name="last_achat_license" id="last_achat_license">
+												<input type="hidden" value="{{ achat_license.pk|stringformat:"d" }}" name="last_achat_license" id="last_achat_license">
 												<button value="submit_annuler_achat_license" name="submit_annuler_achat_license"id="submit_annuler_achat_license" type="submit" class="btn col-md-3 btn-dark pd-x-30 mg-t-5 mt-2">Annuler paiement</button>
 											{% endif %}
 										</div>

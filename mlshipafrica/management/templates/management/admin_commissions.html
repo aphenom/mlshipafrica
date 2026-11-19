@@ -29,7 +29,7 @@
 		<div class="head" style="align-items:center">
 			<h2>{{ c.nom }} <span class="muted" style="font-weight:400;font-size:13px">· {{ c.get_departement_display }}</span></h2>
 			<span class="tools"><span class="badge {% if c.actif %}b-ok{% else %}b-mute{% endif %}">{% if c.actif %}active{% else %}désactivée{% endif %}</span>
-			{% if peut_regler %}<form method="post">{% csrf_token %}<input type="hidden" name="config" value="{{ c.pk }}"><button name="basculer" value="1" class="btn sm{% if not c.actif %} primary{% endif %}">{% if c.actif %}Désactiver{% else %}Activer{% endif %}</button></form>{% endif %}</span>
+			{% if peut_regler %}<form method="post">{% csrf_token %}<input type="hidden" name="config" value="{{ c.pk|stringformat:"d" }}"><button name="basculer" value="1" class="btn sm{% if not c.actif %} primary{% endif %}">{% if c.actif %}Désactiver{% else %}Activer{% endif %}</button></form>{% endif %}</span>
 		</div>
 		<div class="muted" style="font-size:13px;line-height:1.6">{{ c.get_type_display }} sur « {{ c.get_indicateur_display }} »{% if c.type == 'fixe' %} · {{ c.montant_unitaire|fcfa }} par unité{% else %} · paliers {% for p in c.paliers %}{{ p.seuil }} → {{ p.montant|fcfa }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}{% if c.taux_livraison_minimum %} · taux de livraison minimum {{ c.taux_livraison_minimum }} %{% endif %}</div>
 		<div class="vchips">{% for p in c.comptes.all %}<span class="vchip">{{ p.user.get_full_name|default:p.user.email }}</span>{% empty %}<span class="muted">Aucun compte choisi.</span>{% endfor %}</div>

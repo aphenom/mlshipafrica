@@ -30,7 +30,7 @@
 		<div class="muted" style="font-size:12.5px">Choisissez vos produits et les quantités que vous envoyez. À la validation, le bordereau d’envoi s’ouvre : imprimez-le en 2 exemplaires.</div>
 		<div id="lignes-envoi" style="display:flex;flex-direction:column;gap:8px">
 			<div class="ligne-envoi">
-				<label class="field">Produit<select name="produit" required><option value="">Choisir</option>{% for p in produits %}<option value="{{ p.pk }}">{{ p.reference }} · {{ p.designation }}</option>{% endfor %}</select></label>
+				<label class="field">Produit<select name="produit" required><option value="">Choisir</option>{% for p in produits %}<option value="{{ p.pk|stringformat:"d" }}">{{ p.reference }} · {{ p.designation }}</option>{% endfor %}</select></label>
 				<label class="field">Quantité<input name="quantite" type="number" min="1" required></label>
 				<button type="button" class="btn sm retirer" aria-label="Retirer cette ligne">Retirer</button>
 			</div>

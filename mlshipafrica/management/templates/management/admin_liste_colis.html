@@ -42,7 +42,7 @@
 		<button class="btn sm primary" name="action" value="avancer" data-besoin="statut">Appliquer</button></span>
 	{% endif %}
 	{% if peut_format %}
-	<span class="bulk-g"><select name="format" aria-label="Bon format"><option value="">Bon format…</option>{% for f in formats %}<option value="{{ f.pk }}">{{ f.nom }}</option>{% endfor %}</select>
+	<span class="bulk-g"><select name="format" aria-label="Bon format"><option value="">Bon format…</option>{% for f in formats %}<option value="{{ f.pk|stringformat:"d" }}">{{ f.nom }}</option>{% endfor %}</select>
 		<button class="btn sm" name="action" value="format" data-besoin="format" data-confirme="Mettre les colis cochés au format choisi ? Les frais de livraison sont recalculés et chaque vendeur est prévenu.">Corriger le format</button></span>
 	{% endif %}
 	{% if peut_unpaid %}<button class="btn sm primary" name="action" value="unpaid" data-confirme="Passer les colis livrés cochés en « Unpaid » (livrés, en attente de versement) ? Cela confirme que l’argent est chez nous.">Passer en Unpaid</button>{% endif %}

@@ -29,7 +29,7 @@
 		<thead><tr><th>Date</th><th>Par</th><th>Note</th><th>Rappel</th></tr></thead>
 		<tbody>{% for r in relances %}<tr><td class="nw">{{ r.date|date:"d/m/Y H:i" }}</td><td>{{ r.auteur.get_full_name|default:r.auteur.email }}</td><td>{{ r.note }}</td>
 			<td class="nw">{% if r.rappeler_le %}{% if r.rappel_fait %}<span class="muted">{{ r.rappeler_le|date:"d/m" }} · fait</span>{% else %}<b class="{% if r.rappeler_le <= aujourdhui %}t-bad{% endif %}">{{ r.rappeler_le|date:"d/m/Y" }}</b>
-			<form method="post" style="display:inline">{% csrf_token %}<button class="btn sm" name="fait" value="{{ r.pk }}">Fait</button></form>{% endif %}{% else %}—{% endif %}</td></tr>
+			<form method="post" style="display:inline">{% csrf_token %}<button class="btn sm" name="fait" value="{{ r.pk|stringformat:"d" }}">Fait</button></form>{% endif %}{% else %}—{% endif %}</td></tr>
 		{% empty %}<tr><td colspan="4" class="muted" style="padding:16px">Aucune relance notée.</td></tr>{% endfor %}</tbody>
 	</table></div>
 </div>

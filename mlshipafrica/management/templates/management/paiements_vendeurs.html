@@ -140,22 +140,22 @@
 				<td class="r num nw"><b class="{% if r.net < 0 %}t-bad{% endif %}">{{ r.net|fcfa }}</b></td>
 				<td class="r num nw t-bad">{% if r.statut == 'verse' %}{% if r.frais_versement %}− {{ r.frais_versement|fcfa }}{% else %}—{% endif %}{% elif r.frais_estimes %}− {{ r.frais_estimes|fcfa }}{% else %}—{% endif %}</td>
 				<td class="r num nw"><b>{% if r.statut == 'verse' %}{{ r.montant_verse|default:r.net|fcfa }}{% elif r.statut == 'a_verser' %}{{ r.a_envoyer|fcfa }}{% else %}—{% endif %}</b></td>
-				<td class="nw">{% if r.statut == 'a_verser' %}{% if r.net > 0 and not r.vendeur.versement_valide %}<span class="badge b-bad" title="Validez d'abord ses coordonnées dans Moyens de paiement">bloqué</span>{% else %}<button type="button" class="btn sm primary" data-ouvrir="verser-{{ r.pk }}">Verser</button>{% endif %}<div><button type="button" class="lien-annuler" data-ouvrir="annuler-{{ r.pk }}">Annuler la facture</button></div>
+				<td class="nw">{% if r.statut == 'a_verser' %}{% if r.net > 0 and not r.vendeur.versement_valide %}<span class="badge b-bad" title="Validez d'abord ses coordonnées dans Moyens de paiement">bloqué</span>{% else %}<button type="button" class="btn sm primary" data-ouvrir="verser-{{ r.pk|stringformat:"d" }}">Verser</button>{% endif %}<div><button type="button" class="lien-annuler" data-ouvrir="annuler-{{ r.pk|stringformat:"d" }}">Annuler la facture</button></div>
 					{% elif r.statut == 'verse' %}<span class="badge st-verse">{{ r.date_versement|date:"d/m/Y" }}</span> <span class="mono" style="font-size:11.5px">{{ r.reference_versement }}</span>
 					{% else %}<span class="badge b-mute">Annulée</span><div class="muted" style="font-size:11px">{{ r.motif_annulation }}</div>{% endif %}</td>
 			</tr>
 			{% if r.statut == 'a_verser' %}
-			<tr class="sel" id="verser-{{ r.pk }}" hidden><td colspan="9">
-				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Envoyer {{ r.a_envoyer|fcfa }} sur {{ r.vendeur.get_moyen_valide_display }} {{ r.vendeur.compte_valide }} et marquer la facture {{ r.code }} versée ?')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk }}"><input type="hidden" name="action" value="verser">
+			<tr class="sel" id="verser-{{ r.pk|stringformat:"d" }}" hidden><td colspan="9">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Envoyer {{ r.a_envoyer|fcfa }} sur {{ r.vendeur.get_moyen_valide_display }} {{ r.vendeur.compte_valide }} et marquer la facture {{ r.code }} versée ?')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk|stringformat:"d" }}"><input type="hidden" name="action" value="verser">
 					<div class="field">Envoyer<b style="font-size:18px">{{ r.a_envoyer|fcfa }}</b><span class="hint">sur {{ r.vendeur.get_moyen_valide_display }} · {{ r.vendeur.compte_valide }}{% if r.frais_estimes %} (net {{ r.net|fcfa }} − frais {{ r.frais_estimes|fcfa }}){% endif %}</span></div>
 					<label class="field">Référence du transfert *<input name="reference" required placeholder="ex. WV-8F3K21"></label>
-					<div class="tools"><button class="btn primary">Marquer versé</button><button type="button" class="btn" data-fermer="verser-{{ r.pk }}">Fermer</button></div>
+					<div class="tools"><button class="btn primary">Marquer versé</button><button type="button" class="btn" data-fermer="verser-{{ r.pk|stringformat:"d" }}">Fermer</button></div>
 				</form>
 			</td></tr>
-			<tr class="sel" id="annuler-{{ r.pk }}" hidden><td colspan="9">
-				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Annuler la facture {{ r.code }} ? Ses colis repassent dans « À payer ».')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk }}"><input type="hidden" name="action" value="annuler">
+			<tr class="sel" id="annuler-{{ r.pk|stringformat:"d" }}" hidden><td colspan="9">
+				<form method="post" class="form" style="align-items:end" onsubmit="return confirm('Annuler la facture {{ r.code }} ? Ses colis repassent dans « À payer ».')">{% csrf_token %}<input type="hidden" name="releve" value="{{ r.pk|stringformat:"d" }}"><input type="hidden" name="action" value="annuler">
 					<label class="field">Motif de l’annulation *<input name="motif" required maxlength="300" placeholder="ex. généré par erreur, contestation du vendeur"></label>
-					<div class="tools"><button class="btn danger">Annuler la facture</button><button type="button" class="btn" data-fermer="annuler-{{ r.pk }}">Fermer</button></div>
+					<div class="tools"><button class="btn danger">Annuler la facture</button><button type="button" class="btn" data-fermer="annuler-{{ r.pk|stringformat:"d" }}">Fermer</button></div>
 				</form>
 			</td></tr>
 			{% endif %}
