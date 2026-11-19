@@ -1,5 +1,6 @@
 """Messages automatiques réglés par le CEO : bienvenue, approbation, statuts, e-mails au vendeur, page de réglage."""
 from django.core import mail
+from django.test import override_settings
 
 from management import tests_pages
 from management.models import Article, Vendeur
@@ -36,13 +37,14 @@ class MessagesAuto(tests_pages.RecettePages):
             v.save()                                                                  # pas de 2e message
         self.assertEqual(SmsMessage.objects.filter(modele_cle='v_approuve', vendeur=v).count(), 1)
 
+    @override_settings(NOMS_A_MASQUER=['acme'])
     def test_le_ceo_regle_un_message_et_choisit_les_informations(self):
         self.client.force_login(self.comptes[R.SUPER])
         page = self.client.get('/sms/messages-automatiques/').content.decode()
         self.assertIn('Messages automatiques', page)
         self.assertIn('Nom du client', page)
         self.assertIn('Référence produit (SKU)', page)
-        self.assertNotIn("ACME", page.upper())
+        self.assertNotIn('ACME', page.upper())                                  # le nom du prestataire vient du .env
         self.client.post('/sms/messages-automatiques/', {'cle': 'v_livre', 'actif': 'on', 'email_actif': 'on',
                                                          'texte': 'MLCOD : {ref} livre a {client}, {produit} ({sku}) {montant}',
                                                          'email_objet': 'Livré : {ref}', 'email_texte': 'Bonjour {vendeur}, {ref} livré à {client}.'})
